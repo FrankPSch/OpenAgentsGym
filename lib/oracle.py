@@ -9,6 +9,8 @@ supplies its own reference constants and any extra gate:
 
 Contract: run_verification.py <workspace> <run dir> [baseline|""] [holdout dir] [template dir]
 Exit 0 = pass (tests green plus any project gate), 1 = fail, 2 = environment or setup error.
+A pytest collection error caused by the agent's own code is a fail, not an environment error: it
+is scored from the junit.xml pytest wrote and exits 1 (see run_pytest).
 
 The fourth argument is the run's copy of the project's held-out suite (chapter 11). It is scored
 separately and gates nothing: the exit code and `score` are the visible suite's, exactly as before.
@@ -236,11 +238,42 @@ def test_files(template):
     return names
 
 
+def count_test_functions(workspace, targets):
+    """How many `test_*` callables the suite defines -- the denominator when pytest collected none.
+
+    Cheap and best-effort: a file that will not parse contributes nothing, which is the same answer
+    pytest reached. It is only ever consulted when the junit carries no testcase at all, so a run
+    that collected nothing still scores 0.00 instead of dropping out of the statistics.
+    """
+    total = 0
+    for name in (targets or []):
+        path = workspace / name
+        if not path.is_file():
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and \
+                    node.name.startswith("test"):
+                total += 1
+    return total
+
+
 def run_pytest(workspace, junit, holdout=None, targets=None):
     """Run the template's test files and, when there is one, the held-out suite in one invocation.
 
     Returns ((total, passed), (total_holdout, passed_holdout)) or None on an environment error;
     the second pair is (0, 0) when no held-out suite was collected.
+
+    An environment error is "pytest could not run at all" and nothing else: pytest missing, a usage
+    or internal error (exit 3, 4), or no junit.xml written. Whenever pytest wrote a junit.xml that
+    parses, the run is scored from it whatever the exit code was -- a collection error caused by the
+    agent's own code (a SyntaxError or a failed import in the workspace) exits 2 and still writes
+    <error> entries, and that is a run that scores 0.00, not a broken machine. Classifying it as an
+    environment error wrote no verification.txt at all, so the row carried a blank res_score and
+    left the campaign statistics entirely (chapter 11).
 
     `targets` are the file names of the template's suite; pytest is given those paths under the
     workspace and nothing else, so nothing the agent wrote is collected. They are restored from the
@@ -266,7 +299,10 @@ def run_pytest(workspace, junit, holdout=None, targets=None):
     err = (p.stderr or b"").decode("utf-8", "replace")
     if p.returncode == 1 and "No module named pytest" in err:
         return None
-    if p.returncode in (2, 3, 4, 5) or not junit.is_file():
+    # Exit 3 and 4 are pytest's own internal and usage errors, and no junit.xml means pytest never
+    # got as far as writing one: those are the environment. Every other exit code with a junit
+    # beside it is scored from that file -- see the docstring.
+    if p.returncode in (3, 4) or not junit.is_file():
         return None
     try:
         suite = ET.parse(str(junit)).getroot()
@@ -278,13 +314,18 @@ def run_pytest(workspace, junit, holdout=None, targets=None):
 
     stems = {n[:-3] for n in names}
     counts = {False: [0, 0], True: [0, 0]}
+    seen = 0
     for case in suite.iter("testcase"):
+        seen += 1
         # xunit2 (the default) carries no file attribute, so the module name in classname is
         # what identifies the file; xunit1 carries file. Held-out files are test_<module>_holdout
         # and can therefore not collide with the workspace's own test_<module>.
         path = case.get("file") or ""
+        # A collection error carries an empty classname; pytest reports the module stem as the
+        # test name there (`test_x` for test_x.py), which is what identifies the file instead.
+        ident = case.get("classname", "") or case.get("name", "")
         is_holdout = (path.replace("\\", "/").rsplit("/", 1)[-1] in names if path
-                      else any(part in stems for part in case.get("classname", "").split(".")))
+                      else any(part in stems for part in ident.split(".")))
         # A skipped test is neither passed nor failed, so it leaves the fraction entirely: a
         # skipif on the machine's interpreter would otherwise lower the score for a reason that
         # has nothing to do with the methodology.
@@ -293,6 +334,12 @@ def run_pytest(workspace, junit, holdout=None, targets=None):
         bad = any(c.tag in ("failure", "error") for c in case)
         counts[is_holdout][0] += 1
         counts[is_holdout][1] += 0 if bad else 1
+    if not seen:
+        # pytest ran but collected nothing at all, so the junit carries no testcase to count. The
+        # suite's own test functions are the denominator, which keeps the row at 0.00 rather than
+        # at a blank score; 0 when even that cannot be read, and 0/0 is 0.00 as well. A run whose
+        # cases were all skipped is not this case -- those left the fraction on purpose.
+        counts[False][0] = count_test_functions(workspace, targets)
     return tuple(counts[False]), tuple(counts[True])
 
 

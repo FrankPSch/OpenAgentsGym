@@ -1,4 +1,7 @@
 * text=auto eol=lf
+# Batch files must reach cmd.exe with CRLF endings whatever the checkout platform.
+*.bat text eol=crlf
+*.cmd text eol=crlf
 
 *.png binary
 *.jpg binary

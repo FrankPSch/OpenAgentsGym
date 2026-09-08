@@ -18,9 +18,9 @@ MAX_TURNS=60
 MAX_BUDGET_USD=4.00
 # MAX_BUDGET_USD: passed as --max-budget-usd. The real spending cap on a run — since there
 # is no turn cap on the CLI side, this is what actually bounds cost and runtime. Raised from
-# 2.00 for campaign 2: the dearest campaign-1 run on 03_python_large cost $0.882, and x2 for
-# the size of 04_python_xlarge x2.05 for the level-3 model is ~$3.62 — a 2.00 cap would truncate the R
-# and F arms on opus only, a censoring indistinguishable from a methodology effect.
+# 2.00 for campaign 2: the dearest campaign-1 run on 03_python_large cost $0.882; x2 for the size
+# of 04_python_xlarge and x2.05 for the level-3 model's price gives ~$3.62, so a 2.00 cap would
+# truncate the R and F arms on that level alone -- a censoring indistinguishable from a methodology effect.
 REPEATS=1
 # REPEATS: how many times run.bat repeats the same <project> <methodology> pair.
 # REPEATS=1 is a smoke-test setting only; comparing arms needs REPEATS>=3 (chapter 17) —

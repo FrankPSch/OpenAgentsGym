@@ -53,6 +53,9 @@ REQUIRED_FLAGS = ("-p", "--model", "--effort", "--max-budget-usd", "--output-for
 # when a same-model review is configured, so an older CLI without it still runs REVIEW_PASS=none.
 REVIEW_FLAGS = ("--disallowedTools",)
 REVIEW_MODES = ("none", "same_model", "other_model")
+# The --effort levels the CLI offers (chapter 9). A value outside them is rejected by the CLI
+# itself, after the run directory and the venv exist, so it is checked in the pre-flight instead.
+EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
 # The --allowedTools list every arm launches with. An arm may replace it by shipping tools.txt,
 # which cfg_tools then records (chapter 15).
 DEFAULT_TOOLS = ("Read,Edit,Write,Glob,Grep,Agent,"
@@ -203,6 +206,10 @@ def step1_read_config(config=DEFAULT_CONFIG):
         if "=" not in line:
             die("ABORT: malformed line in %s: %r" % (path, raw), 4)
         k, v = line.split("=", 1)
+        # `=value` is a malformed line, not a key: it would land in cfg[""] and the key it was
+        # meant for would read as unset -- a silent default rather than a config error.
+        if not k.strip():
+            die("ABORT: malformed line in %s: %r" % (path, raw), 4)
         cfg[k.strip()] = v.strip()
     # The single gate on the engine. Every other coupling to this CLI is in this file and is
     # listed in chapter 18 under "GPT branch": nothing under methodology/, projects/, lib/ or the
@@ -282,11 +289,17 @@ def check_model(cfg):
     `--fallback-model` substitutes a model silently on overload, which corrupts a comparison with
     no visible error, so it is checked here beside the alias rule. FIX_MODEL takes the same alias
     rule when it is set: it is a second model id on the row and an alias there is the same defect.
+    REVIEW_MODEL takes it too, but on same_model only: there it is this vendor's id and `opus` is
+    the same silent re-pointing as in MODEL, while on other_model it is a foreign vendor's id
+    (`gpt-5`, `o3`) whose canonical form the digit-in-a-dashed-part rule would reject.
     """
     reject_alias(cfg.get("MODEL", "").strip(), "MODEL")
     named_fix = cfg.get("FIX_MODEL", "").strip()
     if named_fix:
         reject_alias(named_fix, "FIX_MODEL")
+    named_review = cfg.get("REVIEW_MODEL", "").strip()
+    if named_review and cfg.get("REVIEW_PASS", "") == "same_model":
+        reject_alias(named_review, "REVIEW_MODEL")
     for key in ("CLAUDE_FALLBACK_MODEL",):
         if os.environ.get(key, "").strip() or cfg.get(key, "").strip():
             die("ABORT: %s is set -- a fallback model is substituted silently on overload and\n"
@@ -306,6 +319,25 @@ def check_config_keys(cfg):
     environment work can make it right.
     """
     check_model(cfg)
+    # EFFORT, MAX_BUDGET_USD, MAX_TURNS and REPEATS are read unguarded further down -- cfg["EFFORT"]
+    # is on the launch line and in the campaign log, cfg["MAX_BUDGET_USD"] is the spending cap --
+    # so a missing or mistyped one used to surface as a KeyError or a ValueError mid-run rather than
+    # as a named abort here. All four are mandatory: every shipped config file carries them, and a
+    # blank cap or a blank effort is not a default anyone should get silently.
+    effort = cfg.get("EFFORT", "").strip()
+    if effort not in EFFORT_LEVELS:
+        die("ABORT: EFFORT=%s (got %r)" % ("|".join(EFFORT_LEVELS), effort), 4)
+    budget = cfg.get("MAX_BUDGET_USD", "").strip()
+    try:
+        ok = float(budget) > 0
+    except ValueError:
+        ok = False
+    if not ok:
+        die("ABORT: MAX_BUDGET_USD must be a positive number of dollars (got %r)" % budget, 4)
+    for key in ("MAX_TURNS", "REPEATS"):
+        v = cfg.get(key, "").strip()
+        if not v.isdigit() or int(v) < 1:
+            die("ABORT: %s must be an integer >= 1 (got %r)" % (key, v), 4)
     fb = cfg.get("REVIEW_FEEDBACK", "").strip() or "0"
     if fb not in ("0", "1"):
         die("ABORT: REVIEW_FEEDBACK=0|1 (got %r)" % fb, 4)
@@ -637,10 +669,13 @@ def resolve_cli():
     """Resolve the CLI to something CreateProcess can launch.
 
     shutil.which() may hand back a .cmd/.bat shim, which subprocess cannot exec directly on
-    Windows; prefer a sibling .exe when one exists.
+    Windows; prefer a sibling .exe when one exists, and abort when there is none rather than
+    hand back a path CreateProcess cannot launch -- returning the shim only moved the failure to
+    step 7, where it arrived as `WinError 193: %1 is not a valid Win32 application` after a run
+    directory and a venv had already been built.
 
-    A CLI that is not there and a CLI missing a flag are the same class of failure -- the launch
-    line cannot be trusted -- so both exit 6.
+    A CLI that is not there, a CLI that cannot be launched and a CLI missing a flag are the same
+    class of failure -- the launch line cannot be trusted -- so all three exit 6.
     """
     claude = shutil.which("claude")
     if claude is None:
@@ -650,6 +685,10 @@ def resolve_cli():
         exe = p.with_suffix(".exe")
         if exe.is_file():
             return str(exe)
+        die("ABORT: 'claude' on PATH is %s, which CreateProcess cannot launch directly, and no\n"
+            "sibling %s exists. Install the native Windows executable (or put its directory\n"
+            "ahead of the shim on PATH) so the harness can start the CLI as a subprocess."
+            % (p, exe.name), 6)
     return str(p)
 
 
@@ -1353,8 +1392,11 @@ def one_run(cfg, project, methodology, repeat, stamp):
         return exc.code
     tee = Tee(run_dir / "run.log")
     saved_stdout, sys.stdout = sys.stdout, tee
-    campaign_log("START %s model=%s effort=%s" % (run_id, cfg["MODEL"], cfg["EFFORT"]))
     try:
+        # Inside the try and read with .get: a missing key here would raise before the finally
+        # existed and leave sys.stdout pointing at a closed Tee for the rest of the campaign.
+        campaign_log("START %s model=%s effort=%s"
+                     % (run_id, cfg.get("MODEL", ""), cfg.get("EFFORT", "")))
         _one_run_body(cfg, project, methodology, repeat, stamp, run_id, run_dir)
         return 0
     except Abort as exc:

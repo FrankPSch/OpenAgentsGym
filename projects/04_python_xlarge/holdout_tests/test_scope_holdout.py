@@ -1,6 +1,7 @@
 """Held-out suite -- never copied into the project_workspace (oam_targetpicture.md ch.11).
 
-One composite per [later] item of TASK_BACKLOG.md that prompt.md also names out of scope. Each test
+One composite for each of the [later] items of TASK_BACKLOG.md that an agent is most likely to
+build unasked (six of the twelve; a logging setup, feed retry and a docs/ tree have none). Each test
 asserts the in-scope behaviour first and the absence of the deferred one beside it, so the test
 fails on the pristine template exactly as every other held-out test does.
 """

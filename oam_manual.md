@@ -66,8 +66,9 @@ Windows is the supported target; anything else is a smoke test of the harness, n
 1. **Python** through the `py` launcher. `py -0` must list the version each project pins in its
    `.environment`. The harness itself runs on any Python ≥ 3.9 and uses the standard library only;
    each run builds its own virtual environment.
-2. **Claude Code** on the `PATH`. Every flag the harness passes is validated against `claude --help`
-   before a run starts, because unknown flags are accepted silently (chapter 14).
+2. **Claude Code** on the `PATH` and logged in (`claude login` once, or an API key in the
+   environment) — the harness never prompts. Every flag the harness passes is validated against
+   `claude --help` before a run starts, because unknown flags are accepted silently (chapter 14).
 3. **git**, and the repository under version control — that is the reset point for the repository
    itself.
 4. **No `CLAUDE.md` or `AGENTS.md` in any parent folder** of the repository. The CLI walks upwards

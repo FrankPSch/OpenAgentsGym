@@ -296,7 +296,7 @@ is the control the first wired campaign will need.
 | `00_fail` | a task whose `prompt.md` contradicts the shipped test — the prompt specifies `f(2) == 5` in one place and `f(2) == 6` in another | — | anchor — the oracle cannot pass; catches a pipeline that reports success regardless |
 | `01_python_small` | one function in `textstats.py`, 4 tests | — | smallest real oracle; the one harness smoke run |
 | `02_python_medium` | three functions and a small class over closed integer intervals, 20 tests | 10 | the default pair of `run_smoke_model_02.bat`: real oracle, short run |
-| `03_python_large` | a `ledger/` package — four sub-modules imported by `cli.py`, a 10-step work order in `prompt.md`, 24 tests, reference solution 82 SLOC | 12 | the ranking project for campaign 1; the first project large enough for structure to matter |
+| `03_python_large` | a `ledger/` package of four sub-modules, three of them imported by `cli.py`, a 10-step work order in `prompt.md`, 24 tests, reference solution 82 SLOC | 12 | the ranking project for campaign 1; the first project large enough for structure to matter |
 | `04_python_xlarge` | order intake and stock allocation: a `warehouse/` package — 11 source files over three packages, a semicolon CSV price list and a JSON order feed in `fixtures/` as the only definition of the two formats, a 14-step work order in `prompt.md`, 50 tests, reference solution 176 SLOC | 25 | the ranking project for campaign 2 |
 | `05_python_refactor_large` | working but over-complex module, behaviour pinned by golden tests | 8 | refactor against fixed expected results; passes only if the golden tests stay green *and* SLOC falls below baseline |
 
@@ -351,8 +351,8 @@ OpenAgentsGym/
 ├─ .llm_config.model_02                 # level 2: workhorse model; run.bat and run_smoke_model_02.bat
 ├─ .llm_config.model_03                 # level 3: frontier model, low effort; --config by hand
 ├─ .llm_config.model_04                 # level 4: above the frontier tier; run_all_ and run_selected_model_04.bat
-├─ .gitignore                           # runs/*/.venv/, runs/*/project_workspace/, runs/_*,
-│                                       #   _to_delete/, __pycache__/, .pytest_cache/, .claude_config/
+├─ .gitignore                           # local/ (runs, archive, to_delete), __pycache__/,
+│                                       #   .pytest_cache/, .claude_config/
 ├─ run_smoke_model_02.bat               # one pair on level 2; no arguments
 ├─ run.bat                              # single run: run.bat <project> <methodology> [--config <path>]
 ├─ run_master.py                        # the only file that does work; stdlib only
@@ -483,7 +483,7 @@ OpenAgentsGym/
 │  │     ├─ .requirements
 │  │     ├─ TASK_BACKLOG.md                  # 20 items; 8 [scope], 12 [later]
 │  │     ├─ fixtures/
-│  │     │  ├─ pricelist.csv            # defines the CSV format; 14 rows incl. 3 malformed
+│  │     │  ├─ pricelist.csv            # defines the CSV format; 14 rows incl. 4 malformed
 │  │     │  └─ orders.json              # defines the JSON feed; 6 orders, 17 lines
 │  │     ├─ warehouse/
 │  │     │  ├─ __init__.py
@@ -506,7 +506,7 @@ OpenAgentsGym/
 │                                       #   layout, `reference/` and `holdout_tests/` included;
 │                                       #   00_fail and 01_python_small ship no held-out suite
 │
-└─ runs/
+└─ local/runs/                          # detail of the git-ignored run directory shown above
    ├─ _matrix_<campaign>_<YYYYMMDD_HHMMSS>.log   # one `--matrix` invocation's whole output, every
    │                                     #   line prefixed by the pair that produced it (chapter 12)
    └─ run_<methodology>_<project>_<YYYYMMDD_HHMMSS>_r<NN>/
@@ -601,7 +601,7 @@ ENGINE=claude
 MODEL=claude-sonnet-5
 EFFORT=medium
 MAX_TURNS=60
-MAX_BUDGET_USD=2.00
+MAX_BUDGET_USD=4.00
 REPEATS=1
 CLAUDE_CONFIG_DIR=
 REVIEW_PASS=none
@@ -618,7 +618,7 @@ BEST_OF_N=1
 The values shown are the smoke-run setting. Campaign 1 sets `REPEATS=3`; campaign 2 sets
 `REPEATS=3` and `MAX_BUDGET_USD=4.00`. The raise is required rather than cosmetic: the dearest
 campaign-1 run on `03_python_large` cost $0.882, and ×2 for the size of `04_python_xlarge` ×2.05
-for opus-5 is ≈$3.62, so a $2.00 cap would truncate the R and F arms on opus alone — a censoring
+for the level-3 model is ≈$3.62, so a $2.00 cap would truncate the R and F arms on that level alone — a censoring
 indistinguishable from a methodology effect.
 
 ### Further details
@@ -648,7 +648,9 @@ invocation, a second cost and a treatment, so it is on for a whole campaign or o
 `REVIEW_MAX_BUDGET_USD` is the review invocation's own `--max-budget-usd`, a quarter of the
 implementer's cap because the reviewer reads a diff and writes at most twenty lines; it never
 touches the implementer's budget. `REVIEW_MODEL` blank on `same_model` means the implementer's
-model, and on `other_model` it is the vendor model id — recorded either way as `cfg_review_model`,
+model and a named value takes the same alias rejection as `MODEL`; on `other_model` it is the
+foreign vendor's id, which the digit-in-a-dashed-part rule cannot judge (`gpt-5`, `o3`), so it is
+taken as given — recorded either way as `cfg_review_model`,
 which on `other_model` is the only record there is, since a foreign CLI does not report back what
 it served. `REVIEW_CMD` applies to `other_model` alone: a command, not a shell line, run with the
 reviewer prompt on stdin and its stdout taken as `review.md`. Blank there aborts with exit 6 before
@@ -693,7 +695,9 @@ writing the code is this one.
 `BEST_OF_N` is how many implementer invocations produce one row, default `1`. Above 1 the harness
 runs that many sequentially and keeps the best (chapter 12, step 7a). Non-numeric or below 1 aborts
 with exit 4 naming the key. All four keys, `FIX_MODEL`'s id and `REVIEW_PROMPT`'s path, are
-validated at pre-flight before any tokens are spent.
+validated at pre-flight before any tokens are spent, as are the run constants: `EFFORT` must be one
+of `low | medium | high | xhigh | max`, `MAX_BUDGET_USD` a positive number, `MAX_TURNS` and
+`REPEATS` integers of at least 1 — each missing or malformed is exit 4 naming the key.
 
 ## 10. Environment
 
@@ -708,8 +712,8 @@ environment before the agent starts, in the run directory and outside the projec
 appears in the diff:
 
 ```
-py -3.10 -m venv runs\<id>\.venv
-runs\<id>\.venv\Scripts\python.exe -m pip install -q -r projects\<P>\project_reset_template\.requirements
+py -3.10 -m venv local\runs\<id>\.venv
+local\runs\<id>\.venv\Scripts\python.exe -m pip install -q -r projects\<P>\project_reset_template\.requirements
 ```
 
 ### Further details
@@ -762,10 +766,12 @@ workspace's own root glob, which is the standalone shape and correct only on a p
 | 2 | environment or setup error |
 
 The third code is not optional. Without it a broken interpreter is recorded as a methodology
-failure and the two are indistinguishable afterwards. Mapping from pytest: `0` → pass, `1` → fail,
-and `2` (collection error or interrupted), `3` (internal error), `4` (usage error) and `5` (no tests
-collected) all → 2, as does pytest not being importable — none of them is a statement about the code
-under test. `res_verification_error` is exit code 2 on the post-run check, and
+failure and the two are indistinguishable afterwards. The rule: whenever pytest wrote a `junit.xml`
+that parses, the run is scored from it whatever pytest's exit code — a collection error raised by the
+agent's own code (a syntax or import error; pytest exit `2`) is a fail, exit 1 with `score=0.00`, and
+a junit with no test case at all scores 0.00 over the template's own test-function count. Only
+pytest exit `3` (internal error), `4` (usage error), pytest not being importable, or no parseable
+`junit.xml` map to 2 — those alone are not statements about the code under test. `res_verification_error` is exit code 2 on the post-run check, and
 `res_verification_exit` is that exit code recorded raw.
 
 **Score, not verdict.** The script writes `verification.txt` into the run directory:
@@ -919,7 +925,8 @@ suite is still green *and* the workspace SLOC is strictly below the baseline SLO
 **The baseline must fail.** A project with an oracle ships a test suite that fails on the pristine
 template and passes once the task is done correctly. Pre-flight therefore *expects* exit 1; exit 0
 means the project cannot measure anything and exit 2 means the environment is broken, and both abort
-the run before any tokens are spent. Pre-flight writes `verification_baseline.txt`, whose score is
+the run before any tokens are spent. A template that cannot even be collected is exit 1 like any
+other failing baseline, so pre-flight does not catch it; the template author's own test run does. Pre-flight writes `verification_baseline.txt`, whose score is
 recorded as `res_score_baseline` — it is already computed, and the post-run gain is meaningless
 without it. Pre-flight passes the held-out directory too, so `verification_baseline.txt` carries
 the baseline held-out fraction as well; it is not a column, because on a pristine template it only
@@ -1005,7 +1012,7 @@ produced. Its flags, each optional:
   Default 1, which is the sequential order the `for /d` loops had. Workers start two seconds apart
   and the queue gives the next pair to whichever worker is free.
 - `--skip-existing` — drop every pair that already has a row with this `prj_name`, `mth_name` and
-  `cfg_campaign`, read from `runs\*\results_run.csv`. This is how an interrupted sweep resumes.
+  `cfg_campaign`, read from `local\runs\*\results_run.csv`. This is how an interrupted sweep resumes.
 - `--projects a,b` and `--methodologies x,y` — restrict either listing to the names given; an
   unknown name is a usage error rather than a silently empty matrix.
 
@@ -1013,7 +1020,7 @@ Each pair runs **once**; `REPEATS` applies inside it, exactly as under `run.bat`
 listings are the matrix rather than a hard-coded list, so a new project or methodology joins by
 existing — 29 × 6 = 174 pairs today, and nothing changed when ten arms were added; a directory whose
 name starts with `_` is not an arm and is skipped. Stdout and stderr of every run go to one
-`runs\_matrix_<campaign>_<timestamp>.log`, each line prefixed by its pair, and the summary at the
+`local\runs\_matrix_<campaign>_<timestamp>.log`, each line prefixed by its pair, and the summary at the
 end is pairs run, rows produced and aborts. The turbo rows are real rows in the repository and are
 excluded from the campaign pivot by `cfg_effort` (chapter 17): the sweep answers "does every pair
 still run", not "which methodology is better".
@@ -1028,7 +1035,7 @@ and 1 when one does not. Either takes exit 2 on a malformed flag.
    invocation and before repeat 1, the checks that cannot come right on a later repeat: the config
    keys including `MODEL` and the fallback model (exit 4), every flag of the launch line against
    `claude --help` and `REVIEW_CMD` where it applies (exit 6), and the ancestor entry files
-   (exit 5). Their records are `runs/_cli_help.txt` and `runs/_preflight_ancestors.txt`; each run
+   (exit 5). Their records are `local/runs/_cli_help.txt` and `local/runs/_preflight_ancestors.txt`; each run
    keeps its own copy as well.
 2. For each repeat `1..REPEATS`: build run id `run_<methodology>_<project>_<timestamp>_r<NN>` and
    create the run directory. **An abort after the run directory exists ends that repeat, not the
@@ -1063,13 +1070,13 @@ and 1 when one does not. Either takes exit 2 on a malformed flag.
    with exit 5 if any `CLAUDE.md` or `AGENTS.md` is
    found, naming the paths in `preflight_ancestors.txt`; build the environment from the project's
    `.environment` and `.requirements` (chapter 10); copy `projects\<P>\holdout_tests\*.py` into
-   `runs\<id>\holdout\` if that directory exists; run the verification against the pristine
+   `local\runs\<id>\holdout\` if that directory exists; run the verification against the pristine
    project_workspace, with the holdout directory as its fourth argument and the template as its
    fifth (chapter 11). Pre-flight
    also tests `%USERPROFILE%\.claude\CLAUDE.md` and records
    `cfg_user_claude_md=present|absent` as a label.
 7. Launch the CLI with cwd = `project_workspace/`. The subprocess environment prepends
-   `runs\<id>\.venv\Scripts` to `PATH`, sets `VIRTUAL_ENV` and removes `PYTHONHOME`, so `python`
+   `local\runs\<id>\.venv\Scripts` to `PATH`, sets `VIRTUAL_ENV` and removes `PYTHONHOME`, so `python`
    and `pytest` resolve to the project environment and an inherited `PYTHONHOME` cannot point the
    venv interpreter at another installation's standard library. `PYTHONUTF8=1` and
    `PYTHONIOENCODING=utf-8` are set on every subprocess the harness starts, not only the CLI —
@@ -1078,8 +1085,8 @@ and 1 when one does not. Either takes exit 2 on a malformed flag.
    `type projects\<P>\prompt.md | claude -p --model %MODEL% --effort %EFFORT%
    --max-budget-usd %MAX_BUDGET_USD% --output-format json --permission-mode acceptEdits
    --allowedTools "<the arm's tool list>"
-   --strict-mcp-config --mcp-config runs\<id>\mcp_empty.json
-   --no-session-persistence --setting-sources project --add-dir runs\<id>\methodology`
+   --strict-mcp-config --mcp-config local\runs\<id>\mcp_empty.json
+   --no-session-persistence --setting-sources project --add-dir local\runs\<id>\methodology`
    Print mode with `--permission-mode acceptEdits` denies any tool that would prompt, Bash included,
    so the tool list is explicit; `PowerShell` is the shell tool on Windows and `Bash(...)` rules do
    not cover it (chapter 14). The list is
@@ -1138,7 +1145,7 @@ and 1 when one does not. Either takes exit 2 on a malformed flag.
    `-p --model <REVIEW_MODEL or MODEL> --effort %EFFORT% --max-budget-usd %REVIEW_MAX_BUDGET_USD%
    --output-format json --permission-mode acceptEdits
    --disallowedTools "Read,Edit,Write,Glob,Grep,Bash,PowerShell,Agent,WebFetch,WebSearch"
-   --strict-mcp-config --mcp-config runs\<id>\mcp_empty.json --no-session-persistence
+   --strict-mcp-config --mcp-config local\runs\<id>\mcp_empty.json --no-session-persistence
    --setting-sources project`, writing `review.json` raw and the `result` text as `review.md`. There
    is no `--allowedTools` and no `--add-dir`: an empty allow-list is not how this CLI is told "no
    tools", so the denial is written out by name, in full — an option this CLI does not offer is
@@ -1197,10 +1204,10 @@ cwd and loads it — which is why that case aborts rather than being recorded. T
 | 0 | every repeat produced a row | — |
 | 2 | usage error: fewer than two arguments, in `run.bat` or in `run_master.py` | before repeat 1 |
 | 3 | the interpreter named in `.environment` is not available; the repeat is skipped | in a repeat |
-| 4 | abort: config, a `MODEL` alias or a fallback model, `REVIEW_PASS` not one of the three values, or a config key failing its type, range or path check (`REVIEW_FEEDBACK`, `BEST_OF_N`, `REVIEW_WEIGHT`, `REVIEW_PROMPT`) — the message names the key | before repeat 1 |
+| 4 | abort: config (a malformed line, an empty key), a `MODEL` alias, a `REVIEW_MODEL` alias on `same_model`, or a fallback model, `REVIEW_PASS` not one of the three values, or a config key failing its type, range or path check (`EFFORT`, `MAX_BUDGET_USD`, `MAX_TURNS`, `REPEATS`, `REVIEW_FEEDBACK`, `BEST_OF_N`, `REVIEW_WEIGHT`, `REVIEW_PROMPT`) — the message names the key | before repeat 1 |
 | 4 | abort: venv build, pip, baseline passes, oracle exit 2, duplicate parameter key | in a repeat |
 | 5 | `CLAUDE.md` or `AGENTS.md` in an ancestor directory | before repeat 1 |
-| 6 | CLI not on `PATH`, a flag the harness passes is not offered by `claude --help`, or `REVIEW_PASS=other_model` with `REVIEW_CMD` blank or not on `PATH` | before repeat 1 |
+| 6 | CLI not on `PATH`, or on Windows only as a `.cmd`/`.bat` shim with no `.exe` beside it, a flag the harness passes is not offered by `claude --help`, or `REVIEW_PASS=other_model` with `REVIEW_CMD` blank or not on `PATH` | before repeat 1 |
 
 The third column is the difference the repeat loop makes. A fault that is certain to recur is
 settled before the first repeat and ends the invocation; a fault that belongs to one repeat leaves
@@ -1211,14 +1218,14 @@ is skipped; a venv or pip that fails afterwards is a broken machine and the mess
 and points at `venv.log` or `pip.log`. Recording the second as a skip would hide it.
 
 `rebuild_results_table.bat` (a wrapper over `run_master.py --consolidate`, followed by
-`run_master.py --gate`) merges `runs\*\results_run.csv` into
+`run_master.py --gate`) merges `local\runs\*\results_run.csv` into
 `results_repository.csv` on demand and then prints the chapter 16 conditions over it.
 Consolidation also names the repeats that aborted and produced no row (`abort.txt`, chapter 12),
 so a campaign short of rows says so instead of looking complete. `results_repository.csv` is never
 written while runs execute, so the repository is rebuildable from the runs at any time. What
 parallel workers do share is three files, and each is written in the one way that cannot tear:
-`runs\_master.log` is appended to a line at a time and never opened for writing, and the two
-invocation-level records `runs\_cli_help.txt` and `runs\_preflight_ancestors.txt` are written to a
+`local\runs\_master.log` is appended to a line at a time and never opened for writing, and the two
+invocation-level records `local\runs\_cli_help.txt` and `local\runs\_preflight_ancestors.txt` are written to a
 private temporary and renamed into place. Everything else a run writes is inside its own run
 directory. Rows are merged by column name rather than by position, and a column a run predates is left blank, so adding a metric never orphans the runs already on disk.
 
@@ -1404,7 +1411,7 @@ Established by direct query of the installed CLI and by the first runs, not assu
 
 | Fact | Value |
 |---|---|
-| CLI | Claude Code 2.1.251 at `C:\Users\Frank\.local\bin\claude.exe` |
+| CLI | Claude Code 2.1.251 at `C:\Users\<you>\.local\bin\claude.exe` |
 | git | 2.55 |
 | Model alias `opus` resolves to | `claude-opus-5` (`modelUsage.canonicalModel`) |
 | Effort | `--effort low\|medium\|high\|xhigh\|max`, settable per invocation |
@@ -1462,7 +1469,7 @@ would corrupt a campaign without any visible error.
 ## 16. Validity gate
 
 Before any campaign result is interpreted, both anchors must behave. The gate is the 3 `00_fail`
-runs and the `00_sabotage` methodology of the campaign's ranking runs — 72 in campaign 2 (chapter 6):
+runs and the `00_sabotage` rows of the campaign's ranking runs, judged against the incumbent:
 
 - `00_sabotage` scores worse than `08_process_doctypes_roles_guardrails` on the same project with
   an oracle.
@@ -1496,7 +1503,7 @@ after a cheap one: it prints the same block for that campaign alone, drops the f
 which needs ranking rows the cheap sweep was never meant to buy — and adds the one the sweep exists
 to answer, that no repeat aborted and no row carries a `res_subtype` other than `success`. An
 aborted repeat writes no row and therefore carries no campaign, so that half of the count is over
-`runs\` whole, which is the conservative reading and the right one here. Exit 0 or 1, as always.
+`local\runs\` whole, which is the conservative reading and the right one here. Exit 0 or 1, as always.
 
 If any of these does not hold, the finding is about the apparatus, not about methodology.
 
@@ -1529,7 +1536,7 @@ If any of these does not hold, the finding is about the apparatus, not about met
   `08_process_doctypes_roles_guardrails`} × 1 = 3, and 1 smoke run on
   `01_python_small`. Optionally 87 continuity runs of `03_python_large` × 29 × 3 under the corrected
   held-out suite, which are a separate 87 and not part of the ranking. Estimated ≈$60.6 at
-  sonnet-5 / medium, ≈$124.2 at opus-5, from a campaign-1 per-run mean of $0.348 on
+  level 2, ≈$124.2 at level 3, from a campaign-1 per-run mean of $0.348 on
   `03_python_large` doubled for project size.
 - The cost axis is `tk_cost_usd`, the first implementer call's spend. `tk_review_cost_usd`,
   `tk_fix_cost_usd` and `tk_bestof_cost_usd` are reported beside it, never summed into it by default: the review pass is a treatment, so a campaign that runs it

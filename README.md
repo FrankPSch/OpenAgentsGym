@@ -38,7 +38,7 @@ That validity gate, not the leaderboard, is the first thing to read.
 
 ## Quick start
 
-Requirements: Windows, Python via the `py` launcher, `claude` on the `PATH`, git, and **no
+Requirements: Windows, Python via the `py` launcher, `claude` on the `PATH` and logged in, git, and **no
 `CLAUDE.md` or `AGENTS.md` in any parent folder** of the repository (the CLI walks upwards and would
 load it into every run — pre-flight aborts instead of measuring it).
 
