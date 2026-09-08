@@ -1,8 +1,9 @@
 """Held-out suite -- never copied into the project_workspace (oam_targetpicture.md ch.11).
 
 The same pinned behaviour as test_pricing.py on inputs it does not cover: zero and negative
-quantities, missing keys, rounding at the half cent, the free-shipping boundary from both sides,
-and customer types outside the table.
+quantities, missing keys, rounding at the half cent, per-unit accumulation that a multiplication
+would round to a different cent, the free-shipping boundary from both sides, and customer types
+outside the table.
 """
 from pricing import discount_rate, shipping_cost, subtotal, total
 
@@ -26,6 +27,16 @@ def test_subtotal_rounds_half_to_even_at_the_cent():
     assert subtotal([{"unit_price": 0.125, "quantity": 1}]) == 0.12
     assert subtotal([{"unit_price": 2.675, "quantity": 1}]) == 2.67
     assert subtotal([{"unit_price": 0.135, "quantity": 1}]) == 0.14
+
+
+def test_subtotal_accumulation_differs_from_a_multiplication_at_the_cent():
+    # prompt.md: "every input keeps the result it returns today, to the cent". A line is the unit
+    # price accumulated once per unit; 0.025 x 7 as a multiplication rounds to 0.18, the pinned
+    # accumulation to 0.17, and 0.635 x 7 the other way round.
+    assert subtotal([{"unit_price": 0.025, "quantity": 7}]) == 0.17
+    assert subtotal([{"unit_price": 0.635, "quantity": 7}]) == 4.44
+    assert subtotal([{"unit_price": 0.001, "quantity": 15}]) == 0.02
+    assert total([{"unit_price": 0.025, "quantity": 7}], "member") == 6.08
 
 
 def test_shipping_at_the_boundary_from_both_sides():

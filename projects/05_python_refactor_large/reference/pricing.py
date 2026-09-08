@@ -7,9 +7,19 @@ FREE_SHIPPING_THRESHOLD = 50.0
 TAX_RATE = 0.19
 
 
+def _line_total(unit_price, quantity):
+    """One line: the unit price accumulated once per unit, as the pinned behaviour does."""
+    # Not price * quantity: 0.001 fifteen times is 0.015000000000000003 and rounds to 0.02, the
+    # product 0.015 rounds to 0.01. The accumulation is behaviour, so it is kept.
+    line, counted = 0.0, 0
+    while counted < quantity:
+        line, counted = line + unit_price, counted + 1
+    return line
+
+
 def subtotal(items):
-    """Sum of price x quantity over the lines carrying both, rounded to the cent."""
-    return round(sum((item.get("unit_price") or 0.0) * (item.get("quantity") or 0)
+    """Sum of the lines carrying a positive price and quantity, rounded to the cent."""
+    return round(sum(_line_total(item.get("unit_price") or 0.0, item.get("quantity") or 0)
                      for item in items
                      if (item.get("unit_price") or 0.0) > 0 and (item.get("quantity") or 0) > 0), 2)
 

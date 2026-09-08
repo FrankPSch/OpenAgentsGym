@@ -15,10 +15,11 @@ PriceRow = namedtuple("PriceRow", "sku name unit_price currency pack_size tax_cl
 def _row(fields):
     """Build a PriceRow from six raw fields, or return None when the row is unusable."""
     sku, name, price, currency, pack, tax = [f.strip() for f in fields]
-    if not sku or currency != "EUR" or tax not in TAX_RATES or not pack.isdigit() or pack == "0":
+    if not sku or currency != "EUR" or tax not in TAX_RATES or not pack.isdigit():
         return None
     try:
-        return PriceRow(sku, name, parse_money(price), currency, int(pack), tax)
+        size = int(pack)
+        return PriceRow(sku, name, parse_money(price), currency, size, tax) if size > 0 else None
     except ValueError:
         return None
 

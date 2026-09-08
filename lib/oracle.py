@@ -10,7 +10,13 @@ supplies its own reference constants and any extra gate:
 Contract: run_verification.py <workspace> <run dir> [baseline|""] [holdout dir] [template dir]
 Exit 0 = pass (tests green plus any project gate), 1 = fail, 2 = environment or setup error.
 A pytest collection error caused by the agent's own code is a fail, not an environment error: it
-is scored from the junit.xml pytest wrote and exits 1 (see run_pytest).
+is scored from the junit.xml pytest wrote and exits 1 (see run_pytest). So is an emptied source
+tree, and so is a suite that outruns VERIFY_TIMEOUT_S -- the latter writes `timeout=1` beside the
+zero score. Only pytest itself being unrunnable is exit 2.
+
+The scored tree is made immune to workspace configuration first: pytest runs against an empty ini
+of the oracle's own with `-o addopts=`, and any pytest config or hook file the template does not
+ship is deleted and reported as `config_tampered=1` (chapter 11).
 
 The fourth argument is the run's copy of the project's held-out suite (chapter 11). It is scored
 separately and gates nothing: the exit code and `score` are the visible suite's, exactly as before.
@@ -32,12 +38,24 @@ recorded there, never scored, and the oracle does not write it.
 import ast
 import builtins
 import math
+import os
+import signal
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
 PARSIMONY_FLOOR = 0.8
+# Wall-clock bound on the pytest invocation (chapter 11). An infinite loop in generated code is a
+# statement about that code, not about the machine, so it is bounded instead of stalling a worker
+# forever; the run scores 0.00 and exits 1. run_master applies a second, wider guard of its own.
+VERIFY_TIMEOUT_S = 300
+# What run_pytest returns when that bound is reached -- distinct from None, which is the environment.
+TIMEOUT = "timeout"
+# Files pytest reads as configuration. One the template does not ship is the agent's, and an added
+# `pytest.ini` carrying `addopts = -k test_origin` deselects every test that contradicts the code:
+# 00_fail scored 1.00 that way. They are removed before scoring and counted as tampering.
+PYTEST_CONFIG_NAMES = ("pytest.ini", ".pytest.ini", "tox.ini", "setup.cfg", "pyproject.toml")
 
 DECISION = (ast.If, ast.For, ast.AsyncFor, ast.While, ast.ExceptHandler, ast.IfExp,
             ast.comprehension, ast.Assert)
@@ -210,8 +228,12 @@ def parsimony_factor(mi, mi_ref):
     MI already combines Halstead volume, cyclomatic complexity and size, so it supersedes the raw
     line count: a run that matches or beats the reference scores 1.0, and one that is bulkier or
     more convoluted scores proportionally less, bounded so it can never outweigh correctness.
+
+    An MI of 0 is the worst measurable code, not the absence of a measurement, so it takes the
+    floor: rewarding it with 1.0 gave an emptied or unparsable source tree the best factor there is.
+    Only an unset MI_REF -- no reference to divide by -- leaves the factor at 1.0.
     """
-    if not mi_ref or mi <= 0:
+    if not mi_ref:
         return 1.0
     return max(PARSIMONY_FLOOR, min(1.0, float(mi) / mi_ref))
 
@@ -261,11 +283,63 @@ def count_test_functions(workspace, targets):
     return total
 
 
+def strip_pytest_config(workspace, template):
+    """Delete every pytest configuration or hook file the template does not ship (chapter 11).
+
+    Restoring the tamper set only puts back what the template contains, so a file the agent *added*
+    survived it: a `pytest.ini` with `addopts = -k test_origin` deselected the contradictory tests
+    and 00_fail scored 1.00. Anything pytest reads as configuration or as a hook -- a `conftest.py`
+    at any depth, the ini/cfg/toml names -- is therefore removed before scoring and reported as
+    tampering; the row is then scored on the cleaned tree, exactly as a restored one is.
+
+    Returns the removed paths, relative and posix-style. Empty when the template is the workspace
+    (the standalone shape), where every such file is the project's own.
+    """
+    removed = []
+    for path in sorted(workspace.rglob("*")):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(workspace)
+        if any(part in SKIP_DIRS for part in rel.parts):
+            continue
+        if path.name != "conftest.py" and path.name not in PYTEST_CONFIG_NAMES:
+            continue
+        if (template / rel).is_file():
+            continue
+        path.unlink()
+        removed.append(rel.as_posix())
+    return removed
+
+
+def _kill_tree(proc):
+    """Kill the timed-out pytest and everything it started.
+
+    Killing the direct child alone leaves a subprocess it spawned holding the pipes, and the run
+    hangs on the read instead of on the child. On Windows `taskkill /T /F` walks the tree; elsewhere
+    the child was started in a session of its own, so one killpg reaches all of it.
+    """
+    try:
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            os.killpg(proc.pid, signal.SIGKILL)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    try:
+        proc.kill()
+    except OSError:
+        pass
+
+
 def run_pytest(workspace, junit, holdout=None, targets=None):
     """Run the template's test files and, when there is one, the held-out suite in one invocation.
 
-    Returns ((total, passed), (total_holdout, passed_holdout)) or None on an environment error;
-    the second pair is (0, 0) when no held-out suite was collected.
+    Returns ((total, passed), (total_holdout, passed_holdout), collected_visible), None on an
+    environment error, or TIMEOUT when the invocation outran VERIFY_TIMEOUT_S. The second pair is
+    (0, 0) when no held-out suite was collected; `collected_visible` counts every visible test case
+    the junit carries, skipped ones included, which is what the caller compares against the
+    template's own test-function count.
 
     An environment error is "pytest could not run at all" and nothing else: pytest missing, a usage
     or internal error (exit 3, 4), or no junit.xml written. Whenever pytest wrote a junit.xml that
@@ -290,19 +364,38 @@ def run_pytest(workspace, junit, holdout=None, targets=None):
     files = [str(workspace / n) for n in (targets or []) if (workspace / n).is_file()]
     if not files:
         return None
-    argv = [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+    # pytest is run immune to whatever configuration the workspace holds: `-c <an empty ini the
+    # oracle writes beside the junit>` makes that file the one and only inifile, so pytest.ini,
+    # tox.ini, setup.cfg and pyproject.toml in the workspace are ignored, and `-o addopts=` clears
+    # any addopts that reached it another way. Without this an added `addopts = -k ...` silently
+    # deselected the failing tests (chapter 11).
+    empty_ini = junit.parent / "pytest_empty.ini"
+    empty_ini.parent.mkdir(parents=True, exist_ok=True)
+    empty_ini.write_text("[pytest]\n", encoding="utf-8")
+    argv = [sys.executable, "-m", "pytest", "-q", "-c", str(empty_ini), "-o", "addopts=",
+            "-p", "no:cacheprovider",
             "--rootdir", str(workspace), "--junitxml", str(junit)] + files
     names = {p.name for p in holdout.glob("test_*.py")} if holdout else set()
     if names:
         argv.append(str(holdout))
-    p = subprocess.run(argv, cwd=str(workspace), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    err = (p.stderr or b"").decode("utf-8", "replace")
-    if p.returncode == 1 and "No module named pytest" in err:
+    # Popen rather than subprocess.run, so the timeout can kill the whole tree: an infinite loop in
+    # the code under test stalled a worker forever (chapter 11, VERIFY_TIMEOUT_S).
+    kwargs = {} if os.name == "nt" else {"start_new_session": True}
+    proc = subprocess.Popen(argv, cwd=str(workspace), stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, **kwargs)
+    try:
+        _, stderr = proc.communicate(timeout=VERIFY_TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        _kill_tree(proc)
+        proc.communicate()
+        return TIMEOUT
+    err = (stderr or b"").decode("utf-8", "replace")
+    if proc.returncode == 1 and "No module named pytest" in err:
         return None
     # Exit 3 and 4 are pytest's own internal and usage errors, and no junit.xml means pytest never
     # got as far as writing one: those are the environment. Every other exit code with a junit
     # beside it is scored from that file -- see the docstring.
-    if p.returncode in (3, 4) or not junit.is_file():
+    if proc.returncode in (3, 4) or not junit.is_file():
         return None
     try:
         suite = ET.parse(str(junit)).getroot()
@@ -314,6 +407,9 @@ def run_pytest(workspace, junit, holdout=None, targets=None):
 
     stems = {n[:-3] for n in names}
     counts = {False: [0, 0], True: [0, 0]}
+    # Every visible case the junit carries, skipped ones included: `total` drops a skip on purpose,
+    # so it cannot answer "was every test the template defines actually collected".
+    collected = {False: 0, True: 0}
     seen = 0
     for case in suite.iter("testcase"):
         seen += 1
@@ -326,6 +422,7 @@ def run_pytest(workspace, junit, holdout=None, targets=None):
         ident = case.get("classname", "") or case.get("name", "")
         is_holdout = (path.replace("\\", "/").rsplit("/", 1)[-1] in names if path
                       else any(part in stems for part in ident.split(".")))
+        collected[is_holdout] += 1
         # A skipped test is neither passed nor failed, so it leaves the fraction entirely: a
         # skipif on the machine's interpreter would otherwise lower the score for a reason that
         # has nothing to do with the methodology.
@@ -340,7 +437,11 @@ def run_pytest(workspace, junit, holdout=None, targets=None):
         # at a blank score; 0 when even that cannot be read, and 0/0 is 0.00 as well. A run whose
         # cases were all skipped is not this case -- those left the fraction on purpose.
         counts[False][0] = count_test_functions(workspace, targets)
-    return tuple(counts[False]), tuple(counts[True])
+        # The same number is the collected count here, so the caller's shortfall check -- which
+        # would otherwise add this denominator a second time -- is a no-op on a run that collected
+        # nothing at all. That run already scores 0.00 over the full suite.
+        collected[False] = counts[False][0]
+    return tuple(counts[False]), tuple(counts[True]), collected[False]
 
 
 def main(size_ref=None, mi_ref=None, require_smaller_than_baseline=False,
@@ -365,6 +466,13 @@ def main(size_ref=None, mi_ref=None, require_smaller_than_baseline=False,
     target = run_dir / ("verification_baseline.txt" if baseline else "verification.txt")
     metrics = run_dir / ("metrics_baseline.txt" if baseline else "metrics.txt")
 
+    # Before the metrics and before pytest: a pytest config or hook file the template does not ship
+    # is the agent's, it is deleted, and the row is scored on the cleaned tree (chapter 11). The
+    # removal is recorded in verification.txt as `config_tampered=1`, which the harness lifts into
+    # res_tests_tampered -- a restore that only puts back template files cannot see this class.
+    stripped = strip_pytest_config(workspace, template)
+    marks = "config_tampered=1\n" if stripped else ""
+
     m = code_metrics(workspace)
     sloc = m["sloc"]
     # mi_ref is written for audit -- it is what the factor was divided by -- and is deliberately
@@ -384,9 +492,25 @@ def main(size_ref=None, mi_ref=None, require_smaller_than_baseline=False,
                         holdout, targets)
     if result is None:
         return 2
-    (total, passed), (total_h, passed_h) = result
-    if sloc == 0:
-        return 2
+    expected = count_test_functions(template, targets)
+    if result is TIMEOUT:
+        # A suite that never finishes is a failure of the code under test, not a broken machine, so
+        # it is exit 1 with score 0.00 over the template's own test count -- res_verification_error
+        # stays false and res_verification_exit stays 1. The `timeout=1` marker is what lets the
+        # harness say TIMEOUT in run.log without a column of its own (chapter 11).
+        target.write_text("passed=0\ntotal=%s\nscore=0.00\npassed_holdout=\ntotal_holdout=\n"
+                          "score_holdout=\ntimeout=1\n%s" % (expected, marks), encoding="utf-8")
+        return 1
+    (total, passed), (total_h, passed_h), collected = result
+    # An emptied or deleted implementation is a scored fail, never an environment error: pytest ran
+    # and reported the import failures, and returning 2 here dropped that row out of the statistics
+    # with a blank score. sloc 0 leaves the metrics at zero and MI 0 takes the parsimony floor.
+    #
+    # Whatever pytest collected must cover what the template defines. A shortfall means tests were
+    # deselected or made uncollectable -- the very thing an added pytest.ini bought -- so the
+    # missing ones are counted as failures instead of shrinking the denominator (chapter 11).
+    if collected < expected:
+        total += expected - collected
 
     # The visible suite alone defines passed/total/score and the exit code. The held-out suite is
     # a second, unscaled fraction beside them: res_score - res_score_holdout is what measures
@@ -398,8 +522,8 @@ def main(size_ref=None, mi_ref=None, require_smaller_than_baseline=False,
     if total_h:
         holdout_lines = "passed_holdout=%s\ntotal_holdout=%s\nscore_holdout=%.2f\n" % (
             passed_h, total_h, float(passed_h) / total_h)
-    target.write_text("passed=%s\ntotal=%s\nscore=%.2f\n%s" % (passed, total, score,
-                                                              holdout_lines),
+    target.write_text("passed=%s\ntotal=%s\nscore=%.2f\n%s%s" % (passed, total, score,
+                                                                holdout_lines, marks),
                       encoding="utf-8")
 
     green = bool(total) and passed == total

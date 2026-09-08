@@ -60,6 +60,18 @@ def test_the_comma_decimal_of_the_price_list_becomes_cents():
     assert parse_money("0,89") == 89 and parse_money("199,00") == 19900
 
 
+def test_a_zero_padded_zero_pack_size_is_skipped_like_a_plain_zero(tmp_path):
+    # prompt.md: a row is skipped unless it has "... a positive integer `pack_size` ...".
+    # "00" is written with a leading zero but is still zero, so the row is not usable.
+    path = write_csv(tmp_path, HEADER + "\nSKU-A;Locher;6,40;EUR;00;standard\n"
+                                        "SKU-B;Locher;6,40;EUR;000;standard\n"
+                                        "SKU-C;Ordner;3,90;EUR;5;standard\n")
+    prices, skipped = load_pricelist(path)
+    assert list(prices) == ["SKU-C"]
+    assert prices["SKU-C"].pack_size == 5
+    assert [row[0] for row in skipped] == ["SKU-A", "SKU-B"]
+
+
 def test_an_unknown_json_key_is_ignored_at_every_level(tmp_path):
     path = write_json(tmp_path, {"feed_version": 2, "generated": "2026-04-01", "source": "erp",
                                  "orders": [{"order_id": "C-1", "customer": "K", "priority": "high",

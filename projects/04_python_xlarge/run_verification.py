@@ -6,8 +6,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "lib"))
 from oracle import main  # noqa: E402
 
-SIZE_REF = 176                      # SLOC of a known-good solution; recorded, not scored
-MI_REF = 16.1                     # Maintainability Index of that solution; scores parsimony
+SIZE_REF = 177                      # SLOC of a known-good solution; recorded, not scored
+MI_REF = 16.0                     # Maintainability Index of that solution; scores parsimony
 REQUIRE_SMALLER_THAN_BASELINE = False
 EXPECTS_TESTS = True
 

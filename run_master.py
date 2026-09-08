@@ -41,6 +41,11 @@ FIXED_TAMPER = ("conftest.py", "pytest.ini", "pyproject.toml", ".requirements", 
 PLACEHOLDER = re.compile(r"\{\{([a-z_]+)=([^}]*)\}\}")
 VERSION_RE = re.compile(r"<!--\s*mth_version:\s*(.*?)\s*-->")
 CLI_TIMEOUT_S = 3600
+# The second layer under lib/oracle.py's own VERIFY_TIMEOUT_S (300 s, chapter 11): wide enough that
+# a normal oracle run -- pytest plus the metrics -- never reaches it, so it fires only when the
+# oracle process hangs somewhere pytest's own bound cannot see. Without either, an infinite loop in
+# generated code stalled a matrix worker forever.
+ORACLE_TIMEOUT_S = 420
 UTF8_ENV = {"PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
 
 # Every long option step7 puts on the launch line, plus -p. The CLI accepts unknown options
@@ -83,6 +88,41 @@ REVIEW_SEP = "\n\n" + "-" * 70 + "\n\n"
 _CLI_CACHE = {}
 
 
+def kill_tree(proc):
+    """Kill a timed-out subprocess and everything it started.
+
+    Killing the direct child alone leaves its own children holding the pipes and the harness hangs
+    on the read instead. `taskkill /T /F` walks the tree on Windows; elsewhere the child was started
+    in a session of its own, so one killpg reaches all of it.
+    """
+    try:
+        if IS_WIN:
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            os.killpg(proc.pid, 9)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    try:
+        proc.kill()
+    except OSError:
+        pass
+
+
+def template_test_count(template):
+    """How many `test_*` functions the template's visible suite defines (chapter 11).
+
+    The denominator the harness falls back to when it has to write a verification.txt itself -- an
+    oracle killed by ORACLE_TIMEOUT_S wrote none -- so the row scores 0.00 over the real suite size
+    rather than dropping out of the statistics with a blank score.
+    """
+    total = 0
+    for path in sorted(template.glob("test_*.py")):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        total += len(re.findall(r"^\s*(?:async\s+)?def\s+test\w*\s*\(", text, re.M))
+    return total
+
+
 def child_env(extra=None):
     """os.environ plus a forced UTF-8 stdio, so Windows cp1252 cannot corrupt a pipe."""
     env = os.environ.copy()
@@ -122,6 +162,7 @@ COLUMNS = [
     "res_verification_passed", "res_verification_error",
     "res_verification_exit",
     "res_review_findings", "res_review_issues", "res_review_actionable", "res_review_fixed",
+    "res_review_error",
     "res_tests_tampered", "res_files_added", "res_files_added_src", "res_diff_lines",
     "res_lines_added",
     "res_lines_removed", "res_artifacts", "res_subtype", "res_hit_turn_cap",
@@ -427,14 +468,18 @@ def render(text, source):
     return PLACEHOLDER.sub(lambda m: m.group(2), text), seen
 
 
-def step5_deploy_entry_file(methodology, workspace):
+def step5_deploy_entry_file(run_dir, workspace):
     """Render the placeholders and deploy the entry file as CLAUDE.md. Empty copy_to_root is fine.
 
     The target name is unconditional: `AGENTS.md` is the name the same source file takes under the
     GPT branch, and that branch is open (chapter 18). The source is named `agents_or_claude.md`
     because the text is already portable between the two -- only the destination waits.
+
+    The source is the run's own snapshot (step 3), never `methodology/<M>/`: deploying from the
+    source directory meant an edit between the two steps gave the agent a file the snapshot does
+    not contain, so the run directory no longer recorded what ran (chapter 12, step 5).
     """
-    src = ROOT / "methodology" / methodology / "copy_to_root" / "agents_or_claude.md"
+    src = run_dir / "methodology" / "copy_to_root" / "agents_or_claude.md"
     blanks = {"mth_chars": 0, "mth_version": ""}
     blanks.update({"mth_param_" + k: "" for k in PARAM_KEYS})
     if not src.is_file():
@@ -486,10 +531,14 @@ def read_triple(path):
 def copy_holdout(project, run_dir):
     """Copy projects/<P>/holdout_tests/*.py into local/runs/<id>/holdout/ and return that directory.
 
-    Idempotent: pre-flight and step 8 both call it. The held-out suite never enters the
-    project_workspace -- the agent must not see the tests it is scored on a second time, and a
-    suite it cannot reach is a suite it cannot weaken, so it stays out of the tamper set.
-    Returns None when the project ships none.
+    Idempotent. The held-out suite never enters the project_workspace -- the agent must not see the
+    tests it is scored on a second time, and a suite it cannot reach is a suite it cannot weaken,
+    so it stays out of the tamper set. Returns None when the project ships none.
+
+    **It must not exist while the agent runs.** `local/runs/<id>/holdout/` is one directory above
+    the workspace the agent works in, so any `Bash(python:*)` call could read `../holdout/` and fit
+    to it. Pre-flight therefore deletes it again before step 7 (drop_holdout) and step 8 re-creates
+    it after the agent has exited (chapter 12, steps 6 and 8).
     """
     src = ROOT / "projects" / project / "holdout_tests"
     files = sorted(src.glob("*.py")) if src.is_dir() else []
@@ -502,6 +551,11 @@ def copy_holdout(project, run_dir):
     return dst
 
 
+def drop_holdout(run_dir):
+    """Remove local/runs/<id>/holdout/ again. Called before the agent is launched (chapter 12)."""
+    shutil.rmtree(str(run_dir / "holdout"), ignore_errors=True)
+
+
 def run_oracle(project, run_dir, workspace, baseline=False, holdout=None, out_dir=None):
     """Run the project's oracle. out_dir is where it writes, defaulting to the run directory.
 
@@ -510,13 +564,35 @@ def run_oracle(project, run_dir, workspace, baseline=False, holdout=None, out_di
 
     The template is the fifth argument: it is what tells the oracle which test files exist, so
     pytest collects the project's suite and never a test the agent wrote (chapter 11).
+
+    The call is bounded by ORACLE_TIMEOUT_S. The oracle bounds pytest itself (VERIFY_TIMEOUT_S), so
+    this is the second layer and fires only when the oracle process hangs outside pytest: the tree
+    is killed, the run is recorded as a failing run with score 0.00 rather than stalling a worker,
+    and run.log says TIMEOUT (chapter 11).
     """
     out_dir = out_dir or run_dir
     argv = [str(venv_python(run_dir)), str(ROOT / "projects" / project / "run_verification.py"),
             str(workspace), str(out_dir), "baseline" if baseline else "",
             str(holdout) if holdout else "",
             str(ROOT / "projects" / project / "project_reset_template")]
-    return subprocess.run(argv, cwd=str(run_dir), env=child_env()).returncode
+    kwargs = {} if IS_WIN else {"start_new_session": True}
+    proc = subprocess.Popen(argv, cwd=str(run_dir), env=child_env(), **kwargs)
+    try:
+        proc.communicate(timeout=ORACLE_TIMEOUT_S)
+        return proc.returncode
+    except subprocess.TimeoutExpired:
+        kill_tree(proc)
+        proc.communicate()
+        target = out_dir / ("verification_baseline.txt" if baseline else "verification.txt")
+        if not target.is_file():
+            target.write_text("passed=0\ntotal=%s\nscore=0.00\npassed_holdout=\ntotal_holdout=\n"
+                              "score_holdout=\ntimeout=1\n"
+                              % template_test_count(ROOT / "projects" / project
+                                                    / "project_reset_template"),
+                              encoding="utf-8")
+        print("TIMEOUT: %s exceeded %ds -- killed, scored 0.00"
+              % (Path(argv[1]).name, ORACLE_TIMEOUT_S))
+        return 1
 
 
 def cli_help_and_version():
@@ -625,8 +701,17 @@ def step6_environment_and_preflight(cfg, project, template, workspace, run_dir):
                 % (run_dir / "pip.log"), 4)
 
     oracle_less = not list(template.glob("test_*.py"))
-    rc = run_oracle(project, run_dir, workspace, baseline=True,
-                    holdout=copy_holdout(project, run_dir))
+    # The held-out suite is copied for the baseline and removed again before the agent can exist:
+    # it lives one directory above the workspace, and `../holdout/` is readable by any python the
+    # agent runs. Step 8 re-creates it (chapter 12, steps 6 and 8).
+    try:
+        rc = run_oracle(project, run_dir, workspace, baseline=True,
+                        holdout=copy_holdout(project, run_dir))
+    finally:
+        drop_holdout(run_dir)
+    if metric_value(run_dir / "verification_baseline.txt", "timeout") == "1":
+        die("ABORT: pre-flight verification timed out on %s -- see verification_baseline.txt"
+            % project, 4)
     if oracle_less:
         if rc == 2:
             die("ABORT: pre-flight environment error (exit 2) on oracle-less project %s" % project, 4)
@@ -780,7 +865,7 @@ def step7_launch_cli(cfg, project, run_dir, workspace, tools):
                               run_dir / "result.json", run_dir / "stderr.txt")
 
 
-def step7a_best_of_n(cfg, project, methodology, run_dir, template, workspace, tools, n):
+def step7a_best_of_n(cfg, project, run_dir, template, workspace, tools, n):
     """Run the implementer N times and keep the best candidate (chapter 12, step 7a).
 
     Sequential by design. Each candidate gets its own fresh copy of the template with the entry
@@ -797,13 +882,16 @@ def step7a_best_of_n(cfg, project, methodology, run_dir, template, workspace, to
     itself is untouched.
     """
     prompt = (ROOT / "projects" / project / "prompt.md").read_text(encoding="utf-8")
-    holdout = copy_holdout(project, run_dir)
+    # No held-out suite here. Candidates are launched and scored in turn, so a holdout/ directory
+    # copied for candidate 1 would sit one level above candidate 2's workspace while its agent runs
+    # (chapter 12, step 7a). Selection is on the visible res_score and nothing else, and the
+    # winner's held-out fraction is measured for the row in step 8.
     names = tamper_names(template)
     cands = []
     for i in range(1, n + 1):
         ws = run_dir / ("project_workspace_%d" % i)
         shutil.copytree(template, ws)
-        step5_deploy_entry_file(methodology, ws)
+        step5_deploy_entry_file(run_dir, ws)
         wall, timed_out = launch_implementer(cfg, run_dir, ws, prompt, tools,
                                              run_dir / ("result_%d.json" % i),
                                              run_dir / ("stderr_%d.txt" % i))
@@ -819,7 +907,7 @@ def step7a_best_of_n(cfg, project, methodology, run_dir, template, workspace, to
         base = run_dir / "metrics_baseline.txt"
         if base.is_file():
             shutil.copy2(base, out_dir / "metrics_baseline.txt")
-        run_oracle(project, run_dir, scored, baseline=False, holdout=holdout, out_dir=out_dir)
+        run_oracle(project, run_dir, scored, baseline=False, holdout=None, out_dir=out_dir)
         triple = read_triple(out_dir / "verification.txt")
         data = result_record((run_dir / ("result_%d.json" % i)).read_text(encoding="utf-8"))
         try:
@@ -869,7 +957,7 @@ def issue_lines(run_dir):
     return out
 
 
-def step7c_feedback(cfg, project, run_dir, workspace, tools):
+def step7c_feedback(cfg, project, run_dir, workspace, tools, review_error=False):
     """Act on the review: one more implementer invocation on the `issue:` lines (step 7c).
 
     Same launch line, same tools, same cwd and the same budget key as step 7 -- it is the
@@ -885,6 +973,11 @@ def step7c_feedback(cfg, project, run_dir, workspace, tools):
            "tk_fix_cache_write": "", "tk_fix_cache_read": "", "tk_fix_cost_usd": "",
            "prf_fix_s": ""}
     if not review_feedback_on(cfg):
+        return row
+    if review_error:
+        # The review pass failed, so `no issue: lines` says nothing about the code. res_review_fixed
+        # stays blank -- 0 would claim the review ran and found nothing to do (chapter 13).
+        print("feedback: skipped -- res_review_error=1, the review produced no findings to act on")
         return row
     issues = issue_lines(run_dir)
     if not issues:
@@ -995,10 +1088,12 @@ def step7b_review(cfg, project, run_dir, workspace, template):
     """
     mode = cfg["REVIEW_PASS"]
     row = {"res_review_findings": "", "res_review_issues": "", "res_review_actionable": "",
+           "res_review_error": "",
            "tk_review_input": "", "tk_review_output": "", "tk_review_cache_write": "",
            "tk_review_cache_read": "", "tk_review_cost_usd": "", "prf_review_s": ""}
     if mode == "none":
         return row
+    row["res_review_error"] = 0
     weight = review_weight(cfg)
     stdin = REVIEW_SEP.join([
         review_prompt_path(cfg).read_text(encoding="utf-8").strip(),
@@ -1046,6 +1141,12 @@ def step7b_review(cfg, project, run_dir, workspace, template):
             rc = "timeout"
         wall += time.time() - started
         codes.append(str(rc))
+        # A reviewer that exits non-zero having printed nothing did not review: counting it as zero
+        # findings and zero cost recorded a failed invocation as a clean review that found nothing,
+        # and the feedback step then had nothing to fix. It is an error, and the counts are dropped
+        # rather than reported partial (chapter 12, step 7b).
+        if rc != 0 and not (out or "").strip():
+            row["res_review_error"] = 1
         (run_dir / ("review_stderr%s.txt" % suffix)).write_text(err, encoding="utf-8")
         text = out
         if mode == "same_model":
@@ -1084,6 +1185,13 @@ def step7b_review(cfg, project, run_dir, workspace, template):
     else:
         merged = "\n".join("# reviewer %d\n%s" % (i + 1, b.strip()) for i, b in enumerate(blocks))
     (run_dir / "review.md").write_text(merged, encoding="utf-8")
+    if row["res_review_error"]:
+        # Blank counts, not zeros: a zero says the reviewer read the diff and found nothing, which
+        # is a measurement, and this pass produced none. Step 7c is skipped for the same reason.
+        print("review: mode=%s weight=%d exit=%s ERROR -- an invocation exited non-zero with no "
+              "output; counts blank, no fix call (see review_stderr*.txt)"
+              % (mode, weight, ",".join(codes)))
+        return row
     findings = issues = actionable = 0
     for line in merged.splitlines():
         m = REVIEW_LINE.match(line)
@@ -1229,13 +1337,23 @@ def step8_tamper_and_verify(project, template, workspace, run_dir):
     rc = run_oracle(project, run_dir, workspace, baseline=False,
                     holdout=copy_holdout(project, run_dir))
     triple = read_triple(run_dir / "verification.txt")
+    # The oracle deletes any pytest config or hook file the template does not ship and says so with
+    # `config_tampered=1`: the restore above only puts template files back, so an *added* pytest.ini
+    # or conftest.py is invisible to it and would otherwise leave res_tests_tampered false
+    # (chapter 11). A timeout is reported the same way, and run.log is where it is said.
+    config_tampered = metric_value(run_dir / "verification.txt", "config_tampered") == "1"
+    if config_tampered:
+        print("tamper: pytest config/hook file(s) not in the template were removed before scoring")
+    if metric_value(run_dir / "verification.txt", "timeout") == "1":
+        print("TIMEOUT: verification exceeded the oracle's own bound -- scored 0.00")
     # The oracle's own verdict, not a threshold on the score: a project with an extra gate
     # (05_python_refactor_large's strict reduction) can be fully green on the tests and still not
     # have done the task, and score == 1.0 would read that as a pass. Blank stays blank -- a
     # project that ships no tests measures nothing and must not report false.
     passed = "" if triple["score"] == "" else str(rc == 0).lower()
     added, added_src, plus, minus = diff_stats(template, workspace)
-    out = {"res_tests_tampered": "" if not names else str(tampered).lower(),
+    out = {"res_tests_tampered": ("" if not names and not config_tampered
+                                  else str(tampered or config_tampered).lower()),
             "res_files_added": added,
             "res_files_added_src": added_src,
             "res_diff_lines": plus + minus,
@@ -1416,7 +1534,7 @@ def _one_run_body(cfg, project, methodology, repeat, stamp, run_id, run_dir):
     print("=== %s" % run_id)
     step3_snapshot_methodology(methodology, run_dir)
     template, workspace = step4_copy_workspace(project, run_dir)
-    mth = step5_deploy_entry_file(methodology, workspace)
+    mth = step5_deploy_entry_file(run_dir, workspace)
     _, user_md, cli_version = step6_environment_and_preflight(cfg, project, template, workspace,
                                                               run_dir)
     baseline = read_triple(run_dir / "verification_baseline.txt")
@@ -1424,8 +1542,7 @@ def _one_run_body(cfg, project, methodology, repeat, stamp, run_id, run_dir):
     n = best_of_n(cfg)
     bestof = {}
     if n > 1:
-        best, bestof = step7a_best_of_n(cfg, project, methodology, run_dir, template, workspace,
-                                        tools, n)
+        best, bestof = step7a_best_of_n(cfg, project, run_dir, template, workspace, tools, n)
         wall, timed_out = best["wall"], best["timed_out"]
     else:
         wall, timed_out = step7_launch_cli(cfg, project, run_dir, workspace, tools)
@@ -1434,7 +1551,8 @@ def _one_run_body(cfg, project, methodology, repeat, stamp, run_id, run_dir):
     # BEST_OF_N it reviews the chosen workspace alone.
     rev = step7b_review(cfg, project, run_dir, workspace, template)
     # 7c after 7b and before 8: the fix call acts on the review, and the oracle scores what it left.
-    fix = step7c_feedback(cfg, project, run_dir, workspace, tools)
+    fix = step7c_feedback(cfg, project, run_dir, workspace, tools,
+                          review_error=rev.get("res_review_error") == 1)
     res = step8_tamper_and_verify(project, template, workspace, run_dir)
     row = {"id_run": run_id, "id_timestamp": stamp, "id_repeat": repeat, "prj_name": project,
            "mth_name": methodology,
@@ -1464,11 +1582,25 @@ def _one_run_body(cfg, project, methodology, repeat, stamp, run_id, run_dir):
     return out
 
 
+def read_table(path):
+    """The published results_repository.csv as a list of records, empty when there is none."""
+    if not path.is_file():
+        return []
+    with open(str(path), newline="", encoding="utf-8") as fh:
+        return [{plain_name(k): v for k, v in rec.items() if k} for rec in csv.DictReader(fh)]
+
+
 def consolidate():
     """Merge every local/runs/*/results_run.csv into results_repository.csv.
 
     Rows are matched by column name, not by position, and a column a run predates is left blank.
     A schema change therefore never orphans earlier runs (chapter 13).
+
+    **The published table is an input, not only an output.** `local/runs/` is git-ignored, so a
+    fresh checkout has none of the runs behind the published rows: rebuilding from the run
+    directories alone emptied the table on the first consolidation after a clone. Every row already
+    in the table whose `id_run` has no local `results_run.csv` is therefore kept as it stands, and a
+    local run overwrites the row of the same id. `local/runs_archive/` is still not read.
 
     A repeat that aborted has no results_run.csv and contributes no row, which is correct and
     invisible -- so the count is printed: a campaign that expected 42 rows and got 40 must not have
@@ -1477,17 +1609,39 @@ def consolidate():
     paths = sorted((RUNS).glob("*/results_run.csv"))
     aborted = sorted(p.parent.name for p in (RUNS).glob("*/abort.txt"))
     records, seen = [], []
+
+    def note(rec):
+        for k in rec:
+            if k not in seen:
+                seen.append(k)
+
+    # Order: the published rows first, as they stand, then the local runs -- a local row replaces
+    # the table row of the same id in place, so a re-consolidation does not reshuffle the file.
+    index = {}
+    for rec in read_table(RESULTS_TABLE):
+        note(rec)
+        index[rec.get("id_run", "")] = len(records)
+        records.append(rec)
+    kept = len(records)
+    from_runs = 0
     for p in paths:
         with open(str(p), newline="", encoding="utf-8") as fh:
             for rec in csv.DictReader(fh):
                 rec = {plain_name(k): v for k, v in rec.items() if k}
-                records.append(rec)
-                for k in rec:
-                    if k not in seen:
-                        seen.append(k)
-    columns = [c for c in COLUMNS if c in seen] + [c for c in seen if c not in COLUMNS]
-    if not columns:
-        columns = list(COLUMNS)
+                note(rec)
+                from_runs += 1
+                rid = rec.get("id_run", "")
+                if rid and rid in index:
+                    kept -= 1
+                    records[index[rid]] = rec
+                else:
+                    index[rid] = len(records)
+                    records.append(rec)
+    # The header is COLUMNS whole, plus anything a row carries that COLUMNS does not. Writing only
+    # the columns some row had left the published table one column short of the schema for as long
+    # as no run had produced the new one, and chapter 13 states the header *is* COLUMNS: a reader
+    # comparing the file against the chapter would have found a column missing rather than blank.
+    columns = list(COLUMNS) + [c for c in seen if c not in COLUMNS]
     out = RESULTS_TABLE
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(str(out), "w", newline="", encoding="utf-8") as fh:
@@ -1497,8 +1651,13 @@ def consolidate():
             w.writerow([rec.get(c, "") for c in columns])
     missing = [c for c in COLUMNS if c not in seen]
     print("wrote %s (%d rows, %d columns)" % (out, len(records), len(columns)))
+    print("  %d row(s) kept from the published table, %d from local/runs" % (kept, from_runs))
+    for line in mixed_campaign_report(records):
+        print("  %s" % line)
     if missing:
-        print("  columns not present in any run yet: %s" % ", ".join(missing))
+        # Informational: the column is in the header with a blank cell in every row, which is what
+        # a column no run has produced yet looks like. Not a warning -- nothing is missing.
+        print("  blank in every row (no run carries them yet): %s" % ", ".join(missing))
     if aborted:
         print("  aborted repeats: %d (see local/runs/<id>/abort.txt)" % len(aborted))
         for run_id in aborted:
@@ -1512,6 +1671,42 @@ GATE_INCUMBENT_MTH = "08_process_doctypes_roles_guardrails"
 # rename that quietly dropped a campaign's baseline arm would report "no incumbent rows" as PASS.
 GATE_INCUMBENT_LEGACY = "08_all"
 GATE_ANCHOR_PRJ = "00_fail"
+
+
+# Chapter 17 forbids pooling rows whose constants differ, and cfg_campaign is only the config
+# file's base name: two different files of the same name, or one edited between two runs, share the
+# label. These are the columns one campaign must agree on for the label to mean anything.
+CAMPAIGN_CONSTANTS = ("cfg_model", "cfg_effort", "cfg_review_pass", "cfg_review_model",
+                      "cfg_fix_model", "cfg_review_weight", "cfg_tools")
+
+
+def mixed_constants(rows):
+    """The CAMPAIGN_CONSTANTS columns on which these rows disagree -> the differing values.
+
+    Empty when the rows really are one campaign. A non-empty result means the label is pooling runs
+    chapter 17 says are two treatments, which no column can repair after the fact.
+    """
+    out = {}
+    for col in CAMPAIGN_CONSTANTS:
+        values = sorted({(r.get(col) or "").strip() for r in rows})
+        if len(values) > 1:
+            out[col] = values
+    return out
+
+
+def mixed_campaign_report(rows):
+    """One line per campaign whose rows disagree on a constant -- printed by --consolidate."""
+    groups = {}
+    for r in rows:
+        groups.setdefault((r.get("cfg_campaign") or "(no cfg_campaign)").strip(), []).append(r)
+    lines = []
+    for campaign in sorted(groups):
+        mixed = mixed_constants(groups[campaign])
+        if mixed:
+            lines.append("MIXED campaign %s: %s (chapter 17 -- these rows are not one campaign)"
+                         % (campaign, "; ".join("%s=%s" % (c, "|".join(v))
+                                                for c, v in sorted(mixed.items()))))
+    return lines
 
 
 def median(values):
@@ -1558,6 +1753,12 @@ def gate(campaign=None, apparatus_only=False):
     ranking rows the cheap campaign was never meant to buy, and adds the one the cheap campaign
     exists to answer: no repeat aborted and no row carries a `res_subtype` other than `success`
     (chapter 16).
+
+    Two verdicts other than PASS/FAIL exist, and both exit 1. A campaign whose rows disagree on the
+    constants chapter 17 pools by is MIXED: the label is the config file's base name, so an edited
+    file or a second file of that name shares it, and no condition over pooled rows means anything.
+    A ranking project that has one anchor of condition 1 but not the other is INCOMPLETE: skipping
+    it silently let a campaign missing half its gate print PASS.
     """
     path = RESULTS_TABLE
     if not path.is_file():
@@ -1579,8 +1780,13 @@ def gate(campaign=None, apparatus_only=False):
              " -- apparatus only" if apparatus_only else ""))
     ok = True
 
-    def verdict(passed, title, detail):
-        print("  %s  %s" % ("PASS" if passed else "FAIL", title))
+    # The rollup word, most severe first: MIXED (the rows are not one campaign, so nothing
+    # computed over them means anything) beats INCOMPLETE (a condition could not be judged)
+    # beats FAIL beats PASS. Only PASS exits 0.
+    mixed_any = incomplete = False
+
+    def verdict(passed, title, detail, label=None):
+        print("  %s  %s" % (label or ("PASS" if passed else "FAIL"), title))
         for line in detail:
             print("        %s" % line)
         return passed
@@ -1590,9 +1796,22 @@ def gate(campaign=None, apparatus_only=False):
         print("")
         print("campaign %s -- %d row(s)" % (campaign, len(rs)))
 
+        # Before any condition: one label must stand for one set of constants (chapter 17). Rows
+        # that disagree are two campaigns wearing one name, and a condition over them is arithmetic
+        # on a mixture rather than a statement about a campaign.
+        mixed = mixed_constants(rs)
+        if mixed:
+            mixed_any = True
+            ok &= verdict(False, "the campaign's rows share their constants",
+                          ["%s: %s" % (c, " | ".join(v or "(blank)" for v in vals))
+                           for c, vals in sorted(mixed.items())]
+                          + ["chapter 17: rows differing on these columns are not pooled"],
+                          label="MIXED")
+
         detail, verdicts = [], []
         projects = ([] if apparatus_only
                     else sorted({r.get("prj_name", "") for r in rs} - {GATE_ANCHOR_PRJ}))
+        half = []
         for prj in projects:
             def scores(*names):
                 return [s for s in (as_float(r.get("res_score"))
@@ -1601,7 +1820,15 @@ def gate(campaign=None, apparatus_only=False):
                         if s is not None]
             bad = scores(GATE_ANCHOR_MTH)
             good = scores(GATE_INCUMBENT_MTH, GATE_INCUMBENT_LEGACY)
+            if not bad and not good:
+                # Not a ranking project of this campaign at all -- the smoke run on
+                # 01_python_small carries neither anchor and is not a gap in the gate.
+                continue
             if not bad or not good:
+                # One anchor and not the other: the comparison cannot be made, and skipping the
+                # project let a campaign missing half its gate print PASS (chapter 16).
+                half.append("%s: %s rows=%d, %s rows=%d -- the other anchor is missing"
+                            % (prj, GATE_ANCHOR_MTH, len(bad), GATE_INCUMBENT_MTH, len(good)))
                 continue
             m_bad, m_good = median(bad), median(good)
             verdicts.append(m_bad < m_good)
@@ -1614,9 +1841,15 @@ def gate(campaign=None, apparatus_only=False):
             detail.append("no project with both %s and %s rows" % (GATE_ANCHOR_MTH,
                                                                    GATE_INCUMBENT_MTH))
         if not apparatus_only:
-            ok &= verdict(bool(verdicts) and all(verdicts),
-                          "%s scores worse than %s" % (GATE_ANCHOR_MTH, GATE_INCUMBENT_MTH),
-                          detail)
+            if half:
+                incomplete = True
+                ok &= verdict(False,
+                              "%s scores worse than %s" % (GATE_ANCHOR_MTH, GATE_INCUMBENT_MTH),
+                              detail + half, label="INCOMPLETE")
+            else:
+                ok &= verdict(bool(verdicts) and all(verdicts),
+                              "%s scores worse than %s" % (GATE_ANCHOR_MTH, GATE_INCUMBENT_MTH),
+                              detail)
 
         fails = [r for r in rs if r.get("prj_name") == GATE_ANCHOR_PRJ]
         passing = [r["id_run"] for r in fails if (r.get("res_verification_passed") or "") == "true"]
@@ -1652,7 +1885,15 @@ def gate(campaign=None, apparatus_only=False):
                           "no aborted repeat and no res_subtype other than success", detail)
 
     print("")
-    print("gate: %s" % ("PASS" if ok and groups else "FAIL"))
+    if ok and groups:
+        rollup = "PASS"
+    elif mixed_any:
+        rollup = "MIXED"
+    elif incomplete:
+        rollup = "INCOMPLETE"
+    else:
+        rollup = "FAIL"
+    print("gate: %s" % rollup)
     return 0 if (ok and groups) else 1
 
 

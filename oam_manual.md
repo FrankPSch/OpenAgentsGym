@@ -110,14 +110,15 @@ two campaigns can never be pooled by accident.
 touched (chapter 12).
 
 **Clearing old runs.** Run directories accumulate — each carries a virtual environment. Move
-`runs\run_*` you no longer need into `_to_delete\` and delete that folder; the rows they produced
-disappear from the table on the next rebuild, which is the point. Filter by timestamp when only part
-of the history should go.
+`runs\run_*` you no longer need into `_to_delete\` and delete that folder; the rows they already
+produced stay in `results_repository.csv`, which is what keeps the published table intact on a
+fresh checkout (chapter 12). A row you want gone is deleted from that file.
 
 **Consolidation.** `rebuild_results_table.bat` merges every `runs\*\results_run.csv` into
 `results_repository.csv` and then prints the validity gate. Merging is by column name, so a run made
-before a column existed simply gets a blank cell and nothing is orphaned. The repository is
-rebuildable at any time and is never written while runs execute.
+before a column existed simply gets a blank cell and nothing is orphaned. The published rows are
+kept and a local run overwrites the row of its own id; the counts are printed (chapter 12). The
+table is never written while runs execute.
 
 **Interrupted sweeps** resume with `--skip-existing`; `--workers N` runs pairs side by side.
 

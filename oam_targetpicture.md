@@ -297,8 +297,8 @@ is the control the first wired campaign will need.
 | `01_python_small` | one function in `textstats.py`, 4 tests | — | smallest real oracle; the one harness smoke run |
 | `02_python_medium` | three functions and a small class over closed integer intervals, 20 tests | 10 | the default pair of `run_smoke_model_02.bat`: real oracle, short run |
 | `03_python_large` | a `ledger/` package of four sub-modules, three of them imported by `cli.py`, a 10-step work order in `prompt.md`, 24 tests, reference solution 82 SLOC | 12 | the ranking project for campaign 1; the first project large enough for structure to matter |
-| `04_python_xlarge` | order intake and stock allocation: a `warehouse/` package — 11 source files over three packages, a semicolon CSV price list and a JSON order feed in `fixtures/` as the only definition of the two formats, a 14-step work order in `prompt.md`, 50 tests, reference solution 176 SLOC | 25 | the ranking project for campaign 2 |
-| `05_python_refactor_large` | working but over-complex module, behaviour pinned by golden tests | 8 | refactor against fixed expected results; passes only if the golden tests stay green *and* SLOC falls below baseline |
+| `04_python_xlarge` | order intake and stock allocation: a `warehouse/` package — 11 source files over three packages, a semicolon CSV price list and a JSON order feed in `fixtures/` as the only definition of the two formats, a 14-step work order in `prompt.md`, 50 tests, reference solution 177 SLOC | 26 | the ranking project for campaign 2 |
+| `05_python_refactor_large` | working but over-complex module, behaviour pinned by golden tests | 9 | refactor against fixed expected results; passes only if the golden tests stay green *and* SLOC falls below baseline |
 
 The two anchors carry no held-out suite: `00_fail` cannot pass its visible tests and
 `01_python_small` is a smoke run, so on neither would the gap mean anything. The four ranking
@@ -326,11 +326,11 @@ ranking.
 verification fails on the metric instead — the module is by definition not yet simplified. A no-op
 therefore keeps every test green and still does not pass, which is what makes the project measure
 simplification rather than caution. Its post-run score is 0.80, not 1.00: the untouched module's MI
-of 34.1 against `MI_REF` 48.7 puts the parsimony factor on its floor, so the two signals agree — the
+of 34.1 against `MI_REF` 45.6 puts the parsimony factor on its floor, so the two signals agree — the
 score says the code is unimproved and the exit code says the task is not done. `res_score_baseline`
 is 1.00 on the same workspace, because the baseline is the unscaled test fraction. Reference values: baseline
-75 SLOC / complexity 23 / MI 34.1; the stored reference reaches 24 SLOC / complexity 12 / MI 48.7
-with all 16 golden tests and all 8 held-out tests green.
+75 SLOC / complexity 23 / MI 34.1; the stored reference reaches 30 SLOC / complexity 14 / MI 45.6
+with all 17 golden tests and all 9 held-out tests green.
 
 Build order: `00_fail` and `01_python_small` first, then `02_python_medium`, then
 `03_python_large` as the campaign-1 ranking project, `05_python_refactor_large` once that has
@@ -360,7 +360,7 @@ OpenAgentsGym/
 ├─ run_turbo_model_01.bat               # the whole matrix once on level 1
 ├─ run_all_model_04.bat                 # full matrix on level 4: every methodology on every project
 ├─ rebuild_results_table.bat            # rebuilds results_repository.csv; also called by the above
-├─ results_repository.csv               # consolidated table; rebuildable, published with the repo
+├─ results_repository.csv               # consolidated table; merged with the local runs, published
 │
 ├─ local/                               # machine-local, git-ignored (see .gitignore)
 │  ├─ runs/                             # every run directory the harness writes
@@ -456,7 +456,7 @@ OpenAgentsGym/
 │  │     └─ test_ledger.py              # 24 tests; the visible suite
 │  ├─ 04_python_xlarge/
 │  │  ├─ prompt.md                      # spec plus a 14-step work order, 882 words
-│  │  ├─ run_verification.py            # SIZE_REF 176, MI_REF 16.1
+│  │  ├─ run_verification.py            # SIZE_REF 177, MI_REF 16.0
 │  │  ├─ reference/                     # harness-side only; never copied into a workspace
 │  │  │  ├─ metrics.txt                 # the oracle's own output on the reference solution
 │  │  │  └─ warehouse/                  # the known-good solution SIZE_REF and MI_REF are measured on
@@ -474,7 +474,7 @@ OpenAgentsGym/
 │  │  │        ├─ stock.py
 │  │  │        └─ validation.py
 │  │  ├─ holdout_tests/
-│  │  │  ├─ test_feeds_holdout.py       # 8
+│  │  │  ├─ test_feeds_holdout.py       # 9
 │  │  │  ├─ test_rules_holdout.py       # 7
 │  │  │  ├─ test_pipeline_holdout.py    # 4
 │  │  │  └─ test_scope_holdout.py       # 6; one composite per [later] backlog item
@@ -514,7 +514,9 @@ OpenAgentsGym/
       ├─ methodology/                   # snapshot of methodology/<M>/ minus notes.md
       ├─ project_workspace/                     # copy of project_reset_template + rendered entry file
       ├─ holdout/                       # copy of projects/<P>/holdout_tests/, outside the
-      │                                 #   project_workspace and unreachable by the agent
+      │                                 #   project_workspace. Exists for the pre-flight score and
+      │                                 #   again from step 8; deleted while the agent runs, since
+      │                                 #   ../holdout/ would be readable from the workspace
       ├─ project_workspace_<n>/         # BEST_OF_N only: one workspace per candidate, kept as the
       │                                 #   record; the chosen one is copied to project_workspace/
       ├─ bestof_<n>/                    # BEST_OF_N only: each candidate's own verification.txt,
@@ -541,10 +543,13 @@ OpenAgentsGym/
       ├─ fix_argv.txt                   # the fix invocation's own argv, kept apart from
       │                                 #   cli_argv.txt because FIX_MODEL can make the two
       │                                 #   launch lines genuinely differ (chapter 9)
+      ├─ pytest_empty.ini               # the empty inifile pytest is pointed at with -c, so no
+      │                                 #   pytest.ini the agent added is read (chapter 11)
       ├─ junit_baseline.xml             # pytest output of the pre-flight check
       ├─ junit.xml                      # pytest output of the post-run check, read by the oracle
       ├─ verification_baseline.txt      # pre-flight: passed / total / score
-      ├─ verification.txt               # post-run: passed / total / score
+      ├─ verification.txt               # post-run: passed / total / score, plus the marker lines
+      │                                 #   config_tampered=1 and timeout=1 where they apply
       ├─ metrics_baseline.txt           # pristine code metrics; the strict-reduction gate reads its sloc
       ├─ metrics.txt                    # post-run code metrics; lifted into the res_ columns
       ├─ run.log                        # everything the harness printed during this run (13.1)
@@ -746,9 +751,17 @@ and defines its own success the same way. The harness only calls it and reads wh
 `baseline` or the empty string — `baseline` writes `verification_baseline.txt` instead of
 `verification.txt` — the run's held-out directory or the empty string, and the
 `project_reset_template` or the empty string. It runs
-`python -m pytest -q -p no:cacheprovider --rootdir=<project_workspace>
+`python -m pytest -q -c <run dir>\pytest_empty.ini -o addopts= -p no:cacheprovider
+--rootdir=<project_workspace>
 --junitxml=<run dir>\junit.xml <project_workspace>\<each template test file> [<holdout dir>]`,
 reads passed and total per test file from the junit XML, and exits with one of three codes:
+
+**The invocation is immune to workspace configuration.** `-c` names an empty ini the oracle writes
+in the run directory, which makes that file the one and only inifile: a `pytest.ini`, `tox.ini`,
+`setup.cfg` or `pyproject.toml` in the project_workspace is not read at all, and `-o addopts=`
+clears any `addopts` that reached pytest another way. Without this an added
+`addopts = -k test_origin` deselected every test that contradicted the code and `00_fail` scored
+1.00 with `res_tests_tampered=false`.
 
 **It runs the template's test files, never tests the agent added.** The fifth argument is what
 makes that possible: the file names are the `test_*.py` glob of `project_reset_template` plus its
@@ -771,8 +784,21 @@ that parses, the run is scored from it whatever pytest's exit code — a collect
 agent's own code (a syntax or import error; pytest exit `2`) is a fail, exit 1 with `score=0.00`, and
 a junit with no test case at all scores 0.00 over the template's own test-function count. Only
 pytest exit `3` (internal error), `4` (usage error), pytest not being importable, or no parseable
-`junit.xml` map to 2 — those alone are not statements about the code under test. `res_verification_error` is exit code 2 on the post-run check, and
+`junit.xml` map to 2 — those alone are not statements about the code under test. An **emptied or
+deleted implementation** is not one either: pytest ran and reported the import failures, so a
+workspace measuring 0 SLOC is a fail with `score=0.00` and the metrics at zero, never exit 2 with a
+blank score. `res_verification_error` is exit code 2 on the post-run check, and
 `res_verification_exit` is that exit code recorded raw.
+
+**A verification that does not finish is a fail.** The pytest invocation is bounded by
+`VERIFY_TIMEOUT_S = 300` seconds in `lib/oracle.py`; on the bound the process tree is killed —
+`taskkill /T /F` on Windows, `killpg` elsewhere, since killing the direct child alone leaves its
+own children holding the pipes — and `verification.txt` is written with `passed=0`,
+`total=<the template's test count>`, `score=0.00` and a `timeout=1` marker line, exit 1. It needs
+no column of its own: `res_verification_error` stays `false` and `res_verification_exit` stays 1,
+and `run.log` says `TIMEOUT`. The harness bounds its own call of `run_verification.py` at 420
+seconds as a second layer, for the case where the oracle hangs where pytest's bound cannot see it.
+An infinite loop in generated code otherwise stalled a matrix worker forever.
 
 **Score, not verdict.** The script writes `verification.txt` into the run directory:
 
@@ -832,8 +858,10 @@ callable; and a test file — `test_*.py` or `*_test.py` — is not a source, no
 `.venv`, `__pycache__`, `.git`, `.pytest_cache`, `build` or `dist`. `MI_REF` is the
 Maintainability Index of a known-good solution, declared in the project's oracle. Matching or beating
 the reference scores 1.0; bulkier or more convoluted code scores proportionally less, floored at 0.8
-so parsimony can never outweigh correctness. The factor is 1.0 whenever `MI_REF` is unset or the run's
-MI is 0, and it is applied to the post-run score only — `res_score_baseline` is the unscaled test
+so parsimony can never outweigh correctness. The factor is 1.0 only where `MI_REF` is unset — there
+is nothing to divide by; **an MI of 0 takes the 0.8 floor**, since it is the worst measurable code
+rather than the absence of a measurement, and returning 1.0 there handed an emptied or unparsable
+source tree the best factor there is. The factor is applied to the post-run score only — `res_score_baseline` is the unscaled test
 fraction, so the two are comparable in the same direction.
 
 ### Further details
@@ -890,8 +918,8 @@ reproducible, so they are recorded here as well as in the code:
 | `01_python_small` | 9 | 63.3 | true | false |
 | `02_python_medium` | 42 | 41.7 | true | false |
 | `03_python_large` | 82 | 31.7 | true | false |
-| `04_python_xlarge` | 176 | 16.1 | true | false |
-| `05_python_refactor_large` | 24 | 48.7 | true | true |
+| `04_python_xlarge` | 177 | 16.0 | true | false |
+| `05_python_refactor_large` | 30 | 45.6 | true | true |
 
 Every pair is measured, and the solution it was measured on is on disk: `projects/<P>/reference/`
 holds the module or package plus `reference/metrics.txt`, the oracle's own output on it. No value
@@ -899,15 +927,15 @@ in this table is a literal any more — a constant that cannot be re-measured fr
 number the reader has to trust. Each reference passes its project's visible **and** held-out suite,
 except `00_fail`, whose task is unsatisfiable by construction: its reference satisfies the two
 tests that can be satisfied and the oracle exits 1 on it, as it must on every run of that project.
-`05_python_refactor_large`'s reference passes the strict-reduction gate as well, at 24 SLOC against
+`05_python_refactor_large`'s reference passes the strict-reduction gate as well, at 30 SLOC against
 the template's 75.
 
 `04_python_xlarge`'s two values are the oracle's own output on its `reference/`, kept there as
-`reference/metrics.txt` beside the solution they were measured on: 176 SLOC, complexity 67, MI
-16.1. The magnitude is what the size predicts — MI falls with `ln(SLOC)`, so 82 → 176 costs about
+`reference/metrics.txt` beside the solution they were measured on: 177 SLOC, complexity 67, MI
+16.0. The magnitude is what the size predicts — MI falls with `ln(SLOC)`, so 82 → 177 costs about
 15 MI points — and it is the reason MI is the tiebreaker and not the discriminator here: the
-pristine template measures 67 SLOC / MI 40.6, and from `MI_REF=16.1` the parsimony factor spans
-roughly 176–200 SLOC before it reaches the 0.80 floor.
+pristine template measures 67 SLOC / MI 40.6, and from `MI_REF=16.0` the parsimony factor spans
+roughly 177–200 SLOC before it reaches the 0.80 floor.
 
 Both constants come from measuring a verified reference solution with the same oracle: the SLOC and
 the MI of an implementation that passes the project's whole suite. `SIZE_REF` is declared by each
@@ -948,6 +976,22 @@ parse is the same move as weakening a test, and would score 1.00 against the age
 `test_*.py` glob is root-level only, which is why a project's visible suite stays at the template
 root: a suite in a subdirectory would not be restored.
 
+**Restoring is not enough: an added file has nothing to restore.** The restore puts template files
+back, so a file the agent *added* survived it untouched — an added `pytest.ini` carrying
+`addopts = -k test_origin`, or an added `conftest.py` monkeypatching the module under test. The
+oracle therefore **deletes every pytest configuration or hook file the template does not ship**
+before it scores anything: `conftest.py` at any depth, `pytest.ini`, `.pytest.ini`, `tox.ini`,
+`setup.cfg`, `pyproject.toml`. The deletion is tampering — it is written to `verification.txt` as
+`config_tampered=1` and the harness lifts it into `res_tests_tampered=true` — and the row is then
+scored on the cleaned tree, exactly as a restored one is.
+
+**And the suite must still be there.** After scoring, the visible test cases the junit carries
+(skipped ones included, since a skip is collected and merely leaves the fraction) are compared with
+the number of `test_*` functions the template's own suite defines. A shortfall means tests were
+deselected or made uncollectable, so **the missing tests are counted as failures** — the
+denominator is raised back to the template's count — rather than quietly shrinking the fraction the
+run is scored on.
+
 **The held-out suite.** The tests in the project_workspace are the spec the agent works against, so
 code can be written that satisfies exactly those inputs and nothing more. Each ranking project
 therefore ships a second suite in `projects/<P>/holdout_tests/`, roughly half the size of the
@@ -962,8 +1006,23 @@ positive behaviour in the same test, and the absence beside it. A bare absence a
 the pristine template, which breaks the chapter-16 requirement that the held-out suite fails at
 baseline and makes the test evidence of nothing.
 
-The harness copies it into `local/runs/<id>/holdout/` and never into the project_workspace, so the agent
-cannot read it, fit to it or weaken it — which is why it is not in the tamper set. Both suites run
+The harness copies it into `local/runs/<id>/holdout/` and never into the project_workspace — which
+is why it is not in the tamper set. **It is not on disk while the agent runs.** `local/runs/<id>/`
+is one directory above the workspace the agent works in, so a suite copied before step 7 is
+readable as `../holdout/` by any python the agent starts. Pre-flight copies it, scores the baseline
+with it and deletes it again before the CLI is launched; step 8 re-creates it after the agent has
+exited. Under `BEST_OF_N` it is not copied at all until step 8: candidates are launched and scored
+in turn, so a directory copied to score candidate 1 would sit beside candidate 2's workspace while
+its agent runs, and candidate selection is on the visible `res_score` alone.
+
+**A known limitation, recorded rather than solved.** The tool list allows `Bash(python:*)`, and a
+python process can read any path on this disk: `projects/<P>/holdout_tests/` and
+`projects/<P>/reference/` are reachable by a relative path from the workspace, whatever the harness
+does with `local/runs/<id>/`. Removing the run's own copy closes the accidental route — reading
+`../holdout/` needs no intent — but not the deliberate one. Nothing in the harness can detect it:
+the CLI reports tool calls, not the paths a subprocess opened, and only a sandbox or a filesystem
+ACL around the repository would prevent it. It is recorded here, in chapter 14 and in chapter 15 as
+a property of the apparatus, and a run suspected of it is a run to discard by hand. Both suites run
 in one pytest invocation with the project_workspace as cwd and as `--rootdir`, so the held-out
 file's `import <module>` resolves exactly as the visible suite's does, and the junit XML is counted
 per file. The held-out fraction is written as `passed_holdout` / `total_holdout` /
@@ -1053,7 +1112,11 @@ and 1 when one does not. Either takes exit 2 on a malformed flag.
 4. Copy `projects/<P>/project_reset_template/` into `local/runs/<id>/project_workspace/` — this copy *is* the
    reset; the source project is never modified.
 5. Render `{{key=value}}` placeholders, deploy the entry file into the project_workspace as `CLAUDE.md` and
-   record its byte count as `mth_chars`. `00_empty` deploys nothing, `mth_chars=0`; the master
+   record its byte count as `mth_chars`. **The source is the run's own snapshot from step 3**,
+   `local/runs/<id>/methodology/copy_to_root/agents_or_claude.md`, never `methodology/<M>/`:
+   deploying from the source directory meant an edit landing between the two steps gave the agent a
+   file the snapshot does not contain, and the run directory then recorded something other than
+   what ran. `00_empty` deploys nothing, `mth_chars=0`; the master
    tolerates an empty `copy_to_root`. A key occurring twice in one entry file aborts here, with
    exit 4 — before pre-flight, because the deployed file is already wrong and no environment work
    can make it right.
@@ -1072,7 +1135,11 @@ and 1 when one does not. Either takes exit 2 on a malformed flag.
    `.environment` and `.requirements` (chapter 10); copy `projects\<P>\holdout_tests\*.py` into
    `local\runs\<id>\holdout\` if that directory exists; run the verification against the pristine
    project_workspace, with the holdout directory as its fourth argument and the template as its
-   fifth (chapter 11). Pre-flight
+   fifth (chapter 11); **then delete `local\runs\<id>\holdout\` again**, so it does not exist while
+   the agent runs — it sits one directory above the workspace and `../holdout/` is readable by any
+   python the agent starts (chapter 11). Step 8 re-creates it. A pre-flight verification that hits
+   the timeout aborts the repeat with exit 4 rather than reading as the expected failing baseline.
+   Pre-flight
    also tests `%USERPROFILE%\.claude\CLAUDE.md` and records
    `cfg_user_claude_md=present|absent` as a label.
 7. Launch the CLI with cwd = `project_workspace/`. The subprocess environment prepends
@@ -1111,7 +1178,9 @@ and 1 when one does not. Either takes exit 2 on a malformed flag.
    machine, a rate limit and one wall-clock, and `prf_duration_s` would stop meaning anything.
    Each candidate is then scored on a throwaway copy of itself, `bestof_<n>/scored_workspace/`,
    where the tamper set is restored and the project's own oracle runs, writing into
-   `local/runs/<id>/bestof_<n>/`. The candidate workspace itself is never restored: the winner must reach
+   `local/runs/<id>/bestof_<n>/` — without the held-out suite, which would otherwise be on disk
+   beside the next candidate's workspace while its agent runs (chapter 11); selection is on the
+   visible `res_score` alone and the winner's held-out fraction is measured in step 8. The candidate workspace itself is never restored: the winner must reach
    step 7b and step 8 exactly as its agent left it, or a weakened test would be missing from the
    reviewer's diff and `res_tests_tampered` would read false on a row that tampered.
    The highest `res_score` wins, a tie going to the cheaper run;
@@ -1154,7 +1223,10 @@ and 1 when one does not. Either takes exit 2 on a malformed flag.
    in `run.log`. `res_review_findings` counts the lines
    opening with a Conventional Comments label, `res_review_issues` the `issue:` lines alone, and
    `res_review_actionable` the `issue:` lines that also carry a `changes=` field naming an edit
-   (chapter 13); with
+   (chapter 13). **An invocation that exits non-zero having printed nothing did not review**: it is
+   recorded as `res_review_error=1`, the three counts stay blank rather than reading as a clean
+   review that found nothing, step 7c is skipped so `res_review_fixed` stays blank too, and
+   `run.log` says why. With
    `REVIEW_FEEDBACK=0` the review gates nothing and blocks nothing — it is measured, not obeyed. Tokens and cost land in
    `tk_review_*` and are blank on `other_model`, whose usage fields are not comparable with this
    CLI's.
@@ -1185,12 +1257,16 @@ and 1 when one does not. Either takes exit 2 on a malformed flag.
    `tk_cost_usd` stays the first implementer call's (chapter 17) and the fix call's permission
    denials are not added to `res_permission_denials`, which is read from `result.json` alone.
 8. After the agent exits: compare the tamper set against the template and record
-   `res_tests_tampered`, restore it, refresh `local/runs/<id>/holdout/` from
-   `projects/<P>/holdout_tests/`, then run `projects/<P>/run_verification.py` against the
+   `res_tests_tampered`, restore it, re-create `local/runs/<id>/holdout/` from
+   `projects/<P>/holdout_tests/` — which pre-flight deleted before the launch (step 6) — then run
+   `projects/<P>/run_verification.py` against the
    project_workspace with that directory as its fourth argument and `project_reset_template` as
    its fifth (chapter 11). The held-out suite is
-   copied into the run directory, never into the project_workspace. A budget or turn stop is a
-   normal row; verification still runs.
+   copied into the run directory, never into the project_workspace. The oracle deletes any pytest
+   configuration or hook file the template does not ship and reports it as `config_tampered=1`,
+   which is `res_tests_tampered=true` here as well: the restore above only puts template files
+   back, so an *added* `pytest.ini` or `conftest.py` is invisible to it (chapter 11). A budget or
+   turn stop is a normal row; verification still runs.
 9. Parse `result.json`, `verification_baseline.txt` and `verification.txt`; print the row and write
    `results_run.csv` into the run directory.
 
@@ -1220,20 +1296,27 @@ and points at `venv.log` or `pip.log`. Recording the second as a skip would hide
 `rebuild_results_table.bat` (a wrapper over `run_master.py --consolidate`, followed by
 `run_master.py --gate`) merges `local\runs\*\results_run.csv` into
 `results_repository.csv` on demand and then prints the chapter 16 conditions over it.
+**The published table is an input as well as the output.** `local\runs\` is git-ignored, so a fresh
+checkout holds none of the runs behind the published rows, and rebuilding from the run directories
+alone emptied the table on the first consolidation after a clone. Every row already in
+`results_repository.csv` whose `id_run` has no local `results_run.csv` is therefore kept exactly as
+it stands, a local run overwrites the row of its own id, and the counts are printed as *kept from
+the published table* and *from local/runs*. `local\runs_archive\` is still not read, and a mixed
+campaign is named here as `--gate` names it (chapter 17).
 Consolidation also names the repeats that aborted and produced no row (`abort.txt`, chapter 12),
 so a campaign short of rows says so instead of looking complete. `results_repository.csv` is never
-written while runs execute, so the repository is rebuildable from the runs at any time. What
+written while runs execute. What
 parallel workers do share is three files, and each is written in the one way that cannot tear:
 `local\runs\_master.log` is appended to a line at a time and never opened for writing, and the two
 invocation-level records `local\runs\_cli_help.txt` and `local\runs\_preflight_ancestors.txt` are written to a
 private temporary and renamed into place. Everything else a run writes is inside its own run
-directory. Rows are merged by column name rather than by position, and a column a run predates is left blank, so adding a metric never orphans the runs already on disk.
+directory. Rows are merged by column name rather than by position, and a column a run predates is left blank, so adding a metric never orphans the runs already on disk. The header written is the full column list of chapter 13 whatever the rows hold — a column no run has produced yet is a blank cell in every row, not an absent column, so the published file always matches the schema — followed by any column a row carries that the list does not.
 
 ## 13. Results
 
 Every column carries a two- or three-letter semantic prefix, so the clusters read as blocks:
 `id_` identity, `prj_` project, `mth_` methodology, `cfg_` configuration, `res_` outcome, `tk_`
-cost, `prf_` performance. This is the literal CSV header, in this order:
+cost, `prf_` performance. This is the literal CSV header, 85 columns, in this order:
 
 ```
 id_run, id_timestamp, id_repeat
@@ -1246,7 +1329,7 @@ cfg_review_pass, cfg_review_model, cfg_fix_model, cfg_review_prompt, cfg_review_
 res_score_baseline, res_score, res_score_holdout, res_bestof_n, res_bestof_min, res_bestof_max,
 res_verification_passed,
 res_verification_error, res_verification_exit, res_review_findings, res_review_issues,
-res_review_actionable, res_review_fixed,
+res_review_actionable, res_review_fixed, res_review_error,
 res_tests_tampered, res_files_added, res_files_added_src, res_diff_lines, res_lines_added,
 res_lines_removed, res_artifacts, res_subtype, res_hit_turn_cap, res_subagents_spawned,
 res_permission_denials,
@@ -1280,8 +1363,9 @@ always explainable, and the repeats after it still run (chapter 12).
 
 The seven parameter columns are always present and blank when the key is not in the entry file —
 `mth_param_review_rounds` therefore carries a value on `09_foureyes` alone, and the three candidate
-keys on `01_process` alone. Consolidation merges by column name; a run that predates a column gets a
-blank cell for it.
+keys on `01_process` alone. Consolidation merges by column name and writes this header in full, so
+a run that predates a column gets a blank cell for it and a column no run has produced yet is blank
+in every row rather than absent from the file.
 
 Source in `result.json`: `usage.input_tokens`, `usage.output_tokens`,
 `usage.output_tokens_details.thinking_tokens`, `usage.cache_creation_input_tokens`,
@@ -1362,9 +1446,19 @@ campaigns get mixed; one label is the first filter (chapter 17) and the unit `--
 `cfg_tools` is `default` on every arm that does not ship `tools.txt` and the comma-joined list on
 one that does (chapter 15). Rows whose `cfg_tools` differ are not pooled (chapter 17).
 
+`res_review_error` is 1 when an invocation of the review pass exited non-zero having printed
+nothing, 0 when the pass ran, and blank where `cfg_review_pass` is `none`. A failed reviewer used to
+be recorded as zero findings at zero cost — indistinguishable from a reviewer that read the diff and
+had nothing to say — and the feedback step then read it as nothing to fix. On a 1 the three
+`res_review_*` counts stay blank, since there is no measurement to report, and the fix call is
+skipped so `res_review_fixed` stays blank as well. Rows with `res_review_error=1` are excluded from
+any statement about the review pass; they are not excluded from the run's own score, which the
+implementer earned before the reviewer failed.
+
 `res_review_fixed` is 1 when the feedback call ran, 0 when the review pass ran and found no
-`issue:` to act on, and blank when `REVIEW_FEEDBACK=0`. The three states are distinct: a blank says
-the treatment was off, a 0 says it was on and the code gave it nothing to do. `tk_fix_*` and
+`issue:` to act on, and blank when `REVIEW_FEEDBACK=0` or when the review pass errored. The states
+are distinct: a blank says the treatment was off or produced nothing usable, a 0 says it was on and
+the code gave it nothing to do. `tk_fix_*` and
 `prf_fix_s` are that invocation's own counters, never folded into the implementer's.
 
 `cfg_fix_model` is the model that invocation ran on (chapter 9, `FIX_MODEL`) and is blank wherever
@@ -1428,8 +1522,21 @@ Established by direct query of the installed CLI and by the first runs, not assu
 | Python versions available | 3.10, 3.9, 3.6, 3.5, 2.7 (`py -0`); no 3.12 |
 | User-level `CLAUDE.md` | present at `%USERPROFILE%\.claude\CLAUDE.md`; suppressed by `--setting-sources project` — verified by run: yes |
 | Ancestor `CLAUDE.md` | loaded into every run; `--setting-sources project` does not stop it |
+| Filesystem reach | `Bash(python:*)` is a python process: it reads any path on the disk, the tool list notwithstanding — an unsandboxed limitation, recorded below |
 
 ### Further details
+
+**What the tool list does not bound.** `--allowedTools` decides which tools the CLI offers, not what
+a process those tools start may open. `Bash(python:*)` and `PowerShell(python:*)` are on the list
+because the agent must be able to run its own tests, and a python process can read
+`projects/<P>/holdout_tests/` and `projects/<P>/reference/` by a relative path from the
+project_workspace. The harness does not copy the held-out suite anywhere the agent could stumble
+over it (chapter 11, chapter 12 step 6), which closes the accidental route; the deliberate one
+stays open. It cannot be detected from here — the CLI reports tool calls, not the files a
+subprocess opened — and closing it needs a sandbox or a filesystem ACL around the repository, which
+this apparatus does not have. It is a known limitation, recorded and not solved: a run suspected of
+it is discarded by hand, and a `res_score_holdout` that matches `res_score` exactly where the field
+shows a gap is the sign to look for.
 
 The evidence for these rows is in the run directories — `cli_help.txt`, `cli_argv.txt`,
 `result.json`, `stderr.txt` — which are not versioned, so the table above is the record that
@@ -1444,6 +1551,9 @@ would corrupt a campaign without any visible error.
 - No `CLAUDE.md` or `AGENTS.md` in any ancestor directory of the repository — enforced by pre-flight
   (exit 5); the user-level file is suppressed by `--setting-sources project` (verified) and
   labelled `cfg_user_claude_md`.
+- The held-out suite and the reference solution are not enforced as unreachable. They are kept out
+  of the project_workspace and off the disk beside it while the agent runs, which is as far as an
+  unsandboxed harness reaches; `Bash(python:*)` can still open them by path (chapter 14).
 - The hygiene flags (`--strict-mcp-config --mcp-config <empty mcpServers file>
   --no-session-persistence --setting-sources project`) and the `--allowedTools` list
   (`Read,Edit,Write,Glob,Grep,Agent,Bash(python:*),Bash(pytest:*),PowerShell(python:*),PowerShell(pytest:*)`)
@@ -1472,7 +1582,11 @@ Before any campaign result is interpreted, both anchors must behave. The gate is
 runs and the `00_sabotage` rows of the campaign's ranking runs, judged against the incumbent:
 
 - `00_sabotage` scores worse than `08_process_doctypes_roles_guardrails` on the same project with
-  an oracle.
+  an oracle. The condition is evaluated **per project the campaign holds rows for**, and a project
+  carrying one of the two anchors but not the other makes the campaign **INCOMPLETE**, printed as
+  such and exit 1 — never PASS. Skipping such a project silently let a campaign missing half its
+  gate report that the gate held. A project carrying neither anchor — the smoke run on
+  `01_python_small` — is not a ranking project of that campaign and is not a gap.
 - `00_fail` never reaches `res_verification_passed` under any methodology.
 - The pristine baseline of an oracle project fails pre-flight. If it passes, the project cannot
   measure anything.
@@ -1490,8 +1604,19 @@ runs and the `00_sabotage` rows of the campaign's ranking runs, judged against t
 
 ### Further details
 
+**One label, one set of constants.** `cfg_campaign` is only the config file's base name, so two
+different files of that name, or one file edited between two runs, share it. Before any condition
+is read, `--gate` checks that the campaign's rows agree on `cfg_model`, `cfg_effort`,
+`cfg_review_pass`, `cfg_review_model`, `cfg_fix_model`, `cfg_review_weight` and `cfg_tools` — the
+columns chapter 17 forbids pooling across. A campaign whose rows do not is printed as **MIXED**
+with the differing values and exits 1: a condition computed over two treatments wearing one name is
+arithmetic, not a gate. `--consolidate` names the same campaigns as it writes the table.
+
 `py -3 run_master.py --gate` prints the first three of these over `results_repository.csv`, one
-block per `cfg_campaign`, each condition PASS or FAIL with the numbers behind it, and
+block per `cfg_campaign`, each condition PASS, FAIL, INCOMPLETE or MIXED with the numbers behind
+it. The closing line is the most severe word any campaign reached — MIXED before INCOMPLETE before
+FAIL before PASS — and only PASS exits 0, so a campaign that is merely two campaigns under one
+label is not reported as an unfinished one.
 `rebuild_results_table.bat` runs it after every consolidation — the gate is worth nothing if it is
 only checked when someone remembers to. It takes the incumbent's rows under either name, the
 current `08_process_doctypes_roles_guardrails` and the legacy `08_all`, since rows written before
@@ -1550,7 +1675,9 @@ If any of these does not hold, the finding is about the apparatus, not about met
   `cfg_review_prompt`, `cfg_review_weight` or `cfg_tools` differs from the
   campaign's constants, and rows whose `res_model_served` ≠ `cfg_model`, are excluded before the
   pivot — a config file edited between two runs keeps its name, so the label narrows the set and
-  the seven columns confirm it. The tool set is an axis like the model: rows with differing `cfg_tools` are not pooled. The repository
+  the seven columns confirm it. `--gate` and `--consolidate` check that much of it automatically and
+  print a campaign whose rows disagree as MIXED (chapter 16); the remaining columns are the
+  reader's. The tool set is an axis like the model: rows with differing `cfg_tools` are not pooled. The repository
   holds every run ever made, including the `run_turbo_model_01.bat` sweep at `cfg_effort=low` and any row
   from an earlier CLI; a campaign is the subset that shares its constants, and the constants are on
   every row so that subset is a filter rather than a memory.
