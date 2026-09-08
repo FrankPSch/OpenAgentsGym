@@ -1,0 +1,15 @@
+sku;name;unit_price;currency;pack_size;tax_class
+SKU-1001;Kopierpapier A4;4,90;EUR;5;standard
+SKU-1002;Kugelschreiber blau;0,89;EUR;10;standard
+SKU-1003;Notizbuch A5;3,50;EUR;4;standard
+SKU-2001;Kaffeebohnen 1kg;12,95;EUR;6;reduced
+SKU-2002;Mineralwasser 12x1l;7,20;EUR;2;reduced
+SKU-2003;Haferkekse 400g;2,15;EUR;12;reduced
+SKU-3001;Lehrbuch Logistik;39,00;EUR;1;zero
+SKU-3002;Fachzeitschrift Monat;8,50;EUR;3;zero
+SKU-4001;Buerostuhl Basis;149,00;EUR;1;standard
+SKU-4002;Schreibtischlampe;24,99;EUR;2;standard
+SKU-5001;Aktenordner breit;3.90;EUR;5;standard
+SKU-5002;Locher metall;6,40;EUR;zwei;standard
+SKU-5003;Tonerkartusche;89,00;EUR;1;luxury
+SKU-6001;Import Stapler;199,00;USD;1;standard

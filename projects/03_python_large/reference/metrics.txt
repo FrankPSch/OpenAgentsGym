@@ -1,0 +1,20 @@
+# metrics.txt of the reference solution, written by run_verification.py (lib/oracle.py).
+# SIZE_REF and MI_REF in run_verification.py are sloc and mi below.
+chars=4087
+comment_density=2.4
+complexity=26
+docstring_cov=100.0
+lint_errors=0
+max_func_sloc=18
+max_nesting=4
+mi=31.7
+mi_ref=31.7
+parsimony_factor=1.0
+sloc=82
+#
+# per-module SLOC
+# ledger/__init__.py  1
+# ledger/cli.py       12
+# ledger/parse.py     41
+# ledger/report.py    18
+# ledger/rules.py     10

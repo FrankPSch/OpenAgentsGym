@@ -1,0 +1,13 @@
+# metrics.txt of the reference solution, written by run_verification.py (lib/oracle.py).
+# SIZE_REF and MI_REF in run_verification.py are sloc and mi below.
+chars=461
+comment_density=0.0
+complexity=3
+docstring_cov=100.0
+lint_errors=0
+max_func_sloc=6
+max_nesting=1
+mi=63.3
+mi_ref=63.3
+parsimony_factor=1.0
+sloc=9

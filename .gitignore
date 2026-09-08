@@ -1,0 +1,12 @@
+# Machine-local, never published: run directories and their artifacts, the archived run history,
+# files moved instead of deleted. The consolidated results_repository.csv stays at the repo root
+# and is published. Run artifacts record session ids,
+# cost and model usage — account data, not project data.
+local/
+
+# Python bytecode cache.
+__pycache__/
+# pytest's own cache directory.
+.pytest_cache/
+# Optional isolated CLAUDE_CONFIG_DIR target (chapter 9) — only relevant if that var is set.
+.claude_config/

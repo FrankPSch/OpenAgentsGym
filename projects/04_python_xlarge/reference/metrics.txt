@@ -1,0 +1,26 @@
+# metrics.txt of the reference solution, written by run_verification.py (lib/oracle.py).
+# SIZE_REF and MI_REF in run_verification.py are sloc and mi below.
+chars=8901
+comment_density=0.0
+complexity=67
+docstring_cov=100.0
+lint_errors=0
+max_func_sloc=20
+max_nesting=4
+mi=16.1
+mi_ref=16.1
+parsimony_factor=1.0
+sloc=176
+#
+# per-module SLOC, against the line budget stated in prompt.md
+# warehouse/__init__.py              3
+# warehouse/cli.py                  16
+# warehouse/feeds/__init__.py        1
+# warehouse/feeds/money.py          20
+# warehouse/feeds/orders.py         21
+# warehouse/feeds/pricelist.py      33
+# warehouse/pipeline.py             28
+# warehouse/rules/__init__.py        1
+# warehouse/rules/pricing.py        17
+# warehouse/rules/stock.py          21
+# warehouse/rules/validation.py     15

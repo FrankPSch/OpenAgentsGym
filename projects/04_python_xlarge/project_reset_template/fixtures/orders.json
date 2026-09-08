@@ -1,0 +1,66 @@
+{
+  "feed_version": 2,
+  "generated": "2026-03-03T06:00:00",
+  "orders": [
+    {
+      "order_id": "A-1001",
+      "customer": "Nordwind GmbH",
+      "placed": "2026-03-01",
+      "lines": [
+        {"sku": "SKU-1001", "qty": 12},
+        {"sku": "SKU-1002", "qty": 30},
+        {"sku": "SKU-2001", "qty": 6}
+      ]
+    },
+    {
+      "order_id": "A-1002",
+      "customer": "Ostsee AG",
+      "placed": "2026-03-01",
+      "lines": [
+        {"sku": "SKU-3001", "qty": 2},
+        {"sku": "SKU-3002", "qty": 5}
+      ]
+    },
+    {
+      "order_id": "A-1003",
+      "customer": "Suedbau KG",
+      "placed": "2026-02-27",
+      "lines": [
+        {"sku": "SKU-4001", "qty": 3},
+        {"sku": "SKU-4002", "qty": 4},
+        {"sku": "SKU-2002", "qty": 10},
+        {"sku": "SKU-2003", "qty": 24}
+      ]
+    },
+    {
+      "order_id": "A-1004",
+      "customer": "Westfeld e.K.",
+      "placed": "2026-03-02",
+      "priority": "high",
+      "lines": [
+        {"sku": "SKU-1003", "qty": 7},
+        {"sku": "SKU-2001", "qty": 1},
+        {"sku": "SKU-1001", "qty": 5}
+      ]
+    },
+    {
+      "order_id": "A-1005",
+      "customer": "Elbmarkt Handel",
+      "placed": "2026-03-02",
+      "lines": [
+        {"sku": "SKU-9999", "qty": 4},
+        {"sku": "SKU-1002", "qty": 20}
+      ]
+    },
+    {
+      "order_id": "A-1006",
+      "customer": "Nulltag GmbH",
+      "placed": "2026-03-03",
+      "lines": [
+        {"sku": "SKU-1001", "qty": 0},
+        {"sku": "SKU-3001", "qty": 6},
+        {"sku": "SKU-2002", "qty": 2}
+      ]
+    }
+  ]
+}

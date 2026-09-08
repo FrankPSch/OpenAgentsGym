@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+title: OpenAgentsGym
+message: If you use this harness or its results, please cite it.
+type: software
+authors:
+  - family-names: Schikarski
+    given-names: Frank
+repository-code: https://github.com/OpenAgentsGym/OpenAgentsGym
+abstract: >-
+  A harness that treats the methodology an agent works under as the variable and
+  everything else as constant. The same task is run under different sets of agent
+  instructions and each run is scored on correctness, parsimony, cost and adherence.
+keywords:
+  - agents
+  - llm
+  - benchmark
+  - evaluation
+  - agent-instructions
+license: MIT
