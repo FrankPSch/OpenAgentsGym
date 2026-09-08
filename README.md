@@ -49,6 +49,7 @@ run_turbo_model_01.bat                 every pair once on level 1, the cheapest 
 run_all_model_04.bat                   every pair on level 4
 run_selected_model_04.bat              the validity gate on level 4 (edit the list in the file)
 rebuild_results_table.bat              re-merge the results table and print the validity gate
+git_pull.bat / git_push.bat            sync with GitHub: fast-forward pull; add, commit, push
 ```
 
 All campaign constants live in the four `.llm_config.model_01` … `model_04` files — one per
