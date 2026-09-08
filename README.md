@@ -46,6 +46,7 @@ load it into every run — pre-flight aborts instead of measuring it).
 run_smoke_model_02.bat                 double-click; proves the whole chain works (level 2)
 run.bat <project> <methodology>        one specific pair (level 2 unless --config says otherwise)
 run_turbo_model_01.bat                 every pair once on level 1, the cheapest model
+run_all_model_03.bat                   every pair on level 3 (frontier model, low effort)
 run_all_model_04.bat                   every pair on level 4
 run_selected_model_04.bat              the validity gate on level 4 (edit the list in the file)
 rebuild_results_table.bat              re-merge the results table and print the validity gate
@@ -53,7 +54,7 @@ rebuild_results_table.bat              re-merge the results table and print the 
 
 All campaign constants live in the four `.llm_config.model_01` … `model_04` files — one per
 capability level: 1 the cheapest model (`run_turbo_model_01.bat`), 2 the workhorse (`run.bat`,
-`run_smoke_model_02.bat`), 3 the frontier model at low effort (by hand only), 4 the model above the
+`run_smoke_model_02.bat`), 3 the frontier model at low effort (`run_all_model_03.bat`), 4 the model above the
 frontier tier (`run_all_model_04.bat`, `run_selected_model_04.bat`). The vendor's model id is on
 the `MODEL=` line and nowhere else. For a one-off, copy a file, edit the copy and pass it with
 `--config`; its base name becomes the campaign label on every row, so two

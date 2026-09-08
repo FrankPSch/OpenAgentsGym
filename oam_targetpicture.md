@@ -349,7 +349,7 @@ OpenAgentsGym/
 │                                       #   document remains the definition of behaviour
 ├─ .llm_config.model_01                 # capability level 1: cheapest model, lowest effort (chapter 9)
 ├─ .llm_config.model_02                 # level 2: workhorse model; run.bat and run_smoke_model_02.bat
-├─ .llm_config.model_03                 # level 3: frontier model, low effort; --config by hand
+├─ .llm_config.model_03                 # level 3: frontier model, low effort; run_all_model_03.bat
 ├─ .llm_config.model_04                 # level 4: above the frontier tier; run_all_ and run_selected_model_04.bat
 ├─ .gitignore                           # local/ (runs, archive, to_delete), __pycache__/,
 │                                       #   .pytest_cache/, .claude_config/
@@ -358,7 +358,8 @@ OpenAgentsGym/
 ├─ run_master.py                        # the only file that does work; stdlib only
 ├─ run_selected_model_04.bat            # the validity gate on level 4: a list of run.bat calls
 ├─ run_turbo_model_01.bat               # the whole matrix once on level 1
-├─ run_all_model_04.bat                 # full matrix on level 4: every methodology on every project
+├─ run_all_model_03.bat                 # full matrix on level 3: every methodology on every project
+├─ run_all_model_04.bat                 # full matrix on level 4
 ├─ rebuild_results_table.bat            # rebuilds results_repository.csv; also called by the above
 ├─ results_repository.csv               # consolidated table; merged with the local runs, published
 │
@@ -589,15 +590,14 @@ the documents and the campaign label can name it without naming a vendor:
 |---|---|---|---|
 | `.llm_config.model_01` | 1 | the cheapest model at the lowest effort; apparatus checks, rows never ranked | `run_turbo_model_01.bat` |
 | `.llm_config.model_02` | 2 | the workhorse model at medium effort; single pairs and the smoke test | `run.bat` (default), `run_smoke_model_02.bat` |
-| `.llm_config.model_03` | 3 | the frontier model at low effort | nothing — `--config` by hand |
+| `.llm_config.model_03` | 3 | the frontier model at low effort; the full matrix | `run_all_model_03.bat` |
 | `.llm_config.model_04` | 4 | the model above the frontier tier; the full campaign and the gate | `run_all_model_04.bat`, `run_selected_model_04.bat` |
 
 A batch file that is bound to a level carries it in its name; `run.bat` and
 `rebuild_results_table.bat` are the two that are not.
 
 The vendor's model id appears in exactly one place, the `MODEL=` line of each file; a different
-vendor or a new generation is four edited lines and no other change. Level 3 is deliberately
-unwired: spend there is a decision, so it is typed on the command line. Callers pass only
+vendor or a new generation is four edited lines and no other change. Callers pass only
 project and methodology, and optionally `--config <path>` to read the same keys from another file —
 a relative path resolves against the repository root. `run_master.py` defaults to level 2.
 
@@ -1055,6 +1055,7 @@ pytest and scoring. Changing the default is a one-line edit in that file.
 | `run_master.py --matrix` | every pair of the two listings once, then consolidation and `--gate` | up to 174 × `REPEATS` |
 | `run_turbo_model_01.bat` | `--matrix --workers 1 --config .llm_config.model_01`, then rebuilds | 174 runs on level 1 |
 | `run_selected_model_04.bat` | the chapter 16 validity gate on `00_fail`, level 4, then rebuilds | 3 pairs × `REPEATS` |
+| `run_all_model_03.bat` | `--matrix --config .llm_config.model_03 --workers 1` | 174 × `REPEATS` on level 3 |
 | `run_all_model_04.bat` | `--matrix --config .llm_config.model_04 --workers 1` | 174 × `REPEATS` on level 4 |
 | `rebuild_results_table.bat` | consolidation, then `--gate`: the chapter 16 conditions per campaign as PASS or FAIL; no runs. Pauses at the end, so double-clicking it shows the result | free |
 

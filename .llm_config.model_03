@@ -1,5 +1,5 @@
-# Capability level 3 of 4 -- the frontier model at low effort. Wired to no batch file; passed
-# by hand with --config, e.g. run.bat <project> <methodology> --config .llm_config.model_03.
+# Capability level 3 of 4 -- the frontier model at low effort. The full matrix on the
+# frontier model at low effort (run_all_model_03.bat); single pairs by hand with --config.
 # The model id below is the ONLY vendor-specific line in the repository: the level is what file
 # names, batch files and documents refer to. Read once per run by run_master.py (KEY=VALUE, text
 # after # is a comment). Project and methodology are NOT set here -- they come from the command

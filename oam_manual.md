@@ -91,7 +91,7 @@ All entry points are batch files in the repository root; the exit code says what
 | one specific pair | `run.bat <project> <methodology>` |
 | the same pair under different constants | `run.bat <project> <methodology> --config <path>` |
 | every pair once, cheaply | `run_turbo_model_01.bat` — every pair on level 1, the cheapest model |
-| every pair on level 4 | `run_all_model_04.bat` |
+| every pair on level 3 or 4 | `run_all_model_03.bat`, `run_all_model_04.bat` |
 | a hand-picked list, e.g. the validity gate | `run_selected_model_04.bat` (edit the list in the file) |
 | the results table and the gate, without running anything | `rebuild_results_table.bat` |
 
@@ -99,7 +99,7 @@ All entry points are batch files in the repository root; the exit code says what
 nowhere else — model, effort, budget cap, repeats, and the review and best-of-N keys (chapter 9).
 Each file is one capability level: 1 the cheapest model for the apparatus sweep
 (`run_turbo_model_01.bat`), 2 the workhorse for single pairs and the smoke test (`run.bat`,
-`run_smoke_model_02.bat`), 3 the frontier model at low effort, passed by hand with `--config`, 4 the
+`run_smoke_model_02.bat`), 3 the frontier model at low effort for the full matrix (`run_all_model_03.bat`), 4 the
 model above the frontier tier for the full matrix and the gate (`run_all_model_04.bat`,
 `run_selected_model_04.bat`). A batch file bound to a level carries it in its name. For a one-off, copy a file,
 edit the copy, and pass it with `--config`; the file's base name becomes the campaign label on every row, so
