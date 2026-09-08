@@ -21,10 +21,11 @@ MAX_BUDGET_USD=8.00
 # 2.00 for campaign 2: the dearest campaign-1 run on 03_python_large cost $0.882, and x2 for
 # the size of 04_python_xlarge x2.05 for the level-3 model is ~$3.62 — a 2.00 cap would truncate the R
 # and F arms on opus only, a censoring indistinguishable from a methodology effect.
-REPEATS=1
-# REPEATS: how many times run.bat repeats the same <project> <methodology> pair.
-# REPEATS=1 is a smoke-test setting only; comparing arms needs REPEATS>=3 (chapter 17) —
-# agent runs vary enough that one observation per arm can't separate an effect from noise.
+REPEATS=3
+# REPEATS: how many times run.bat repeats the same <project> <methodology> pair. 3 here because
+# this is the ranking level: comparing arms needs REPEATS>=3 (chapter 17) — the measured noise
+# floor on the score is about 0.05, so one observation per arm cannot separate an effect from it.
+# Levels 1 and 2 stay at 1; they are smoke and screening settings, not comparisons.
 # blank = leave the CLI on the user config dir; set to a path (relative to the repo root)
 # to isolate the campaign from the user profile. Needs a one-time "claude login" in it.
 CLAUDE_CONFIG_DIR=
