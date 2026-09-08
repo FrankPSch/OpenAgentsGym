@@ -91,6 +91,7 @@ All entry points are batch files in the repository root; the exit code says what
 | one specific pair | `run.bat <project> <methodology>` |
 | the same pair under different constants | `run.bat <project> <methodology> --config <path>` |
 | every pair once, cheaply | `run_turbo_model_01.bat` — every pair on level 1, the cheapest model |
+| every methodology once on the xlarge project, level 3 | `run_screen_model_03.bat` (the screen; edit `PROJECT` in the file) |
 | every pair on level 3 or 4 | `run_all_model_03.bat`, `run_all_model_04.bat` |
 | a hand-picked list, e.g. the validity gate | `run_selected_model_04.bat` (edit the list in the file) |
 | the results table and the gate, without running anything | `rebuild_results_table.bat` |

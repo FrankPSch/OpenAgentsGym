@@ -46,6 +46,7 @@ load it into every run — pre-flight aborts instead of measuring it).
 run_smoke_model_02.bat                 double-click; proves the whole chain works (level 2)
 run.bat <project> <methodology>        one specific pair (level 2 unless --config says otherwise)
 run_turbo_model_01.bat                 every pair once on level 1, the cheapest model
+run_screen_model_03.bat                every methodology once on 04_python_xlarge, level 3 (the screen)
 run_all_model_03.bat                   every pair on level 3 (frontier model, low effort)
 run_all_model_04.bat                   every pair on level 4
 run_selected_model_04.bat              the validity gate on level 4 (edit the list in the file)

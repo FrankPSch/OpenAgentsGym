@@ -358,6 +358,7 @@ OpenAgentsGym/
 ├─ run_master.py                        # the only file that does work; stdlib only
 ├─ run_selected_model_04.bat            # the validity gate on level 4: a list of run.bat calls
 ├─ run_turbo_model_01.bat               # the whole matrix once on level 1
+├─ run_screen_model_03.bat              # 29 methodologies once on 04_python_xlarge, level 3, 3 workers
 ├─ run_all_model_03.bat                 # full matrix on level 3: every methodology on every project
 ├─ run_all_model_04.bat                 # full matrix on level 4
 ├─ rebuild_results_table.bat            # rebuilds results_repository.csv; also called by the above
@@ -1055,6 +1056,7 @@ pytest and scoring. Changing the default is a one-line edit in that file.
 | `run_master.py --matrix` | every pair of the two listings once, then consolidation and `--gate` | up to 174 × `REPEATS` |
 | `run_turbo_model_01.bat` | `--matrix --workers 1 --config .llm_config.model_01`, then rebuilds | 174 runs on level 1 |
 | `run_selected_model_04.bat` | the chapter 16 validity gate on `00_fail`, level 4, then rebuilds | 3 pairs × `REPEATS` |
+| `run_screen_model_03.bat` | `--matrix --config .llm_config.model_03 --projects 04_python_xlarge --workers 3 --skip-existing` | 29 runs on level 3 |
 | `run_all_model_03.bat` | `--matrix --config .llm_config.model_03 --workers 1` | 174 × `REPEATS` on level 3 |
 | `run_all_model_04.bat` | `--matrix --config .llm_config.model_04 --workers 1` | 174 × `REPEATS` on level 4 |
 | `rebuild_results_table.bat` | consolidation, then `--gate`: the chapter 16 conditions per campaign as PASS or FAIL; no runs. Pauses at the end, so double-clicking it shows the result | free |
