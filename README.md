@@ -38,9 +38,9 @@ That validity gate, not the leaderboard, is the first thing to read.
 
 ## First result
 
-Level-3 screen, 8 September 2026: all 31 methodologies once on `04_python_xlarge`
+Level-3 screen, 8–9 September 2026: all 33 methodologies once on `04_python_xlarge`
 (`claude-opus-5`, low effort, one repeat, `$4.00` cap, review off). Every arm passed all 50 visible
-tests; 29 of 31 passed all 26 held-out tests. The spread is the parsimony factor — how compact the
+tests; 31 of 33 passed all 26 held-out tests. The spread is the parsimony factor — how compact the
 passing code is. One repeat orders, it does not decide (manual, chapter 6): arms within 0.05 are
 ties.
 
@@ -55,16 +55,20 @@ ties.
 | 7 | `07_process_doctypes_roles` | 0.96 | 1.00 | 15.3 | 193 | 59 | 2.14 |
 | 8 | `06_process_roles` | 0.95 | 1.00 | 15.2 | 193 | 38 | 1.54 |
 | … | | | | | | | |
-| 24 | `00_empty` | 0.91 | 1.00 | 14.6 | 199 | 22 | 1.16 |
-| 26 | `00_sabotage` | 0.90 | 1.00 | 14.4 | 193 | 34 | 0.85 |
-| 30 | `03_roles` | 0.86 | 1.00 | 13.7 | 199 | 42 | 1.83 |
-| 31 | `08_process_doctypes_roles_guardrails` | 0.86 | 1.00 | 13.8 | 194 | 47 | 1.94 |
+| 15 | `31_pipeline_source` | 0.93 | 1.00 | 14.9 | 191 | 34 | 0.79 |
+| 25 | `00_empty` | 0.91 | 1.00 | 14.6 | 199 | 22 | 1.16 |
+| 27 | `00_sabotage` | 0.90 | 1.00 | 14.4 | 193 | 34 | 0.85 |
+| 29 | `30_delivery_kernel` | 0.90 | 1.00 | 14.4 | 198 | 45 | 1.74 |
+| 32 | `03_roles` | 0.86 | 1.00 | 13.7 | 199 | 42 | 1.83 |
+| 33 | `08_process_doctypes_roles_guardrails` | 0.86 | 1.00 | 13.8 | 194 | 47 | 1.94 |
 
 What it says, at this model and effort: short, checkable constraints on the *output* (`26`, `15`,
 `19`, `24`) beat process instructions; the four-layer stack `08` — the incumbent until this screen —
 is last, slowest and dearest; roles are the weak ingredient. `29` is the composition of the three
 winners and matches the best score at two thirds of the turns; it is the provisional incumbent
-until three repeats confirm it. Full rows, both projects: [`results_repository.csv`](results_repository.csv).
+until three repeats confirm it. `30` is a working methodology's kernel transcribed into this frame and `31`
+the same kernel untranscribed; both land beside `00_empty`, and the transcription cost a reviewer
+round the source text did not trigger. Full rows, both projects: [`results_repository.csv`](results_repository.csv).
 
 ---
 
