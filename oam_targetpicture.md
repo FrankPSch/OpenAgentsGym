@@ -181,6 +181,9 @@ Four features, one file each: **P** `process.md` (plan → implement → run tes
 | `29_invariants_test_first_relative_stop` | I+Tf+Rs | `28` plus `relative_stop.md` — three short output constraints against the four long process layers of `08` |
 | `30_delivery_kernel` | DK | `kernel.md` — a working real-world methodology's kernel transcribed, composite by intent: staged cycle with an exit condition per stage, producer never certifies (a reviewer subagent, `review_rounds=1`), finding schema with a severity ladder, change discipline against over-delivery, escalate rather than guess, halt after three. What needs a second task, a second seat or a person is left out (its `notes.md` lists it) |
 | `31_pipeline_source` | PS | the same source untranscribed: its own entry file as it stands (4 KB) and its kernel directory verbatim — dangling project references, vendor names and role talk included, declared as deviations from 19.5. Read against `30`: what the transcription lost or added |
+| `32_invariants_relative_stop` | I+Rs | `invariants.md` + `relative_stop.md` — the two cheapest arms on the level-3 front composed, without test first |
+| `33_justify_file_invariants` | J+I | `justify_file.md` + `invariants.md` — the cheapest front arm with the strongest single constraint |
+| `34_pipeline_source_with_reviewer` | PS+R | `31` plus the source's `team_roles.md` verbatim, which carries its reviewer rule; the reviewer seat's cost and benefit |
 
 ### Further details
 
@@ -1090,7 +1093,7 @@ produced. Its flags, each optional:
 
 Each pair runs **once**; `REPEATS` applies inside it, exactly as under `run.bat`. The two directory
 listings are the matrix rather than a hard-coded list, so a new project or methodology joins by
-existing — 33 × 6 = 198 pairs today, and nothing changed when ten arms were added; a directory whose
+existing — 36 × 6 = 216 pairs today, and nothing changed when ten arms were added; a directory whose
 name starts with `_` is not an arm and is skipped. Stdout and stderr of every run go to one
 `local\runs\_matrix_<campaign>_<timestamp>.log`, each line prefixed by its pair, and the summary at the
 end is pairs run, rows produced and aborts. The turbo rows are real rows in the repository and are
