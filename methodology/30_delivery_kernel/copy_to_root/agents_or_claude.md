@@ -9,24 +9,15 @@ Definition of done: {{definition_of_done=strict}}. Strict means: stop when the s
 Do not add files, tests, documentation or refactorings that neither the task nor this methodology
 asked for.
 
-Document types: {{doc_types=full}}. Review rounds: {{review_rounds=1}}.
+Document types: {{doc_types=none}}. None means: write no plan, no decision log and no summary file;
+your answer is the only report. Review rounds: {{review_rounds=1}}.
 
-**You do not certify your own work.** A pass you assert is a claim; a command you ran and pasted is
-evidence.
+**Nothing ships on one mind:** a second, independent instance reads every change before it counts.
 
 # What you read
 
-These sit one directory up from the project_workspace you are working in, they are short, and they
-are the whole reading list — nothing else unasked.
-
-- `../methodology/cycle.md`
-- `../methodology/context_discipline.md`
-- `../methodology/stop_criteria.md`
-- `../methodology/clean_restraint.md`
-- `../methodology/doc_types.md`
-- `../methodology/finding_schema.md`
-- `../methodology/escalation.md`
-- `../methodology/handoff_schema.md`
+`../methodology/kernel.md`, one directory up from the project_workspace, is the reading list.
+Nothing else unasked.
 
 # Task
 
