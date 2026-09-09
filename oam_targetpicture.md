@@ -174,6 +174,8 @@ Four features, one file each: **P** `process.md` (plan → implement → run tes
 | `25_context_discipline` | Cd | `context_discipline.md` — what to read before the first edit, when to re-read, when to summarise; never re-read what has not changed |
 | `26_test_first` | Tf | `test_first.md` — the test for the change written before the change; the agent's own tests are allowed and are not scored |
 | `27_escalation` | Es | `escalation.md` — when the task, the tests and the code cannot all be satisfied, stop and name the contradiction; a guessed resolution is a failed run |
+| `28_invariants_test_first` | I+Tf | `invariants.md` + `test_first.md`, byte-identical copies — the two single-feature arms that led the level-3 screen on `04_python_xlarge`; composed, not restated |
+| `29_invariants_test_first_relative_stop` | I+Tf+Rs | `28` plus `relative_stop.md` — three short output constraints against the four long process layers of `08` |
 
 ### Further details
 
@@ -358,7 +360,7 @@ OpenAgentsGym/
 ├─ run_master.py                        # the only file that does work; stdlib only
 ├─ run_selected_model_04.bat            # the validity gate on level 4: a list of run.bat calls
 ├─ run_turbo_model_01.bat               # the whole matrix once on level 1
-├─ run_screen_model_03.bat              # 29 methodologies once on 04_python_xlarge, level 3, 3 workers
+├─ run_screen_model_03.bat              # every methodology once on 04_python_xlarge, level 3, 3 workers
 ├─ run_all_model_03.bat                 # full matrix on level 3: every methodology on every project
 ├─ run_all_model_04.bat                 # full matrix on level 4
 ├─ rebuild_results_table.bat            # rebuilds results_repository.csv; also called by the above
@@ -1080,7 +1082,7 @@ produced. Its flags, each optional:
 
 Each pair runs **once**; `REPEATS` applies inside it, exactly as under `run.bat`. The two directory
 listings are the matrix rather than a hard-coded list, so a new project or methodology joins by
-existing — 29 × 6 = 174 pairs today, and nothing changed when ten arms were added; a directory whose
+existing — 31 × 6 = 186 pairs today, and nothing changed when ten arms were added; a directory whose
 name starts with `_` is not an arm and is skipped. Stdout and stderr of every run go to one
 `local\runs\_matrix_<campaign>_<timestamp>.log`, each line prefixed by its pair, and the summary at the
 end is pairs run, rows produced and aborts. The turbo rows are real rows in the repository and are
