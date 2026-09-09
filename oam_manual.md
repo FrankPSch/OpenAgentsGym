@@ -246,6 +246,20 @@ included — so a campaign is a filter, not a memory (chapter 17).
 **median** with the **spread** reported beside it for turns and cost: two runs of the same cell
 differ by more than the gap between two arms (chapter 17).
 
+**The rule for reading a ranking**, fixed before the rows are read so the rows cannot bend it:
+
+1. Per arm, the median `res_score` over its repeats and the range (min–max).
+2. Two arms are **different** only when their medians are more than 0.05 apart *and* their ranges
+   do not overlap. 0.05 is the measured noise floor of one cell; anything inside it is a tie
+   whatever the ordering says.
+3. Ties are broken by cost (`tk_cost_usd` median), then by turns — never by the third decimal of
+   the score.
+4. A one-repeat screen ranks by the same rule with the range collapsed to a point: it can
+   separate an arm from `00_empty` when the gap exceeds 0.05, it cannot separate two arms that
+   close. A screen orders; repeats decide.
+5. The rows read are one campaign label (chapter 17); a comparison across levels or configs is
+   a comparison of models, not of methodologies, and is not made.
+
 **What to look for.**
 - *Saturation* — every arm at the top of the score range. The project has stopped discriminating;
   it now ranks by cost.

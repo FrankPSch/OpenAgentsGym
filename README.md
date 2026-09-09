@@ -36,6 +36,38 @@ That validity gate, not the leaderboard, is the first thing to read.
 
 ---
 
+## First result
+
+Level-3 screen, 8 September 2026: all 31 methodologies once on `04_python_xlarge`
+(`claude-opus-5`, low effort, one repeat, `$4.00` cap, review off). Every arm passed all 50 visible
+tests; 29 of 31 passed all 26 held-out tests. The spread is the parsimony factor — how compact the
+passing code is. One repeat orders, it does not decide (manual, chapter 6): arms within 0.05 are
+ties.
+
+| # | methodology | score | held-out | MI | SLOC | turns | $ |
+|---|---|---|---|---|---|---|---|
+| 1 | `29_invariants_test_first_relative_stop` | 0.99 | 1.00 | 15.8 | 186 | 32 | 1.15 |
+| 2 | `26_test_first` | 0.99 | 0.96 | 15.9 | 187 | 50 | 1.64 |
+| 3 | `15_invariants` | 0.98 | 1.00 | 15.7 | 187 | 36 | 0.93 |
+| 4 | `28_invariants_test_first` | 0.97 | 1.00 | 15.6 | 186 | 37 | 1.10 |
+| 5 | `19_relative_stop` | 0.96 | 1.00 | 15.3 | 187 | 37 | 0.82 |
+| 6 | `24_two_proposals` | 0.96 | 1.00 | 15.4 | 193 | 33 | 1.04 |
+| 7 | `07_process_doctypes_roles` | 0.96 | 1.00 | 15.3 | 193 | 59 | 2.14 |
+| 8 | `06_process_roles` | 0.95 | 1.00 | 15.2 | 193 | 38 | 1.54 |
+| … | | | | | | | |
+| 24 | `00_empty` | 0.91 | 1.00 | 14.6 | 199 | 22 | 1.16 |
+| 26 | `00_sabotage` | 0.90 | 1.00 | 14.4 | 193 | 34 | 0.85 |
+| 30 | `03_roles` | 0.86 | 1.00 | 13.7 | 199 | 42 | 1.83 |
+| 31 | `08_process_doctypes_roles_guardrails` | 0.86 | 1.00 | 13.8 | 194 | 47 | 1.94 |
+
+What it says, at this model and effort: short, checkable constraints on the *output* (`26`, `15`,
+`19`, `24`) beat process instructions; the four-layer stack `08` — the incumbent until this screen —
+is last, slowest and dearest; roles are the weak ingredient. `29` is the composition of the three
+winners and matches the best score at two thirds of the turns; it is the provisional incumbent
+until three repeats confirm it. Full rows, both projects: [`results_repository.csv`](results_repository.csv).
+
+---
+
 ## Quick start
 
 Requirements: Windows, Python via the `py` launcher, `claude` on the `PATH` and logged in, git, and **no
@@ -98,9 +130,9 @@ Working apparatus, early results. Read before quoting a number:
   projects, the oracle and the batch files name no vendor — and chapter 18 of the specification
   lists every point a second engine would have to touch.
 - **Python projects only.** A project type that filters which methodologies apply is not built.
-- **The validity gate has not yet passed on a full campaign.** In the first campaign the sabotage
-  anchor outscored most real methodologies, because every arm passed every test and only parsimony
-  separated them — a statement about the task being too easy, not about methodology.
+- **One repeat so far.** The level-3 screen above orders the arms; the repeats that make the
+  ordering a result are the next campaign. `05_python_refactor_large` saturates at this level (20
+  arms tie at 1.00) and serves as a cost check only.
 - **Costs are real.** A campaign is methodologies × projects × repeats invocations of a paid CLI.
   Start with `run_smoke_model_02.bat` and read `tk_cost_usd` before scaling anything up.
 

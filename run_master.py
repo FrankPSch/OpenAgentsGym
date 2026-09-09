@@ -1665,11 +1665,13 @@ def consolidate():
 
 
 GATE_ANCHOR_MTH = "00_sabotage"
-GATE_INCUMBENT_MTH = "08_process_doctypes_roles_guardrails"
-# The incumbent's name before it was spelled out. Rows written under the old name are still on
-# disk and are still the incumbent's rows, so the gate reads both and pools them (chapter 16); a
-# rename that quietly dropped a campaign's baseline arm would report "no incumbent rows" as PASS.
-GATE_INCUMBENT_LEGACY = "08_all"
+# The incumbent is the arm the sabotage anchor must lose to (chapter 16). It was the four-feature
+# stack 08_process_doctypes_roles_guardrails until the level-3 screen of 8 Sep put that arm last on
+# the ranking project; since 9 Sep it is the composition that led the screen at the lowest cost,
+# provisionally until repeats confirm it. The legacy name lets rows of the previous incumbent still
+# be found by campaigns that predate the change -- they are read only when no current rows exist.
+GATE_INCUMBENT_MTH = "29_invariants_test_first_relative_stop"
+GATE_INCUMBENT_LEGACY = "08_process_doctypes_roles_guardrails"
 GATE_ANCHOR_PRJ = "00_fail"
 
 
@@ -1819,7 +1821,9 @@ def gate(campaign=None, apparatus_only=False):
                                     if r.get("prj_name") == prj and r.get("mth_name") in names)
                         if s is not None]
             bad = scores(GATE_ANCHOR_MTH)
-            good = scores(GATE_INCUMBENT_MTH, GATE_INCUMBENT_LEGACY)
+            # Current incumbent first; the previous one only where a campaign has none of its rows
+            # (chapter 16) -- pooling two different arms under one name would be a third arm.
+            good = scores(GATE_INCUMBENT_MTH) or scores(GATE_INCUMBENT_LEGACY)
             if not bad and not good:
                 # Not a ranking project of this campaign at all -- the smoke run on
                 # 01_python_small carries neither anchor and is not a gap in the gate.

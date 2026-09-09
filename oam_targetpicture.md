@@ -118,15 +118,18 @@ stays an outcome to be measured rather than something the harness forces.
 The prefix `00_` marks an **anchor**: a degenerate case that exists to bound the measurement range,
 never a candidate to be improved. Arms `01`–`08` form a feature ladder over four features — process
 (P), document types (D), roles (R), guardrails (G): the low numbers are single features, the high
-numbers combinations, and `08_process_doctypes_roles_guardrails` is the practical baseline, the
-incumbent to beat. Its name is its feature list, as every other combination's is; it was `08_all`
-until the arms outside the ladder made "all" untrue. The convention applies identically to
+numbers combinations, and `08_process_doctypes_roles_guardrails` is the full stack. It was the
+incumbent to beat until the level-3 screen of 8 September put it last on the ranking project;
+the incumbent is now `29_invariants_test_first_relative_stop`, the composition that led that
+screen at the lowest cost — provisional until repeats confirm it (chapter 16). A name is its
+feature list, as every combination's is; `08` was `08_all` until the arms outside the ladder made
+"all" untrue. The convention applies identically to
 methodologies and projects.
 
 Arms `09` and upwards sit outside the ladder. Each is one prose feature of its own — a candidate
-the ladder's four do not express — read against `00_empty` for the main effect and against
-`08_process_doctypes_roles_guardrails` for whether it beats the incumbent, never combined into a
-grid. A new one joins by existing: the harness reads the two directory listings rather than a
+the ladder's four do not express — read against `00_empty` for the main effect and against the
+incumbent for whether it beats it, never combined into a grid. `28` and `29` are the exception
+that proves the rule: compositions of screen winners, built from data rather than from a guess. A new one joins by existing: the harness reads the two directory listings rather than a
 matrix, so nothing outside the arm's own directory is edited to add it. That is what makes the
 ladder finite and the set of arms open, and `09`–`27` is what it holds today rather than what it
 can hold.
@@ -300,7 +303,7 @@ is the control the first wired campaign will need.
 | `02_python_medium` | three functions and a small class over closed integer intervals, 20 tests | 10 | the default pair of `run_smoke_model_02.bat`: real oracle, short run |
 | `03_python_large` | a `ledger/` package of four sub-modules, three of them imported by `cli.py`, a 10-step work order in `prompt.md`, 24 tests, reference solution 82 SLOC | 12 | the ranking project for campaign 1; the first project large enough for structure to matter |
 | `04_python_xlarge` | order intake and stock allocation: a `warehouse/` package — 11 source files over three packages, a semicolon CSV price list and a JSON order feed in `fixtures/` as the only definition of the two formats, a 14-step work order in `prompt.md`, 50 tests, reference solution 177 SLOC | 26 | the ranking project for campaign 2 |
-| `05_python_refactor_large` | working but over-complex module, behaviour pinned by golden tests | 9 | refactor against fixed expected results; passes only if the golden tests stay green *and* SLOC falls below baseline |
+| `05_python_refactor_large` | working but over-complex module, behaviour pinned by golden tests | 9 | refactor against fixed expected results; passes only if the golden tests stay green *and* SLOC falls below baseline. Saturates at level 3 (20 arms tie at 1.00): a cost check, not a ranking project |
 
 The two anchors carry no held-out suite: `00_fail` cannot pass its visible tests and
 `01_python_small` is a smoke run, so on neither would the gap mean anything. The four ranking
@@ -316,8 +319,11 @@ methodology. `01_python_small` is that case by design and is used for exactly on
 
 ### Further details
 
-`04_python_xlarge` is the project from which a campaign-2 conclusion may be drawn, and
-`03_python_large` is the retained secondary. On `03` the visible fraction is 24/24 on every run of
+`04_python_xlarge` is the ranking project: on the level-3 screen of 8 September every arm passed
+all 50 visible and 26 held-out tests and the 0.86–0.99 spread was the maintainability factor alone,
+which is the discriminator this project was built to expose. `05_python_refactor_large` on the same
+screen had 20 of 29 arms at 1.00 and a 0.94–1.00 field: it separates nothing at that level and is
+kept as a cost and sanity check. `03_python_large` is the retained secondary. On `03` the visible fraction is 24/24 on every run of
 campaign 1, so correctness carries no variance there and the whole ranking is produced by the
 parsimony factor — a clamped one-decimal ratio that has already reached both ends of its range
 (0.911 at the top, 0.801 on the floor). `04_python_xlarge` moves the discriminator back to the
@@ -1586,8 +1592,8 @@ would corrupt a campaign without any visible error.
 Before any campaign result is interpreted, both anchors must behave. The gate is the 3 `00_fail`
 runs and the `00_sabotage` rows of the campaign's ranking runs, judged against the incumbent:
 
-- `00_sabotage` scores worse than `08_process_doctypes_roles_guardrails` on the same project with
-  an oracle. The condition is evaluated **per project the campaign holds rows for**, and a project
+- `00_sabotage` scores worse than the incumbent, `29_invariants_test_first_relative_stop`, on the
+  same project with an oracle. The condition is evaluated **per project the campaign holds rows for**, and a project
   carrying one of the two anchors but not the other makes the campaign **INCOMPLETE**, printed as
   such and exit 1 — never PASS. Skipping such a project silently let a campaign missing half its
   gate report that the gate held. A project carrying neither anchor — the smoke run on
@@ -1623,10 +1629,11 @@ it. The closing line is the most severe word any campaign reached — MIXED befo
 FAIL before PASS — and only PASS exits 0, so a campaign that is merely two campaigns under one
 label is not reported as an unfinished one.
 `rebuild_results_table.bat` runs it after every consolidation — the gate is worth nothing if it is
-only checked when someone remembers to. It takes the incumbent's rows under either name, the
-current `08_process_doctypes_roles_guardrails` and the legacy `08_all`, since rows written before
-the rename are still the incumbent's and a gate that silently found none of them would report the
-absence as PASS.
+only checked when someone remembers to. The incumbent is `GATE_INCUMBENT_MTH` in `run_master.py`;
+where a campaign has no rows of it the gate falls back to the previous incumbent,
+`08_process_doctypes_roles_guardrails`, so campaigns that predate the change still have a
+comparison, and a gate that silently found no incumbent rows would otherwise report the absence as
+PASS.
 
 `--gate --campaign <name> --apparatus-only` is the go/no-go for launching an expensive campaign
 after a cheap one: it prints the same block for that campaign alone, drops the first condition —
