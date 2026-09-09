@@ -1,6 +1,6 @@
 @echo off
 REM Full matrix: every methodology on every project, on capability level 4 (.llm_config.model_04).
-REM 44 methodologies x 6 projects = 264 calls, each REPEATS times.
+REM 43 methodologies x 6 projects = 258 calls; *_outdated directories are skipped., each REPEATS times.
 REM Directory listings, not a hard-coded list -- a new project or methodology joins the matrix by
 REM existing, which is what run_turbo_model_01.bat already does. Repeats come from REPEATS in the
 REM config, not from this file.

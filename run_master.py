@@ -925,8 +925,8 @@ def step7a_best_of_n(cfg, project, run_dir, template, workspace, tools, n):
     shutil.copy2(run_dir / ("stderr_%d.txt" % best["i"]), run_dir / "stderr.txt")
     scored = [c["score"] for c in cands if c["score"] >= 0]
     row = {"res_bestof_n": n,
-           "res_bestof_min": ("%.2f" % min(scored)) if scored else "",
-           "res_bestof_max": ("%.2f" % max(scored)) if scored else "",
+           "res_bestof_min": ("%.4f" % min(scored)) if scored else "",
+           "res_bestof_max": ("%.4f" % max(scored)) if scored else "",
            "tk_bestof_cost_usd": round(sum(c["cost"] for c in cands) - best["cost"], 6)}
     print("bestof: chose candidate %d" % best["i"])
     return best, row
@@ -1929,8 +1929,11 @@ def matrix_names(kind, wanted):
     or methodology joins by existing. A leading `_` is what marks a directory that is not an arm --
     the harness's own `local/runs/_*` convention, applied here so scratch can live beside the real thing.
     """
+    # A directory named *_outdated is an arm kept only for its rows (chapter 19.5): it stays on
+    # disk, its rows stay in the table, and no matrix runs it again.
     names = sorted(p.name for p in (ROOT / kind).iterdir()
-                   if p.is_dir() and not p.name.startswith("_"))
+                   if p.is_dir() and not p.name.startswith("_")
+                   and not p.name.endswith("_outdated"))
     if wanted is None:
         return names
     picked = [n.strip() for n in wanted.split(",") if n.strip()]

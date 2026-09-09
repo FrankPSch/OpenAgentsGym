@@ -1,4 +1,4 @@
-<!-- mth_version: 42_gsd_core_lean.v1 -->
+<!-- mth_version: 43_gsd_surface_lean_portable_outdated.v1 -->
 
 # Constraints
 
@@ -9,17 +9,19 @@ Definition of done: {{definition_of_done=strict}}. Strict means: stop when the s
 Do not add files, tests, documentation or refactorings that neither the task nor this methodology
 asked for.
 
-Document types: {{doc_types=spec_plan_report}}. Exactly three files, under `.work/`: `SPEC.md`,
-`PLAN.md`, `REPORT.md`. A fourth is over-delivery. Review rounds: {{review_rounds=3}}, capped, and
-stopped early if the finding count does not fall between two rounds.
+Document types: {{doc_types=planning_tree}}. Planning tree means: the artefacts named in §1 of
+the side file are written under `.planning/`, and no others. Anything beyond that is
+over-delivery. Review rounds: {{review_rounds=3}},
+capped, and stopped early if the issue count does not fall between two rounds.
 
 **Nothing ships on one mind:** the instance that produced material never certifies it. Planner,
-checker, builder and verifier are separate instances with separate contexts.
+plan checker, executor and verifier are separate instances with separate contexts. Absence of
+evidence is FAIL, not PASS.
 
 # What you read
 
-`../methodology/GSD Core - Lean Methodology.md`, one directory up from the project_workspace, is the reading
-list. Nothing else unasked. Re-read §8 before you hand anything over.
+`../methodology/Get-Shit-Done Lean Methodology.md`, one directory up from the project_workspace, is
+the reading list. Nothing else unasked. Re-read §5 and §6 before you hand anything over.
 
 # Task
 

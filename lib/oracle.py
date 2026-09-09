@@ -498,7 +498,7 @@ def main(size_ref=None, mi_ref=None, require_smaller_than_baseline=False,
         # it is exit 1 with score 0.00 over the template's own test count -- res_verification_error
         # stays false and res_verification_exit stays 1. The `timeout=1` marker is what lets the
         # harness say TIMEOUT in run.log without a column of its own (chapter 11).
-        target.write_text("passed=0\ntotal=%s\nscore=0.00\npassed_holdout=\ntotal_holdout=\n"
+        target.write_text("passed=0\ntotal=%s\nscore=0.0000\npassed_holdout=\ntotal_holdout=\n"
                           "score_holdout=\ntimeout=1\n%s" % (expected, marks), encoding="utf-8")
         return 1
     (total, passed), (total_h, passed_h), collected = result
@@ -520,9 +520,9 @@ def main(size_ref=None, mi_ref=None, require_smaller_than_baseline=False,
         score *= m["parsimony_factor"]
     holdout_lines = "passed_holdout=\ntotal_holdout=\nscore_holdout=\n"
     if total_h:
-        holdout_lines = "passed_holdout=%s\ntotal_holdout=%s\nscore_holdout=%.2f\n" % (
+        holdout_lines = "passed_holdout=%s\ntotal_holdout=%s\nscore_holdout=%.4f\n" % (
             passed_h, total_h, float(passed_h) / total_h)
-    target.write_text("passed=%s\ntotal=%s\nscore=%.2f\n%s%s" % (passed, total, score,
+    target.write_text("passed=%s\ntotal=%s\nscore=%.4f\n%s%s" % (passed, total, score,
                                                                 holdout_lines, marks),
                       encoding="utf-8")
 

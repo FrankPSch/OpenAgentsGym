@@ -1,0 +1,2 @@
+GSD-C/L. 44 cut to a single run: six roles, three artefacts under .work/ (SPEC, PLAN, REPORT), doc_types=spec_plan_report. Successor of 42_gsd_core_lean_outdated (same text; renumbered so the GSD family is one clean set, 44-46).
+Read against 00_empty for the effect and against 34_pipeline_source_with_reviewer for whether a role split beats a single seat. Adherence: res_subagents_spawned (roles as instances), res_files_added (the artefact tree counts as added files; no res_artifacts name matches).

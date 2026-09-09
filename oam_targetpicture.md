@@ -188,10 +188,10 @@ Four features, one file each: **P** `process.md` (plan → implement → run tes
 | `36_pipeline_change_discipline` | Cd | `change_discipline.md` — section 3 of the source's entry file verbatim (the eight over-delivery rules) behind the standard frame; the cheapest cut of the source |
 | `37_pipeline_team_roles_only` | TR | `team_roles.md` verbatim behind the standard frame — the one file that separated `34` from `31`, alone |
 | `38_pipeline_source_with_reviewer_relative_stop` | PS+R+Rs | `34` plus `relative_stop.md` first on its reading list — the best front arm with the cheapest stopping rule |
-| `39_gsd_surface_full` | GSD-S/F | `Get-Shit-Done Full Methodology.md` — the Get Shit Done framework at its May-2026 snapshot (the frozen `gsd-build` repository, same lineage as `41`) transcribed at its full published surface: 33 roles, 67 commands; `doc_types=planning_tree`, `review_rounds=3`. Human gates, git and cross-vendor review are named in the text and cannot act in a run |
-| `40_gsd_surface_lean` | GSD-S/L | `Get-Shit-Done Lean Methodology.md` — `39` cut to what one run can obey: 33 roles to 8, four phase artefacts |
-| `41_gsd_core_full` | GSD-C/F | `GSD Core - Faithful Methodology.md` — the same framework at its current head (`open-gsd/gsd-core` v1.13.0), fifteen roles: the planning tree under `.planning/`, planner / checker / executor / verifier as separate instances; `doc_types=planning_tree`, `review_rounds=3` |
-| `42_gsd_core_lean` | GSD-C/L | `GSD Core - Lean Methodology.md` — `41` cut to a single run: six roles, three artefacts under `.work/` (`doc_types=spec_plan_report`) |
+| `39`–`43` `*_outdated` | — | the first GSD transcriptions; their text named the framework's enforcement layer (hook events, tool names, flags) and two were edited after a run. Kept with their rows as the record; not run again |
+| `44_gsd_core_full` | GSD-C/F | `GSD Core - Faithful Methodology.md` — the Get Shit Done framework at its current head (gsd-core v1.13), fifteen roles, as pure method: six-stage per-phase cycle behind gates, a plan reviewed before execution, one fresh instance per plan, goal-backward verification, the planning tree under `.planning/`; `doc_types=planning_tree`, `review_rounds=3` |
+| `45_gsd_core_lean` | GSD-C/L | `GSD Core - Lean Methodology.md` — `44` cut to a single run: six roles, three artefacts under `.work/` (`doc_types=spec_plan_report`) |
+| `46_gsd_surface_lean` | GSD-S/L | `Get-Shit-Done Lean Methodology.md` — the framework's May-2026 snapshot cut to one run: eight roles, four phase artefacts; the session-discipline rules its enforcement layer used to impose, as rules |
 
 ### Further details
 
@@ -827,11 +827,14 @@ An infinite loop in generated code otherwise stalled a matrix worker forever.
 ```
 passed=7
 total=10
-score=0.70
+score=0.7000
 passed_holdout=5
 total_holdout=12
-score_holdout=0.42
+score_holdout=0.4167
 ```
+
+Scores are written with four decimals (`%.4f`); the parsimony factor keeps its three. Rows written
+before 9 September carry two — the value is the same, only the rounding differs.
 
 `passed` and `total` are the visible suite alone; the held-out lines are blank when the project
 ships no held-out suite. A **skipped test is neither passed nor failed** and leaves the fraction
@@ -1101,7 +1104,7 @@ produced. Its flags, each optional:
 
 Each pair runs **once**; `REPEATS` applies inside it, exactly as under `run.bat`. The two directory
 listings are the matrix rather than a hard-coded list, so a new project or methodology joins by
-existing — 44 × 6 = 264 pairs today, and nothing changed when ten arms were added; a directory whose
+existing — 43 × 6 = 258 pairs today (five `*_outdated` directories are skipped), and nothing changed when ten arms were added; a directory whose
 name starts with `_` is not an arm and is skipped. Stdout and stderr of every run go to one
 `local\runs\_matrix_<campaign>_<timestamp>.log`, each line prefixed by its pair, and the summary at the
 end is pairs run, rows produced and aborts. The turbo rows are real rows in the repository and are
@@ -1831,7 +1834,13 @@ No invented conventions:
 
 ### 19.5 Portability rules
 
-Checked by the author when a methodology is edited, not at run time:
+Checked by the author when a methodology is edited, not at run time — and an edit is only ever
+made to an arm that has no result rows. **An arm with rows is never edited:** every row records the
+text the run saw (`mth_version`, `mth_chars`, the run's own `methodology/` snapshot), and a later
+edit would leave rows of two texts under one name. A change after the first run is a new directory
+with a new number, and the rows stay with the text that produced them; the old directory is renamed
+`<name>_outdated`, which `--matrix` skips like a `_`-prefixed directory while its rows stay in the
+table (`39`–`43` are the example). The rules:
 
 1. No vendor tool names. Capability words are allowed — `subagent` is used by the R and F arms
    — but they bind the arm to engines that have the capability, which is a portability limit of
