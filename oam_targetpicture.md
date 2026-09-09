@@ -188,6 +188,10 @@ Four features, one file each: **P** `process.md` (plan → implement → run tes
 | `36_pipeline_change_discipline` | Cd | `change_discipline.md` — section 3 of the source's entry file verbatim (the eight over-delivery rules) behind the standard frame; the cheapest cut of the source |
 | `37_pipeline_team_roles_only` | TR | `team_roles.md` verbatim behind the standard frame — the one file that separated `34` from `31`, alone |
 | `38_pipeline_source_with_reviewer_relative_stop` | PS+R+Rs | `34` plus `relative_stop.md` first on its reading list — the best front arm with the cheapest stopping rule |
+| `39_gsd_core_full_surface` | GSD-B/F | `Get-Shit-Done Full Methodology.md` — the archived `gsd-build/get-shit-done` repository transcribed at its final state; `doc_types=planning_tree`, `review_rounds=3`. Human gates, git and cross-vendor review are named in the text and cannot act in a run |
+| `40_gsd_build_lean` | GSD-B/L | `Get-Shit-Done Lean Methodology.md` — `39` cut to what one run can obey: 33 roles to 8, four phase artefacts |
+| `41_gsd_core_full` | GSD-F | `GSD Core - Faithful Methodology.md` — `open-gsd/gsd-core` v1.13.0 transcribed: the planning tree under `.planning/`, planner / checker / executor / verifier as separate instances; `doc_types=planning_tree`, `review_rounds=3` |
+| `42_gsd_core_lean` | GSD-L | `GSD Core - Lean Methodology.md` — `41` cut to a single run: six roles, three artefacts under `.work/` (`doc_types=spec_plan_report`) |
 
 ### Further details
 
@@ -276,7 +280,7 @@ largest single cost driver.
 follow the task description in the entry file. Tests position effects on adherence and costs
 nothing to vary.
 
-**`doc_types`** — `none` | `notes` (a short decision log) | `full` (plan, decision log and summary)
+**`doc_types`** — `none` | `notes` (a short decision log) | `full` (plan, decision log and summary); a transcribed arm may declare its own value naming its artefact set (`planning_tree`, `spec_plan_report` — arms `39`–`42`), recorded as-is in `mth_param_doc_types` and matched by no `res_artifacts` name, so its documents count in the diff columns like any other added file
 | `adr` (plan and summary, and one numbered record per decision under `docs/adr/` instead of the
 decision log). Documents are pure cost on single-session work with no downstream consumer and are
 expected to pay off only on handover or multi-session tasks; `adr` and the `AGENT_BACKLOG.md` the feature
@@ -1097,7 +1101,7 @@ produced. Its flags, each optional:
 
 Each pair runs **once**; `REPEATS` applies inside it, exactly as under `run.bat`. The two directory
 listings are the matrix rather than a hard-coded list, so a new project or methodology joins by
-existing — 40 × 6 = 240 pairs today, and nothing changed when ten arms were added; a directory whose
+existing — 44 × 6 = 264 pairs today, and nothing changed when ten arms were added; a directory whose
 name starts with `_` is not an arm and is skipped. Stdout and stderr of every run go to one
 `local\runs\_matrix_<campaign>_<timestamp>.log`, each line prefixed by its pair, and the summary at the
 end is pairs run, rows produced and aborts. The turbo rows are real rows in the repository and are

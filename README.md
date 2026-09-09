@@ -102,7 +102,7 @@ campaigns cannot be pooled by accident.
 ## Layout
 
 ```
-methodology/     40 candidates: 00_empty, 00_sabotage, a four-feature ladder, one idea each, two compositions, one transcribed kernel and its untranscribed source
+methodology/     44 candidates: 00_empty, 00_sabotage, a four-feature ladder, one idea each, two compositions, one transcribed kernel and its untranscribed source
 projects/        00_fail (impossible by construction) and five Python tasks of growing size
 lib/oracle.py    the shared scorer: tests, SLOC, complexity, Halstead, maintainability index
 run_master.py    the harness — pre-flight, invoke, score, one CSV row
