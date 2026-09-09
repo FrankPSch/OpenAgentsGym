@@ -184,6 +184,10 @@ Four features, one file each: **P** `process.md` (plan → implement → run tes
 | `32_invariants_relative_stop` | I+Rs | `invariants.md` + `relative_stop.md` — the two cheapest arms on the level-3 front composed, without test first |
 | `33_justify_file_invariants` | J+I | `justify_file.md` + `invariants.md` — the cheapest front arm with the strongest single constraint |
 | `34_pipeline_source_with_reviewer` | PS+R | `31` plus the source's `team_roles.md` verbatim, which carries its reviewer rule; the reviewer seat's cost and benefit |
+| `35_pipeline_source_with_reviewer_instance` | PS+R+i | `34` plus two sentences: the second reader is a separate instance with a fresh context, never the author's own — forces the seat `34` satisfied by self-check |
+| `36_pipeline_change_discipline` | Cd | `change_discipline.md` — section 3 of the source's entry file verbatim (the eight over-delivery rules) behind the standard frame; the cheapest cut of the source |
+| `37_pipeline_team_roles_only` | TR | `team_roles.md` verbatim behind the standard frame — the one file that separated `34` from `31`, alone |
+| `38_pipeline_source_with_reviewer_relative_stop` | PS+R+Rs | `34` plus `relative_stop.md` first on its reading list — the best front arm with the cheapest stopping rule |
 
 ### Further details
 
@@ -1093,7 +1097,7 @@ produced. Its flags, each optional:
 
 Each pair runs **once**; `REPEATS` applies inside it, exactly as under `run.bat`. The two directory
 listings are the matrix rather than a hard-coded list, so a new project or methodology joins by
-existing — 36 × 6 = 216 pairs today, and nothing changed when ten arms were added; a directory whose
+existing — 40 × 6 = 240 pairs today, and nothing changed when ten arms were added; a directory whose
 name starts with `_` is not an arm and is skipped. Stdout and stderr of every run go to one
 `local\runs\_matrix_<campaign>_<timestamp>.log`, each line prefixed by its pair, and the summary at the
 end is pairs run, rows produced and aborts. The turbo rows are real rows in the repository and are
