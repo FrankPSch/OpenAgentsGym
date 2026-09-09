@@ -1,5 +1,5 @@
-GSD-S. The same framework as 35_gsd_core_faithful, transcribed at its full published surface: all 33
-agent roles and all 67 commands kept as roles and verbs, against 35's fifteen. The surface area is
+GSD-S. The same framework as 41_gsd_core_full, transcribed at its full published surface: all 33
+agent roles and all 67 commands kept as roles and verbs, against 41's fifteen. The surface area is
 the variable; nothing else is.
 
 Source note, and the reason this is not a second framework: `gsd-build/get-shit-done` and
@@ -14,8 +14,8 @@ differs by two lines, the roadmap template is byte-identical, the role set is th
 `dom-verifier` and `mempalace-curator`, the command surface is 67 against 72. What the head adds is
 enforcement depth — the verifier evidence gate, Nyquist compliance, the honest-verifier and
 untrusted-input-boundary rules, the compact-content gate, eight debugger references, and the
-skills/capabilities repackaging. None of it changes the stages, and 35 already carries it. So the
-only thing this rung can measure that 35 cannot is breadth.
+skills/capabilities repackaging. None of it changes the stages, and 41 already carries it. So the
+only thing this rung can measure that 41 cannot is breadth.
 
 Map: `Get-Shit-Done Full Methodology.md` §2 = the template corpus and the `.planning/` layout; §3 =
 all 33 agent files with their input/output/must-not contracts; §4 = `references/gates.md` in
@@ -31,7 +31,7 @@ Write, the context monitor and statusline, and the CLI/SDK layer that computes s
 archives milestones and drives worktrees.
 
 The readable question: what does surface area cost when almost none of it is reachable on a single
-task? 35 states up front what one run cannot obey and keeps fifteen roles; this rung keeps all 33
+task? 41 states up front what one run cannot obey and keeps fifteen roles; this rung keeps all 33
 and 67 and leaves the pruning to the agent, so over-delivery and unread artefacts are the expected
 failure mode and are visible as such.
 

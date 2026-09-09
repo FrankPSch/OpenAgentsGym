@@ -188,10 +188,10 @@ Four features, one file each: **P** `process.md` (plan → implement → run tes
 | `36_pipeline_change_discipline` | Cd | `change_discipline.md` — section 3 of the source's entry file verbatim (the eight over-delivery rules) behind the standard frame; the cheapest cut of the source |
 | `37_pipeline_team_roles_only` | TR | `team_roles.md` verbatim behind the standard frame — the one file that separated `34` from `31`, alone |
 | `38_pipeline_source_with_reviewer_relative_stop` | PS+R+Rs | `34` plus `relative_stop.md` first on its reading list — the best front arm with the cheapest stopping rule |
-| `39_gsd_core_full_surface` | GSD-B/F | `Get-Shit-Done Full Methodology.md` — the archived `gsd-build/get-shit-done` repository transcribed at its final state; `doc_types=planning_tree`, `review_rounds=3`. Human gates, git and cross-vendor review are named in the text and cannot act in a run |
-| `40_gsd_build_lean` | GSD-B/L | `Get-Shit-Done Lean Methodology.md` — `39` cut to what one run can obey: 33 roles to 8, four phase artefacts |
-| `41_gsd_core_full` | GSD-F | `GSD Core - Faithful Methodology.md` — `open-gsd/gsd-core` v1.13.0 transcribed: the planning tree under `.planning/`, planner / checker / executor / verifier as separate instances; `doc_types=planning_tree`, `review_rounds=3` |
-| `42_gsd_core_lean` | GSD-L | `GSD Core - Lean Methodology.md` — `41` cut to a single run: six roles, three artefacts under `.work/` (`doc_types=spec_plan_report`) |
+| `39_gsd_surface_full` | GSD-S/F | `Get-Shit-Done Full Methodology.md` — the Get Shit Done framework at its May-2026 snapshot (the frozen `gsd-build` repository, same lineage as `41`) transcribed at its full published surface: 33 roles, 67 commands; `doc_types=planning_tree`, `review_rounds=3`. Human gates, git and cross-vendor review are named in the text and cannot act in a run |
+| `40_gsd_surface_lean` | GSD-S/L | `Get-Shit-Done Lean Methodology.md` — `39` cut to what one run can obey: 33 roles to 8, four phase artefacts |
+| `41_gsd_core_full` | GSD-C/F | `GSD Core - Faithful Methodology.md` — the same framework at its current head (`open-gsd/gsd-core` v1.13.0), fifteen roles: the planning tree under `.planning/`, planner / checker / executor / verifier as separate instances; `doc_types=planning_tree`, `review_rounds=3` |
+| `42_gsd_core_lean` | GSD-C/L | `GSD Core - Lean Methodology.md` — `41` cut to a single run: six roles, three artefacts under `.work/` (`doc_types=spec_plan_report`) |
 
 ### Further details
 
