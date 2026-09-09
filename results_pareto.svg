@@ -1,0 +1,287 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 978" width="800" height="978">
+<style>
+text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fill:#1f2933}
+.ttl{font-size:13px;font-weight:600} .hd{font-size:12px} .lg{font-size:10px;fill:#6b7280} .ax{font-size:10px;fill:#4b5563} .lb{font-size:9px} .lbo{font-size:9px;fill:#9aa3ad}
+.grid{stroke:#e5e7eb;stroke-width:1} .axis{stroke:#9aa3ad;stroke-width:1}
+.pt{fill:#1f2933} .pto{fill:none;stroke:#9aa3ad;stroke-width:1.2}
+.front{fill:none;stroke:#1f2933;stroke-width:1.2;opacity:0.55}
+</style>
+<rect x="0" y="0" width="800" height="978" fill="#ffffff"/>
+<text class="hd" x="58" y="20">score against cost, one panel per campaign and project</text>
+<text class="lg" x="58" y="36">filled = live arm, hollow = *_outdated; the line is the Pareto front of the live arms</text>
+<text class="ttl" x="58" y="66">04_python_xlarge  &#8212;  .llm_config.model_03</text>
+<rect x="58" y="80" width="720" height="360" fill="#fbfbfc" stroke="#e5e7eb"/>
+<line class="grid" x1="58" y1="440" x2="778" y2="440"/>
+<text class="ax" x="50" y="443" text-anchor="end">0.80</text>
+<line class="grid" x1="58" y1="404" x2="778" y2="404"/>
+<text class="ax" x="50" y="407" text-anchor="end">0.82</text>
+<line class="grid" x1="58" y1="368" x2="778" y2="368"/>
+<text class="ax" x="50" y="371" text-anchor="end">0.84</text>
+<line class="grid" x1="58" y1="332" x2="778" y2="332"/>
+<text class="ax" x="50" y="335" text-anchor="end">0.86</text>
+<line class="grid" x1="58" y1="296" x2="778" y2="296"/>
+<text class="ax" x="50" y="299" text-anchor="end">0.88</text>
+<line class="grid" x1="58" y1="260" x2="778" y2="260"/>
+<text class="ax" x="50" y="263" text-anchor="end">0.90</text>
+<line class="grid" x1="58" y1="224" x2="778" y2="224"/>
+<text class="ax" x="50" y="227" text-anchor="end">0.92</text>
+<line class="grid" x1="58" y1="188" x2="778" y2="188"/>
+<text class="ax" x="50" y="191" text-anchor="end">0.94</text>
+<line class="grid" x1="58" y1="152" x2="778" y2="152"/>
+<text class="ax" x="50" y="155" text-anchor="end">0.96</text>
+<line class="grid" x1="58" y1="116" x2="778" y2="116"/>
+<text class="ax" x="50" y="119" text-anchor="end">0.98</text>
+<line class="grid" x1="58" y1="80" x2="778" y2="80"/>
+<text class="ax" x="50" y="83" text-anchor="end">1.00</text>
+<line class="grid" x1="58" y1="80" x2="58" y2="440"/>
+<text class="ax" x="58" y="455" text-anchor="middle">0.0</text>
+<line class="grid" x1="138" y1="80" x2="138" y2="440"/>
+<text class="ax" x="138" y="455" text-anchor="middle">0.5</text>
+<line class="grid" x1="218" y1="80" x2="218" y2="440"/>
+<text class="ax" x="218" y="455" text-anchor="middle">1.0</text>
+<line class="grid" x1="298" y1="80" x2="298" y2="440"/>
+<text class="ax" x="298" y="455" text-anchor="middle">1.5</text>
+<line class="grid" x1="378" y1="80" x2="378" y2="440"/>
+<text class="ax" x="378" y="455" text-anchor="middle">2.0</text>
+<line class="grid" x1="458" y1="80" x2="458" y2="440"/>
+<text class="ax" x="458" y="455" text-anchor="middle">2.5</text>
+<line class="grid" x1="538" y1="80" x2="538" y2="440"/>
+<text class="ax" x="538" y="455" text-anchor="middle">3.0</text>
+<line class="grid" x1="618" y1="80" x2="618" y2="440"/>
+<text class="ax" x="618" y="455" text-anchor="middle">3.5</text>
+<line class="grid" x1="698" y1="80" x2="698" y2="440"/>
+<text class="ax" x="698" y="455" text-anchor="middle">4.0</text>
+<line class="grid" x1="778" y1="80" x2="778" y2="440"/>
+<text class="ax" x="778" y="455" text-anchor="middle">4.5</text>
+<line class="axis" x1="58" y1="440" x2="778" y2="440"/>
+<line class="axis" x1="58" y1="80" x2="58" y2="440"/>
+<text class="ax" x="418" y="473" text-anchor="middle">cost (USD)</text>
+<text class="ax" x="20" y="260" text-anchor="middle" transform="rotate(-90 20 260)">score</text>
+<polyline class="front" points="183.31,180.8 189.5,159.2 197.68,101.6 320.35,90.8"/>
+<circle class="pt" cx="183.31" cy="180.8" r="3.2"/>
+<text class="lb" x="188.31" y="176.8">18</text>
+<circle class="pt" cx="183.52" cy="249.2" r="3.2"/>
+<text class="lb" x="188.52" y="245.2">25</text>
+<circle class="pt" cx="183.79" cy="180.8" r="3.2"/>
+<text class="lb" x="167.99" y="176.8">37</text>
+<circle class="pt" cx="184.91" cy="204.2" r="3.2"/>
+<text class="lb" x="189.91" y="200.2">31</text>
+<circle class="pt" cx="189.5" cy="159.2" r="3.2"/>
+<text class="lb" x="194.5" y="155.2">19</text>
+<circle class="pt" cx="190.34" cy="180.8" r="3.2"/>
+<text class="lb" x="209.14" y="176.8">32</text>
+<circle class="pt" cx="191.27" cy="249.2" r="3.2"/>
+<text class="lb" x="175.47" y="245.2">12</text>
+<circle class="pt" cx="194.24" cy="191.6" r="3.2"/>
+<text class="lb" x="199.24" y="187.6">10</text>
+<circle class="pt" cx="194.71" cy="260" r="3.2"/>
+<text class="lb" x="199.71" y="256">00</text>
+<circle class="pt" cx="197.68" cy="101.6" r="3.2"/>
+<text class="lb" x="202.68" y="97.6">34</text>
+<circle class="pt" cx="198.67" cy="204.2" r="3.2"/>
+<text class="lb" x="203.67" y="200.2">04</text>
+<circle class="pt" cx="199.05" cy="260" r="3.2"/>
+<text class="lb" x="183.25" y="256">14</text>
+<circle class="pt" cx="204.8" cy="180.8" r="3.2"/>
+<text class="lb" x="223.6" y="176.8">36</text>
+<circle class="pt" cx="206.77" cy="114.2" r="3.2"/>
+<text class="lb" x="211.77" y="110.2">15</text>
+<circle class="pt" cx="208.26" cy="249.2" r="3.2"/>
+<text class="lb" x="213.26" y="245.2">16</text>
+<circle class="pt" cx="211.5" cy="180.8" r="3.2"/>
+<text class="lb" x="216.5" y="189.8">11</text>
+<circle class="pt" cx="218.74" cy="249.2" r="3.2"/>
+<text class="lb" x="237.54" y="245.2">23</text>
+<circle class="pt" cx="222.05" cy="191.6" r="3.2"/>
+<text class="lb" x="240.85" y="187.6">01</text>
+<circle class="pt" cx="222.22" cy="249.2" r="3.2"/>
+<text class="lb" x="227.22" y="258.2">20</text>
+<circle class="pt" cx="223.14" cy="170" r="3.2"/>
+<text class="lb" x="228.14" y="166">33</text>
+<circle class="pt" cx="224.4" cy="146.6" r="3.2"/>
+<text class="lb" x="229.4" y="142.6">24</text>
+<circle class="pt" cx="226.16" cy="191.6" r="3.2"/>
+<text class="lb" x="231.16" y="200.6">27</text>
+<circle class="pt" cx="233.9" cy="125" r="3.2"/>
+<text class="lb" x="238.9" y="121">28</text>
+<circle class="pt" cx="237.9" cy="283.4" r="3.2"/>
+<text class="lb" x="242.9" y="279.4">22</text>
+<circle class="pt" cx="241.1" cy="180.8" r="3.2"/>
+<text class="lb" x="246.1" y="176.8">02</text>
+<circle class="pt" cx="241.92" cy="101.6" r="3.2"/>
+<text class="lb" x="246.92" y="97.6">29</text>
+<circle class="pt" cx="243.56" cy="215" r="3.2"/>
+<text class="lb" x="248.56" y="211">05</text>
+<circle class="pt" cx="244.15" cy="238.4" r="3.2"/>
+<text class="lb" x="249.15" y="234.4">00</text>
+<circle class="pt" cx="265.23" cy="238.4" r="3.2"/>
+<text class="lb" x="270.23" y="234.4">17</text>
+<circle class="pt" cx="289.31" cy="270.8" r="3.2"/>
+<text class="lb" x="294.31" y="266.8">21</text>
+<circle class="pt" cx="293.34" cy="204.2" r="3.2"/>
+<text class="lb" x="298.34" y="200.2">38</text>
+<circle class="pt" cx="303.98" cy="170" r="3.2"/>
+<text class="lb" x="308.98" y="166">06</text>
+<circle class="pt" cx="320.35" cy="90.8" r="3.2"/>
+<text class="lb" x="325.35" y="99.8">26</text>
+<circle class="pt" cx="336.38" cy="260" r="3.2"/>
+<text class="lb" x="341.38" y="256">30</text>
+<circle class="pt" cx="350.41" cy="339.2" r="3.2"/>
+<text class="lb" x="355.41" y="335.2">03</text>
+<circle class="pt" cx="365.36" cy="225.8" r="3.2"/>
+<text class="lb" x="370.36" y="221.8">09</text>
+<circle class="pt" cx="368.7" cy="326.6" r="3.2"/>
+<text class="lb" x="373.7" y="322.6">08</text>
+<circle class="pt" cx="370.54" cy="215" r="3.2"/>
+<text class="lb" x="375.54" y="211">13</text>
+<circle class="pt" cx="385.69" cy="215" r="3.2"/>
+<text class="lb" x="390.69" y="211">35</text>
+<circle class="pt" cx="400.76" cy="159.2" r="3.2"/>
+<text class="lb" x="405.76" y="155.2">07</text>
+<circle class="pto" cx="543.87" cy="146.6" r="3.2"/>
+<text class="lbo" x="548.87" y="142.6">42</text>
+<circle class="pt" cx="567.93" cy="159.2" r="3.2"/>
+<text class="lb" x="572.93" y="155.2">45</text>
+<circle class="pto" cx="577.15" cy="215" r="3.2"/>
+<text class="lbo" x="582.15" y="211">39</text>
+<circle class="pto" cx="619.31" cy="101.6" r="3.2"/>
+<text class="lbo" x="624.31" y="97.6">40</text>
+<circle class="pto" cx="650.91" cy="80" r="3.2"/>
+<text class="lbo" x="655.91" y="89">43</text>
+<circle class="pto" cx="658.04" cy="114.2" r="3.2"/>
+<text class="lbo" x="663.04" y="110.2">41</text>
+<circle class="pt" cx="692.54" cy="215" r="3.2"/>
+<text class="lb" x="697.54" y="211">46</text>
+<circle class="pt" cx="703.01" cy="125" r="3.2"/>
+<text class="lb" x="708.01" y="121">44</text>
+<text class="ttl" x="58" y="532">05_python_refactor_large  &#8212;  .llm_config.model_03</text>
+<rect x="58" y="546" width="720" height="360" fill="#fbfbfc" stroke="#e5e7eb"/>
+<line class="grid" x1="58" y1="906" x2="778" y2="906"/>
+<text class="ax" x="50" y="909" text-anchor="end">0.90</text>
+<line class="grid" x1="58" y1="834" x2="778" y2="834"/>
+<text class="ax" x="50" y="837" text-anchor="end">0.92</text>
+<line class="grid" x1="58" y1="762" x2="778" y2="762"/>
+<text class="ax" x="50" y="765" text-anchor="end">0.94</text>
+<line class="grid" x1="58" y1="690" x2="778" y2="690"/>
+<text class="ax" x="50" y="693" text-anchor="end">0.96</text>
+<line class="grid" x1="58" y1="618" x2="778" y2="618"/>
+<text class="ax" x="50" y="621" text-anchor="end">0.98</text>
+<line class="grid" x1="58" y1="546" x2="778" y2="546"/>
+<text class="ax" x="50" y="549" text-anchor="end">1.00</text>
+<line class="grid" x1="58" y1="546" x2="58" y2="906"/>
+<text class="ax" x="58" y="921" text-anchor="middle">0.0</text>
+<line class="grid" x1="148" y1="546" x2="148" y2="906"/>
+<text class="ax" x="148" y="921" text-anchor="middle">0.5</text>
+<line class="grid" x1="238" y1="546" x2="238" y2="906"/>
+<text class="ax" x="238" y="921" text-anchor="middle">1.0</text>
+<line class="grid" x1="328" y1="546" x2="328" y2="906"/>
+<text class="ax" x="328" y="921" text-anchor="middle">1.5</text>
+<line class="grid" x1="418" y1="546" x2="418" y2="906"/>
+<text class="ax" x="418" y="921" text-anchor="middle">2.0</text>
+<line class="grid" x1="508" y1="546" x2="508" y2="906"/>
+<text class="ax" x="508" y="921" text-anchor="middle">2.5</text>
+<line class="grid" x1="598" y1="546" x2="598" y2="906"/>
+<text class="ax" x="598" y="921" text-anchor="middle">3.0</text>
+<line class="grid" x1="688" y1="546" x2="688" y2="906"/>
+<text class="ax" x="688" y="921" text-anchor="middle">3.5</text>
+<line class="grid" x1="778" y1="546" x2="778" y2="906"/>
+<text class="ax" x="778" y="921" text-anchor="middle">4.0</text>
+<line class="axis" x1="58" y1="906" x2="778" y2="906"/>
+<line class="axis" x1="58" y1="546" x2="58" y2="906"/>
+<text class="ax" x="418" y="939" text-anchor="middle">cost (USD)</text>
+<text class="ax" x="20" y="726" text-anchor="middle" transform="rotate(-90 20 726)">score</text>
+<circle class="pt" cx="91.61" cy="546" r="3.2"/>
+<text class="lb" x="96.61" y="555">00</text>
+<circle class="pt" cx="92.09" cy="546" r="3.2"/>
+<text class="lb" x="76.29" y="555">34</text>
+<circle class="pt" cx="92.71" cy="546" r="3.2"/>
+<text class="lb" x="111.51" y="555">36</text>
+<circle class="pt" cx="93.59" cy="546" r="3.2"/>
+<text class="lb" x="63.99" y="555">38</text>
+<circle class="pt" cx="94.16" cy="546" r="3.2"/>
+<text class="lb" x="99.16" y="564">32</text>
+<circle class="pt" cx="94.93" cy="546" r="3.2"/>
+<text class="lb" x="79.13" y="564">18</text>
+<circle class="pt" cx="95.53" cy="546" r="3.2"/>
+<text class="lb" x="114.33" y="564">11</text>
+<circle class="pt" cx="95.74" cy="546" r="3.2"/>
+<text class="lb" x="66.14" y="564">19</text>
+<circle class="pt" cx="95.87" cy="546" r="3.2"/>
+<text class="lb" x="100.87" y="573">01</text>
+<circle class="pt" cx="97.07" cy="578.4" r="3.2"/>
+<text class="lb" x="81.27" y="574.4">14</text>
+<circle class="pt" cx="97.32" cy="578.4" r="3.2"/>
+<text class="lb" x="116.12" y="574.4">25</text>
+<circle class="pt" cx="97.51" cy="758.4" r="3.2"/>
+<text class="lb" x="102.51" y="754.4">00</text>
+<circle class="pt" cx="97.52" cy="546" r="3.2"/>
+<text class="lb" x="67.92" y="573">37</text>
+<circle class="pt" cx="99.01" cy="546" r="3.2"/>
+<text class="lb" x="104.01" y="582">24</text>
+<circle class="pt" cx="100.28" cy="571.2" r="3.2"/>
+<text class="lb" x="84.48" y="589.2">04</text>
+<circle class="pt" cx="100.61" cy="546" r="3.2"/>
+<text class="lb" x="105.61" y="591">22</text>
+<circle class="pt" cx="101.79" cy="546" r="3.2"/>
+<text class="lb" x="120.59" y="591">10</text>
+<circle class="pt" cx="102.15" cy="585.6" r="3.2"/>
+<text class="lb" x="72.55" y="594.6">16</text>
+<circle class="pt" cx="104.9" cy="546" r="3.2"/>
+<text class="lb" x="123.7" y="555">15</text>
+<circle class="pt" cx="105.69" cy="697.2" r="3.2"/>
+<text class="lb" x="110.69" y="693.2">23</text>
+<circle class="pt" cx="105.79" cy="546" r="3.2"/>
+<text class="lb" x="110.79" y="555">35</text>
+<circle class="pt" cx="109.95" cy="546" r="3.2"/>
+<text class="lb" x="128.75" y="564">02</text>
+<circle class="pt" cx="110.52" cy="546" r="3.2"/>
+<text class="lb" x="129.32" y="573">12</text>
+<circle class="pt" cx="112.79" cy="546" r="3.2"/>
+<text class="lb" x="131.59" y="582">20</text>
+<circle class="pt" cx="117.12" cy="546" r="3.2"/>
+<text class="lb" x="135.92" y="555">29</text>
+<circle class="pt" cx="118.28" cy="546" r="3.2"/>
+<text class="lb" x="137.08" y="591">05</text>
+<circle class="pt" cx="119.63" cy="546" r="3.2"/>
+<text class="lb" x="124.63" y="555">21</text>
+<circle class="pt" cx="120.35" cy="546" r="3.2"/>
+<text class="lb" x="125.35" y="555">27</text>
+<circle class="pt" cx="120.75" cy="546" r="3.2"/>
+<text class="lb" x="125.75" y="555">33</text>
+<circle class="pt" cx="122.5" cy="546" r="3.2"/>
+<text class="lb" x="141.3" y="564">31</text>
+<circle class="pt" cx="152.82" cy="664.8" r="3.2"/>
+<text class="lb" x="157.82" y="660.8">13</text>
+<circle class="pt" cx="165.76" cy="546" r="3.2"/>
+<text class="lb" x="170.76" y="555">09</text>
+<circle class="pt" cx="168.41" cy="697.2" r="3.2"/>
+<text class="lb" x="173.41" y="693.2">17</text>
+<circle class="pt" cx="181.91" cy="546" r="3.2"/>
+<text class="lb" x="186.91" y="555">26</text>
+<circle class="pt" cx="184.78" cy="546" r="3.2"/>
+<text class="lb" x="203.58" y="555">03</text>
+<circle class="pt" cx="196.01" cy="571.2" r="3.2"/>
+<text class="lb" x="201.01" y="567.2">30</text>
+<circle class="pt" cx="197.52" cy="546" r="3.2"/>
+<text class="lb" x="216.32" y="555">28</text>
+<circle class="pt" cx="198.67" cy="610.8" r="3.2"/>
+<text class="lb" x="203.67" y="606.8">08</text>
+<circle class="pt" cx="210.24" cy="546" r="3.2"/>
+<text class="lb" x="229.04" y="555">06</text>
+<circle class="pto" cx="222.04" cy="672" r="3.2"/>
+<text class="lbo" x="227.04" y="668">39</text>
+<circle class="pt" cx="223.68" cy="553.2" r="3.2"/>
+<text class="lb" x="242.48" y="562.2">07</text>
+<circle class="pt" cx="284.19" cy="571.2" r="3.2"/>
+<text class="lb" x="289.19" y="567.2">45</text>
+<circle class="pto" cx="357.69" cy="672" r="3.2"/>
+<text class="lbo" x="362.69" y="668">42</text>
+<circle class="pto" cx="671.02" cy="679.2" r="3.2"/>
+<text class="lbo" x="676.02" y="675.2">43</text>
+<circle class="pt" cx="680.51" cy="664.8" r="3.2"/>
+<text class="lb" x="685.51" y="660.8">46</text>
+<circle class="pto" cx="734.9" cy="546" r="3.2"/>
+<text class="lbo" x="739.9" y="555">41</text>
+<circle class="pt" cx="768.03" cy="718.8" r="3.2"/>
+<text class="lb" x="773.03" y="714.8">44</text>
+</svg>

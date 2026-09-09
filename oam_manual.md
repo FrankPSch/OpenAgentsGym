@@ -119,7 +119,9 @@ fresh checkout (chapter 12). A row you want gone is deleted from that file.
 `results_repository.csv` and then prints the validity gate. Merging is by column name, so a run made
 before a column existed simply gets a blank cell and nothing is orphaned. The published rows are
 kept and a local run overwrites the row of its own id; the counts are printed (chapter 12). The
-table is never written while runs execute.
+table is never written while runs execute. The same call writes `results_pareto.svg` beside the
+table at the repository root — score against cost, one panel per campaign and project; open it in
+a browser (chapter 13.2).
 
 **Interrupted sweeps** resume with `--skip-existing`; `--workers N` runs pairs side by side.
 

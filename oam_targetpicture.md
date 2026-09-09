@@ -35,7 +35,7 @@ methodology snapshot, the launch line and the raw output of every invocation.
 | 10 | Environment | who owns the runtime, and pre-flight | ✓ |
 | 11 | Verification and scoring | the oracle contract, the score and the metrics | ✓ |
 | 12 | Run sequence | what happens between the call and the row | ✓ |
-| 13 | Results | the columns, what they mean, and the logs | ✓ |
+| 13 | Results | the columns, what they mean, the logs and the chart | ✓ |
 | 14 | Verified CLI | what was established about the CLI by probe | ✓ |
 | 15 | Invariants | the properties no run may violate | — |
 | 16 | Validity gate | what must hold before a result may be read | ✓ |
@@ -384,6 +384,8 @@ OpenAgentsGym/
 ├─ run_all_model_04.bat                 # full matrix on level 4
 ├─ rebuild_results_table.bat            # rebuilds results_repository.csv; also called by the above
 ├─ results_repository.csv               # consolidated table; merged with the local runs, published
+├─ results_pareto.svg                   # cost/score chart of that table, rewritten on every
+│                                       #   consolidation; derived, never edited by hand (13.2)
 │
 ├─ local/                               # machine-local, git-ignored (see .gitignore)
 │  ├─ runs/                             # every run directory the harness writes
@@ -1331,7 +1333,8 @@ it stands, a local run overwrites the row of its own id, and the counts are prin
 the published table* and *from local/runs*. `local\runs_archive\` is still not read, and a mixed
 campaign is named here as `--gate` names it (chapter 17).
 Consolidation also names the repeats that aborted and produced no row (`abort.txt`, chapter 12),
-so a campaign short of rows says so instead of looking complete. `results_repository.csv` is never
+so a campaign short of rows says so instead of looking complete. Consolidation also rewrites
+`results_pareto.svg` from the rows it just wrote (13.2). `results_repository.csv` is never
 written while runs execute. What
 parallel workers do share is three files, and each is written in the one way that cannot tear:
 `local\runs\_master.log` is appended to a line at a time and never opened for writing, and the two
@@ -1385,6 +1388,17 @@ Three levels, all plain text:
 A run that aborts before `results_run.csv` exists still leaves `run.log`, an `abort.txt` carrying
 the exit code and the message, and an `ABORT` line in `_master.log`; a missing row is therefore
 always explainable, and the repeats after it still run (chapter 12).
+
+### 13.2 The Pareto chart
+
+`--consolidate` writes `results_pareto.svg` at the repository root beside the table, from the same
+rows. One panel per campaign × project, laid out vertically and never pooled (chapter 17): x is
+`tk_cost_usd`, y is `res_score`, and each point carries the arm's two-digit number as its label.
+The score axis runs from the tenth below the worst arm of that panel up to 1.0 rather than from 0,
+because arms of one campaign differ by hundredths and a 0..1 axis showed that as one flat line. A
+`*_outdated` arm is drawn hollow so it stays visible without competing with the live arms, and the
+front line joins the live points no cheaper point beats — the cheapest arm at each new best score.
+The chart is a derived file: it is regenerated on every consolidation and never edited by hand.
 
 ### Further details
 

@@ -1662,6 +1662,226 @@ def consolidate():
         print("  aborted repeats: %d (see local/runs/<id>/abort.txt)" % len(aborted))
         for run_id in aborted:
             print("    %s" % run_id)
+    # The chart is written from the rows just written, never from a second read of the file: the
+    # two artifacts then cannot disagree about what was consolidated.
+    chart = ROOT / "results_pareto.svg"
+    panels, points = write_pareto_svg(records, chart)
+    print("wrote %s (%d panel(s), %d point(s))" % (chart, panels, points))
+
+
+# Panel geometry in px. The plot area is the same size in every panel so two panels of one chart
+# are read against each other by eye; only the axis maximum differs, and it is labelled.
+CHART_PLOT_W, CHART_PLOT_H = 720, 360
+CHART_PAD_L, CHART_PAD_R, CHART_PAD_T, CHART_PAD_B = 58, 22, 34, 46
+CHART_HEADER_H, CHART_GAP = 46, 26
+
+
+def svg_num(value):
+    """A coordinate as short, stable text -- 2 decimals, trailing zeros and a signed zero dropped.
+
+    Every number in the file goes through this. `%r` on a float writes the platform's shortest
+    repr, which is one more thing that can differ between two machines rebuilding the same rows;
+    a fixed two decimals cannot, and the chart is read at a pixel, not at a micron.
+    """
+    text = "%.2f" % value
+    if text.endswith(".00"):
+        text = text[:-3]
+    elif text.endswith("0"):
+        text = text[:-1]
+    return "0" if text in ("-0", "-0.0") else text
+
+
+def svg_text(value):
+    """XML-escape a label: campaign and project names reach the file as text and must escape."""
+    return str(value).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def pareto_front(points):
+    """The front of `(cost, score, ...)` tuples: a point no cheaper point beats on score.
+
+    Sorted by cost, a point is on the front when its score is strictly above every *strictly
+    cheaper* point's. Equal costs are settled as a group rather than one after the other, so two
+    arms that cost the same both survive if they beat everything below them -- resolving them in
+    list order would have kept whichever happened to be first.
+    """
+    out, best_below, i = [], None, 0
+    ordered = sorted(points)
+    while i < len(ordered):
+        j = i
+        while j < len(ordered) and ordered[j][0] == ordered[i][0]:
+            j += 1
+        group = ordered[i:j]
+        for p in group:
+            if best_below is None or p[1] > best_below:
+                out.append(p)
+        top = max(p[1] for p in group)
+        best_below = top if best_below is None else max(best_below, top)
+        i = j
+    return out
+
+
+def write_pareto_svg(records, out_path):
+    """Write the cost/score Pareto chart of these rows to `out_path`; return (panels, points).
+
+    A hand-written SVG rather than a plotting library: the harness is stdlib only (chapter 8), and
+    the chart is a *derived* file living beside `results_repository.csv` in the repository, so it
+    is regenerated on every consolidation and must be byte-identical for identical rows or every
+    rebuild would show up as a diff nobody made.
+
+    One panel per (`cfg_campaign`, `prj_name`) pair, never pooled: chapter 17 forbids reading rows
+    whose constants differ as one set, and a cost axis shared between two models would say exactly
+    the thing that chapter denies. Points are labelled with the arm's number, `*_outdated` arms are
+    drawn hollow so they stay visible without competing, and the front joins the live points no
+    cheaper point beats -- the one line the eye is meant to follow.
+    """
+    groups = {}
+    for rec in records:
+        cost = as_float((rec.get("tk_cost_usd") or "").strip())
+        score = as_float((rec.get("res_score") or "").strip())
+        if cost is None or score is None:
+            continue
+        name = (rec.get("mth_name") or "").strip()
+        key = ((rec.get("cfg_campaign") or "").strip(), (rec.get("prj_name") or "").strip())
+        # The arm's number: what stands before the first `_`, cut to two characters. A name that
+        # is not numbered still gets its first two, so no point on the chart is unlabelled.
+        label = name.split("_")[0][:2] or name[:2]
+        groups.setdefault(key, []).append((cost, score, label, name.endswith("_outdated")))
+
+    body, panels, total = [], sorted(groups), 0
+    width = CHART_PAD_L + CHART_PLOT_W + CHART_PAD_R
+    panel_h = CHART_PAD_T + CHART_PLOT_H + CHART_PAD_B
+    height = CHART_HEADER_H + max(1, len(panels)) * (panel_h + CHART_GAP)
+    for n, key in enumerate(panels):
+        top = CHART_HEADER_H + n * (panel_h + CHART_GAP)
+        total += len(groups[key])
+        body.extend(pareto_panel(key, sorted(groups[key]), top))
+
+    lines = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %s %s" width="%s" height="%s">'
+             % (svg_num(width), svg_num(height), svg_num(width), svg_num(height)),
+             "<style>",
+             "text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;"
+             "fill:#1f2933}",
+             ".ttl{font-size:13px;font-weight:600} .hd{font-size:12px} .lg{font-size:10px;"
+             "fill:#6b7280} .ax{font-size:10px;fill:#4b5563} .lb{font-size:9px} "
+             ".lbo{font-size:9px;fill:#9aa3ad}",
+             ".grid{stroke:#e5e7eb;stroke-width:1} .axis{stroke:#9aa3ad;stroke-width:1}",
+             ".pt{fill:#1f2933} .pto{fill:none;stroke:#9aa3ad;stroke-width:1.2}",
+             ".front{fill:none;stroke:#1f2933;stroke-width:1.2;opacity:0.55}",
+             "</style>",
+             '<rect x="0" y="0" width="%s" height="%s" fill="#ffffff"/>'
+             % (svg_num(width), svg_num(height))]
+    if not panels:
+        # Still a valid SVG: a consolidation that produced no plottable row must leave a file that
+        # opens and says so, not a stale chart of the previous rows and not a parse error.
+        lines.append('<text class="hd" x="%s" y="%s">no rows</text>'
+                     % (svg_num(CHART_PAD_L), svg_num(CHART_HEADER_H)))
+    else:
+        lines.append('<text class="hd" x="%s" y="20">score against cost, one panel per campaign '
+                     "and project</text>" % svg_num(CHART_PAD_L))
+        lines.append('<text class="lg" x="%s" y="36">filled = live arm, hollow = *_outdated; the '
+                     "line is the Pareto front of the live arms</text>" % svg_num(CHART_PAD_L))
+    lines.extend(body)
+    lines.append("</svg>")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(str(out_path), "w", encoding="utf-8", newline="\n") as fh:
+        fh.write("\n".join(lines) + "\n")
+    return len(panels), total
+
+
+def pareto_panel(key, points, top):
+    """The SVG lines of one panel: frame, grid, axes, front, points and labels, offset by `top`."""
+    campaign, project = key
+    left, base = CHART_PAD_L, top + CHART_PAD_T + CHART_PLOT_H
+    # A "nice" maximum -- the next half dollar above the dearest arm -- so the axis of a panel does
+    # not move by a cent when one run is added, and two rebuilds a run apart stay comparable.
+    steps = int(max(p[0] for p in points) / 0.5) + 1
+    x_max = max(0.5, steps * 0.5)
+    x_step = 1.0 if x_max > 5 else 0.5
+    # The score axis is adaptive: 1.0 down to the tenth below the worst arm. A fixed 0..1 axis put
+    # every point of a working campaign in the top sixth of the panel -- arms differ by hundredths
+    # where the axis counts in tenths -- so the differences the chart exists for were invisible.
+    # Held in hundredths so the ticks land where the labels say and not a rounding error away.
+    # Capped at 0.9 so a panel whose arms all score 1.00 still has an axis with a span.
+    y_min_h = min(90, max(0, int(min(p[1] for p in points) * 10) * 10))
+    span_h = 100 - y_min_h
+    y_step_h = 10 if span_h >= 50 else (5 if span_h >= 25 else 2)
+    y_fmt = "%.1f" if y_step_h == 10 else "%.2f"
+
+    def px(cost):
+        return left + CHART_PLOT_W * (cost / x_max)
+
+    def py(score):
+        share = (min(max(score, y_min_h / 100.0), 1.0) - y_min_h / 100.0) / (span_h / 100.0)
+        return base - CHART_PLOT_H * share
+
+    out = ['<text class="ttl" x="%s" y="%s">%s  &#8212;  %s</text>'
+           % (svg_num(left), svg_num(top + 20), svg_text(project), svg_text(campaign)),
+           '<rect x="%s" y="%s" width="%s" height="%s" fill="#fbfbfc" stroke="#e5e7eb"/>'
+           % (svg_num(left), svg_num(top + CHART_PAD_T), svg_num(CHART_PLOT_W),
+              svg_num(CHART_PLOT_H))]
+    for tick_h in range(y_min_h, 101, y_step_h):
+        value = tick_h / 100.0
+        y = py(value)
+        out.append('<line class="grid" x1="%s" y1="%s" x2="%s" y2="%s"/>'
+                   % (svg_num(left), svg_num(y), svg_num(left + CHART_PLOT_W), svg_num(y)))
+        out.append(('<text class="ax" x="%s" y="%s" text-anchor="end">' + y_fmt + "</text>")
+                   % (svg_num(left - 8), svg_num(y + 3), value))
+    i = 0
+    while i * x_step <= x_max + 1e-9:
+        value = i * x_step
+        x = px(value)
+        out.append('<line class="grid" x1="%s" y1="%s" x2="%s" y2="%s"/>'
+                   % (svg_num(x), svg_num(top + CHART_PAD_T), svg_num(x), svg_num(base)))
+        out.append('<text class="ax" x="%s" y="%s" text-anchor="middle">%.1f</text>'
+                   % (svg_num(x), svg_num(base + 15), value))
+        i += 1
+    out.append('<line class="axis" x1="%s" y1="%s" x2="%s" y2="%s"/>'
+               % (svg_num(left), svg_num(base), svg_num(left + CHART_PLOT_W), svg_num(base)))
+    out.append('<line class="axis" x1="%s" y1="%s" x2="%s" y2="%s"/>'
+               % (svg_num(left), svg_num(top + CHART_PAD_T), svg_num(left), svg_num(base)))
+    out.append('<text class="ax" x="%s" y="%s" text-anchor="middle">cost (USD)</text>'
+               % (svg_num(left + CHART_PLOT_W / 2.0), svg_num(base + 33)))
+    mid_x, mid_y = svg_num(left - 38), svg_num(top + CHART_PAD_T + CHART_PLOT_H / 2.0)
+    out.append('<text class="ax" x="%s" y="%s" text-anchor="middle" transform="rotate(-90 %s %s)">'
+               "score</text>" % (mid_x, mid_y, mid_x, mid_y))
+
+    front = pareto_front([p for p in points if not p[3]])
+    if len(front) > 1:
+        out.append('<polyline class="front" points="%s"/>'
+                   % " ".join("%s,%s" % (svg_num(px(p[0])), svg_num(py(p[1]))) for p in front))
+    # Labels are placed greedily in cost order: the first offset from the point that does not hit a
+    # label already placed, nearest offset first, right before left. Every arm of a project sits in
+    # one dense cluster -- scores differ by hundredths where costs differ by a factor of twenty --
+    # and one label per point above it made that cluster a single illegible smear. Alternating
+    # around the point and then stepping away from it keeps almost all of them readable; the cost
+    # is a label a row further from its own circle, which is the cheaper of the two confusions.
+    # Points sitting at the top of the plot are offered the room below them first, so a label of a
+    # score-1.0 arm does not climb out of the panel and into the title.
+    placed = []
+
+    def free(box):
+        return not any(box[0] < b[2] and b[0] < box[2] and box[1] < b[3] and b[1] < box[3]
+                       for b in placed)
+
+    for cost, score, label, outdated in points:
+        x, y = px(cost), py(score)
+        out.append('<circle class="%s" cx="%s" cy="%s" r="3.2"/>'
+                   % ("pto" if outdated else "pt", svg_num(x), svg_num(y)))
+        w = len(label) * 5.4
+        rungs = (9, -4, 18, -13, 27, -22, 36, -31, 45, -40) if y - (top + CHART_PAD_T) < 16 else \
+                (-4, 9, -13, 18, -22, 27, -31, 36, -40, 45)
+        boxes = [(dx, dy, (x + dx, y + dy - 8, x + dx + w, y + dy + 1))
+                 for dy in rungs for dx in (5, -5 - w, 8 + w, -8 - 2 * w)]
+        # Inside the plot rectangle first: a label pushed out of it lands on the panel title or on
+        # the axis, which reads as a caption of the chart rather than the name of a point.
+        inside = [c for c in boxes
+                  if c[2][1] >= top + CHART_PAD_T and c[2][3] <= base] or boxes[:1]
+        dx, dy, box = ([c for c in inside if free(c[2])] or inside)[0]
+        placed.append(box)
+        out.append('<text class="%s" x="%s" y="%s">%s</text>'
+                   % ("lbo" if outdated else "lb", svg_num(x + dx), svg_num(y + dy),
+                      svg_text(label)))
+    return out
 
 
 GATE_ANCHOR_MTH = "00_sabotage"
