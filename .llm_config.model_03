@@ -10,6 +10,14 @@ ENGINE=claude
 MODEL=claude-opus-5
 # MODEL: canonical model id, passed as --model. Never an alias like "opus" — an alias can
 # silently re-point to a different model between campaigns and invalidate comparisons.
+PROVIDER=
+# PROVIDER: blank = anthropic, this vendor's own endpoint. Any other value (moonshot, groq,
+# openrouter, local, ...) needs BASE_URL and is recorded as cfg_provider -- a campaign constant,
+# because one model id served from two places is two populations, not one.
+BASE_URL=
+# BASE_URL: blank = native. The endpoint the CLI is pointed at; recorded as cfg_endpoint.
+# Together the two set cfg_effort_enforced (--effort is this vendor's flag) and cfg_bound (the cap
+# that actually binds: --max-budget-usd only where the endpoint reports cost, else the timeout).
 EFFORT=low
 # EFFORT: passed as --effort. Valid values: low | medium | high | xhigh | max.
 MAX_TURNS=60

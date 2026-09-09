@@ -154,7 +154,9 @@ COLUMNS = [
     "mth_param_review_rounds", "mth_param_gate_style", "mth_param_phase_budget",
     "mth_param_retry_policy",
     "cfg_campaign",
-    "cfg_engine", "cfg_cli_version", "cfg_model", "cfg_effort", "cfg_user_claude_md",
+    "cfg_engine", "cfg_cli_version", "cfg_model", "cfg_effort",
+    "cfg_provider", "cfg_endpoint", "cfg_effort_enforced", "cfg_bound",
+    "cfg_user_claude_md",
     "cfg_review_pass", "cfg_review_model", "cfg_fix_model", "cfg_review_prompt",
     "cfg_review_weight", "cfg_tools",
     "res_score_baseline", "res_score", "res_score_holdout",
@@ -394,6 +396,14 @@ def check_config_keys(cfg):
     path = review_prompt_path(cfg)
     if not path.is_file():
         die("ABORT: REVIEW_PROMPT file not found at %s" % path, 4)
+    # A provider other than this vendor is reached over a base URL and nowhere else: named without
+    # one, the run would go to the vendor's own endpoint while cfg_provider claimed otherwise --
+    # a row that misreports what served it, which is worse than a run that does not start.
+    if cfg.get("PROVIDER", "").strip() not in ("", "anthropic") \
+            and not cfg.get("BASE_URL", "").strip():
+        die("ABORT: PROVIDER=%s needs BASE_URL -- without one the run reaches this vendor's own\n"
+            "endpoint and cfg_provider would misreport what served it."
+            % cfg["PROVIDER"].strip(), 4)
 
 
 def allowed_tools(methodology):
@@ -414,6 +424,34 @@ def allowed_tools(methodology):
             die("ABORT: methodology/%s/tools.txt: %r is not a tool entry "
                 "(Name or Name(pattern))" % (methodology, line), 4)
     return ",".join(tools), ",".join(tools)
+
+
+def engine_columns(cfg):
+    """The four cells that make a row groupable when more than one provider serves a model.
+
+    `cfg_engine` names the runtime and `cfg_model` the id requested, but one id can be served
+    from several places -- the vendor's own endpoint, a gateway, a local server -- and those
+    are not one population: quantisation, context window and routing differ under one model
+    name. `cfg_provider` and `cfg_endpoint` are what separate them, and both are campaign
+    constants (chapter 17), so a campaign that mixes them is reported as mixed.
+
+    `cfg_effort_enforced` exists because `--effort` is a flag of this vendor's API: a provider
+    without an effort knob drops it silently, and `cfg_effort=medium` would then read as a
+    treatment that never happened. `cfg_bound` names the cap that actually binds the run --
+    `--max-budget-usd` binds only where the endpoint reports cost, and where it does not the
+    harness timeout is the only bound left, which is a censoring a row must carry rather than
+    hide. Both are derived from the provider, not declared, so they cannot disagree with it.
+
+    Blank PROVIDER is this vendor, which is what every row before these columns existed was;
+    the backfill of those rows writes exactly these four values.
+    """
+    provider = cfg.get("PROVIDER", "").strip() or "anthropic"
+    endpoint = cfg.get("BASE_URL", "").strip() or "native"
+    native = provider == "anthropic"
+    return {"cfg_provider": provider,
+            "cfg_endpoint": endpoint,
+            "cfg_effort_enforced": "true" if native else "false",
+            "cfg_bound": "usd" if native else "walltime"}
 
 
 def step2_make_run_dir(methodology, project, repeat, stamp):
@@ -794,6 +832,15 @@ def cli_env(cfg, run_dir):
         env["CLAUDE_CONFIG_DIR"] = str((ROOT / ccd) if not os.path.isabs(ccd) else Path(ccd))
     else:
         env.pop("CLAUDE_CONFIG_DIR", None)
+    # BASE_URL is the endpoint cfg_endpoint claims served the run, so it must reach the CLI here and
+    # nowhere else: recorded without being applied, the column would misreport what served the row.
+    # Blank means this vendor's own endpoint, and any inherited override is dropped for the same
+    # reason -- the config file, not the user's shell, decides where a campaign is served from.
+    base_url = cfg.get("BASE_URL", "").strip()
+    if base_url:
+        env["ANTHROPIC_BASE_URL"] = base_url
+    else:
+        env.pop("ANTHROPIC_BASE_URL", None)
     return env
 
 
@@ -1427,6 +1474,17 @@ def step9_parse_and_write(cfg, run_dir, row):
                 return (float(entry.get("costUSD") or 0), int(entry.get("outputTokens") or 0))
             key, entry = max(mu.items(), key=spend)
             row["res_model_served"] = entry.get("canonicalModel", key) if isinstance(entry, dict) else key
+        else:
+            # An endpoint that is not this vendor's own may report no modelUsage at all
+            # (cfg_provider, chapter 9): the block is absent, or every costUSD in it is zero and
+            # the outputTokens tie-break above is what carries it. The guard against a silently
+            # substituted model must not go blank exactly where substitution is likeliest -- a
+            # gateway that auto-routes, a local tag such as `:latest` -- so the served id falls
+            # back to the result record's own `model` field where the engine offers one. Blank
+            # still means the row cannot answer what served it, which is what a reader comparing
+            # it with cfg_model has to know.
+            served = data.get("model")
+            row["res_model_served"] = served.strip() if isinstance(served, str) else ""
         ms = data.get("duration_ms")
         if isinstance(ms, (int, float)):
             row["prf_duration_s"] = round(ms / 1000.0, 1)
@@ -1568,6 +1626,7 @@ def _one_run_body(cfg, project, methodology, repeat, stamp, run_id, run_dir):
            "cfg_tools": cfg_tools,
            "res_score_baseline": baseline["score"],
            "prf_duration_s": round(wall, 1)}
+    row.update(engine_columns(cfg))
     row.update(mth)
     row.update(bestof)
     row.update(rev)
@@ -1898,7 +1957,8 @@ GATE_ANCHOR_PRJ = "00_fail"
 # Chapter 17 forbids pooling rows whose constants differ, and cfg_campaign is only the config
 # file's base name: two different files of the same name, or one edited between two runs, share the
 # label. These are the columns one campaign must agree on for the label to mean anything.
-CAMPAIGN_CONSTANTS = ("cfg_model", "cfg_effort", "cfg_review_pass", "cfg_review_model",
+CAMPAIGN_CONSTANTS = ("cfg_model", "cfg_provider", "cfg_endpoint", "cfg_effort",
+                      "cfg_review_pass", "cfg_review_model",
                       "cfg_fix_model", "cfg_review_weight", "cfg_tools")
 
 

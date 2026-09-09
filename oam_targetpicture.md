@@ -628,6 +628,8 @@ a relative path resolves against the repository root. `run_master.py` defaults t
 ```
 ENGINE=claude
 MODEL=claude-sonnet-5
+PROVIDER=
+BASE_URL=
 EFFORT=medium
 MAX_TURNS=60
 MAX_BUDGET_USD=4.00
@@ -660,6 +662,16 @@ to a path — relative paths resolve against the repository root, as for `--conf
 into the CLI's environment and isolates the campaign from the user profile, which is what a machine
 whose user-level entry file is not suppressed needs. The directory needs a one-time `claude login`
 inside it before the first run; an unauthenticated config dir fails every run identically.
+
+`PROVIDER` and `BASE_URL` are blank in every shipped file, meaning this vendor's own endpoint;
+they are recorded as `cfg_provider` and `cfg_endpoint` and set `cfg_effort_enforced` and
+`cfg_bound` with them (chapter 13). A `PROVIDER` other than `anthropic` with a blank `BASE_URL`
+aborts with exit 4: without an endpoint the run would reach this vendor anyway while the column
+claimed otherwise, and a row that misreports what served it is worse than a run that does not
+start. A non-blank `BASE_URL` is exported to the CLI as its base-URL environment variable and a
+blank one clears any such variable inherited from the shell, so the config file alone decides where
+a campaign is served from. `ENGINE` names the *runtime*, `PROVIDER` the place the model is served from — the two vary
+apart, which is what lets a second model be measured under this runtime without a second engine.
 
 `ENGINE=claude` is the only valid value. `MODEL` is pinned to the canonical id, never the `opus`
 alias — an alias silently re-points to a different model between campaigns and invalidates
@@ -1346,7 +1358,7 @@ directory. Rows are merged by column name rather than by position, and a column 
 
 Every column carries a two- or three-letter semantic prefix, so the clusters read as blocks:
 `id_` identity, `prj_` project, `mth_` methodology, `cfg_` configuration, `res_` outcome, `tk_`
-cost, `prf_` performance. This is the literal CSV header, 85 columns, in this order:
+cost, `prf_` performance. This is the literal CSV header, 89 columns, in this order:
 
 ```
 id_run, id_timestamp, id_repeat
@@ -1354,7 +1366,8 @@ prj_name
 mth_name, mth_version, mth_chars, mth_param_definition_of_done, mth_param_constraint_order,
 mth_param_doc_types, mth_param_review_rounds, mth_param_gate_style, mth_param_phase_budget,
 mth_param_retry_policy
-cfg_campaign, cfg_engine, cfg_cli_version, cfg_model, cfg_effort, cfg_user_claude_md,
+cfg_campaign, cfg_engine, cfg_cli_version, cfg_model, cfg_effort,
+cfg_provider, cfg_endpoint, cfg_effort_enforced, cfg_bound, cfg_user_claude_md,
 cfg_review_pass, cfg_review_model, cfg_fix_model, cfg_review_prompt, cfg_review_weight, cfg_tools
 res_score_baseline, res_score, res_score_holdout, res_bestof_n, res_bestof_min, res_bestof_max,
 res_verification_passed,
@@ -1533,7 +1546,23 @@ a threshold read from the config file and never passed to the CLI (chapter 9).
 second `claude-haiku-4-5` housekeeping entry of about $0.001, so the first key is not the model that
 did the work, and on a run cheap enough for two entries to report the same cost the one that wrote
 more is the one that did it. A `res_model_served` ≠ `cfg_model` mismatch is a row to discard, not a
-measurement.
+measurement. Where an endpoint reports no `modelUsage` at all, the served id falls back to the
+result record's own `model` field: the guard against a substituted model must not go blank exactly
+where substitution is likeliest — a gateway that auto-routes, a local tag such as `:latest`. Where
+it reports the block with every cost at zero, the `outputTokens` tie-break already carries it.
+
+`cfg_provider` and `cfg_endpoint` are the two columns that make a row groupable when more than one
+place can serve one model id — the vendor's own endpoint, a gateway, a local server are not one
+population under one `cfg_model`. They come from `PROVIDER` and `BASE_URL` (chapter 9), blank
+meaning `anthropic` and `native`, and they are campaign constants like `cfg_model`.
+`cfg_effort_enforced` and `cfg_bound` are derived from them rather than declared, so they cannot
+disagree: `--effort` is this vendor's flag and a provider without an effort knob drops it silently,
+which would leave `cfg_effort=medium` reading as a treatment that never happened; and
+`--max-budget-usd` binds only where the endpoint reports cost, so elsewhere the harness timeout is
+the only bound left — a censoring the row carries as `cfg_bound=walltime` rather than hides. Every
+row made before these columns existed was `anthropic, native, true, usd` and is backfilled with
+exactly that, in the published table and in each run's own `results_run.csv`, so a rebuild
+reproduces it.
 
 `mth_version` is the first line of the entry file, an HTML comment
 `<!-- mth_version: 08_process_doctypes_roles_guardrails.v1 -->`; blank for `00_empty`. The full
@@ -1647,7 +1676,8 @@ runs and the `00_sabotage` rows of the campaign's ranking runs, judged against t
 
 **One label, one set of constants.** `cfg_campaign` is only the config file's base name, so two
 different files of that name, or one file edited between two runs, share it. Before any condition
-is read, `--gate` checks that the campaign's rows agree on `cfg_model`, `cfg_effort`,
+is read, `--gate` checks that the campaign's rows agree on `cfg_model`, `cfg_provider`,
+`cfg_endpoint`, `cfg_effort`,
 `cfg_review_pass`, `cfg_review_model`, `cfg_fix_model`, `cfg_review_weight` and `cfg_tools` — the
 columns chapter 17 forbids pooling across. A campaign whose rows do not is printed as **MIXED**
 with the differing values and exits 1: a condition computed over two treatments wearing one name is
@@ -1713,7 +1743,8 @@ If any of these does not hold, the finding is about the apparatus, not about met
   run costs end to end, and say which figure is being quoted.
 - Pool only rows that share a `cfg_campaign`: it is the name of the constants file they were run
   on, so one label stands for the whole `cfg_` set and a pivot cannot silently mix two campaigns.
-  Beyond it, rows whose `cfg_model`, `cfg_effort`, `cfg_cli_version`, `cfg_review_pass`,
+  Beyond it, rows whose `cfg_model`, `cfg_provider`, `cfg_endpoint`, `cfg_effort`,
+  `cfg_cli_version`, `cfg_review_pass`,
   `cfg_review_prompt`, `cfg_review_weight` or `cfg_tools` differs from the
   campaign's constants, and rows whose `res_model_served` ≠ `cfg_model`, are excluded before the
   pivot — a config file edited between two runs keeps its name, so the label narrows the set and
@@ -1732,7 +1763,10 @@ If any of these does not hold, the finding is about the apparatus, not about met
 
 ## 18. Open
 
-- **GPT branch.** A second engine needs its own launch command, flags and usage field names, and
+- **GPT branch.** Only the *runtime* half of this is open: `PROVIDER`/`BASE_URL` and the four
+  columns they feed (chapter 13) already carry a foreign model served under this runtime, and
+  `res_model_served` no longer depends on `modelUsage` alone. What follows needs a second engine.
+  A second engine needs its own launch command, flags and usage field names, and
   its token counters will not be comparable across vendors — cost and wall-clock are the only
   cross-vendor axes. Every coupling to this engine sits in `run_master.py`, and nowhere else in the
   repository — the methodologies, the projects, `lib/oracle.py` and the batch files carry none:

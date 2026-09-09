@@ -10,6 +10,14 @@ ENGINE=claude
 MODEL=claude-haiku-4-5
 # MODEL: the campaign model, unchanged — a sweep that also moved the model would tell us nothing
 # about the harness.
+PROVIDER=
+# PROVIDER: blank = anthropic, this vendor's own endpoint. Any other value (moonshot, groq,
+# openrouter, local, ...) needs BASE_URL and is recorded as cfg_provider -- a campaign constant,
+# because one model id served from two places is two populations, not one.
+BASE_URL=
+# BASE_URL: blank = native. The endpoint the CLI is pointed at; recorded as cfg_endpoint.
+# Together the two set cfg_effort_enforced (--effort is this vendor's flag) and cfg_bound (the cap
+# that actually binds: --max-budget-usd only where the endpoint reports cost, else the timeout).
 EFFORT=low
 # EFFORT: the cheapest setting. This is what makes the sweep affordable and what disqualifies its
 # rows from the campaign pivot.
