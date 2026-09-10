@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "quantconnect": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "QUANTCONNECT_USER_ID",
+        "-e", "QUANTCONNECT_API_TOKEN",
+        "-e", "AGENT_NAME",
+        "--platform", "linux/amd64",
+        "quantconnect/mcp-server"
+      ],
+      "env": {
+        "AGENT_NAME": "OpenAgentsGym"
+      }
+    }
+  }
+}

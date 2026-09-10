@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "qc_results_02",
+  "description": "Written after the backtest completes and its results have been read back.",
+  "type": "object",
+  "required": ["project_id", "backtest_id", "start_date", "end_date", "statistics",
+               "orders_count"],
+  "properties": {
+    "project_id": {"type": "integer"},
+    "backtest_id": {"type": "string", "minLength": 1},
+    "start_date": {"type": "string", "enum": ["2025-01-01"]},
+    "end_date": {"type": "string", "enum": ["2025-12-31"]},
+    "statistics": {"type": "object", "minProperties": 1},
+    "orders_count": {"type": "integer", "minimum": 1}
+  }
+}

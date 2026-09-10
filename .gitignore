@@ -10,3 +10,9 @@ __pycache__/
 .pytest_cache/
 # Optional isolated CLAUDE_CONFIG_DIR target (chapter 9) — only relevant if that var is set.
 .claude_config/
+
+# Repository-level projects build their project_reset_template from a pinned upstream commit
+# (projects/<P>/setup_template.py). Thousands of files, reproducible from the two commit ids in
+# that script, and not ours to publish -- so the script and the overlay are committed and the
+# checkout is not. The blobless clone it caches sits under local/, already ignored above.
+projects/10_xarray_7233/project_reset_template/

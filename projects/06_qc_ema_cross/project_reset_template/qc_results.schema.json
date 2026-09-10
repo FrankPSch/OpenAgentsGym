@@ -1,0 +1,4 @@
+{
+  "$deprecated": true,
+  "note": "Superseded by qc_results_01.schema.json (post-compile) and qc_results_02.schema.json (post-backtest). This single-file schema is no longer used by run_verification.py."
+}

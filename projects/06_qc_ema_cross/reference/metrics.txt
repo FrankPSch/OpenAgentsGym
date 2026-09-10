@@ -1,0 +1,12 @@
+# metrics.txt of the reference solution's main.py, computed with lib/oracle.py's code_metrics.
+chars=982
+comment_density=0.0
+complexity=10
+docstring_cov=25.0
+lint_errors=1
+max_func_sloc=9
+max_nesting=4
+mi=51.1
+mi_ref=51.1
+parsimony_factor=1.0
+sloc=20

@@ -69,7 +69,7 @@ DEFAULT_TOOLS = ("Read,Edit,Write,Glob,Grep,Agent,"
 # One tools.txt line: a tool name, optionally with a parenthesised pattern. The CLI accepts an
 # unrecognised entry silently, exactly as it accepts an unknown flag, so a typo would drop a tool
 # with no visible error; the shape is checked before the run instead.
-TOOL_LINE = re.compile(r"^[A-Za-z]+(\(.*\))?$")
+TOOL_LINE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*\*?(\(.*\))?$")
 # Conventional Comments (chapter 19.4) is what makes the findings a count rather than a guess.
 # A model asked for bare lines still reaches for a bullet and a capital, and a finding lost to
 # formatting is a miscount, not a stricter measurement -- so a leading markdown bullet and the
@@ -406,7 +406,7 @@ def check_config_keys(cfg):
             % cfg["PROVIDER"].strip(), 4)
 
 
-def allowed_tools(methodology):
+def allowed_tools(methodology, project):
     """The arm's --allowedTools list and the cfg_tools cell that records it (chapter 15).
 
     The default list is identical for every arm, so the tool set is not a treatment. An arm that
@@ -414,16 +414,37 @@ def allowed_tools(methodology):
     17 keeps rows with different tool sets out of one pivot.
     """
     src = ROOT / "methodology" / methodology / "tools.txt"
-    if not src.is_file():
-        return DEFAULT_TOOLS, "default"
-    tools = [l.strip() for l in src.read_text(encoding="utf-8").splitlines() if l.strip()]
+    if src.is_file():
+        tools = read_tool_file(src, "methodology/%s/tools.txt" % methodology)
+        base, cfg = ",".join(tools), ",".join(tools)
+    else:
+        base, cfg = DEFAULT_TOOLS, "default"
+
+    # A project may need tools no methodology asks for -- 06_qc_ema_cross drives the
+    # QuantConnect MCP server and cannot be done with the default list. That need belongs to
+    # the task, not to the arm, so `projects/<P>/tools.txt` is APPENDED to whatever the arm
+    # runs with: the treatment stays the arm's list, and every arm on that project gets the
+    # same addition. cfg_tools records the appendix so chapter 17 can still separate rows.
+    psrc = ROOT / "projects" / project / "tools.txt"
+    if psrc.is_file():
+        extra = read_tool_file(psrc, "projects/%s/tools.txt" % project)
+        add = [t for t in extra if t not in base.split(",")]
+        if add:
+            base = base + "," + ",".join(add)
+            cfg = cfg + "+project:" + ",".join(add)
+    return base, cfg
+
+
+def read_tool_file(path, label):
+    """Parse one tools.txt: non-empty lines, each a tool entry. Shared by arm and project."""
+    tools = [l.strip() for l in path.read_text(encoding="utf-8").splitlines()
+             if l.strip() and not l.strip().startswith("#")]
     if not tools:
-        die("ABORT: methodology/%s/tools.txt is empty" % methodology, 4)
+        die("ABORT: %s is empty" % label, 4)
     for line in tools:
         if not TOOL_LINE.match(line):
-            die("ABORT: methodology/%s/tools.txt: %r is not a tool entry "
-                "(Name or Name(pattern))" % (methodology, line), 4)
-    return ",".join(tools), ",".join(tools)
+            die("ABORT: %s: %r is not a tool entry (Name or Name(pattern))" % (label, line), 4)
+    return tools
 
 
 def engine_columns(cfg):
@@ -844,7 +865,35 @@ def cli_env(cfg, run_dir):
     return env
 
 
-def implementer_argv(cfg, run_dir, tools, model=None):
+def write_mcp_config(project, run_dir):
+    """The --mcp-config file the implementer launches with, and the empty one beside it.
+
+    The CLI validates --mcp-config against a schema: a bare "{}" is rejected with
+    'mcpServers: expected record, received undefined'. Written as a file, so no shell quoting
+    of JSON is involved and the run directory records what was actually passed.
+
+    Default is no server at all -- the tool surface is a campaign constant and an MCP server
+    reachable from one machine and not another would be an uncontrolled one. A project that
+    cannot be done without an external system says so by shipping `projects/<P>/mcp.json`,
+    which is copied verbatim into the run directory and passed instead; --strict-mcp-config
+    still means nothing else can reach the run. `mcp_empty.json` is written either way,
+    because the reviewer (step 7b) is stdin-only and always launches without servers.
+    """
+    empty = run_dir / "mcp_empty.json"
+    empty.write_text('{"mcpServers": {}}\n', encoding="utf-8")
+    src = ROOT / "projects" / project / "mcp.json"
+    if not src.is_file():
+        return empty
+    try:
+        json.loads(src.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        die("ABORT: projects/%s/mcp.json is not valid JSON: %s" % (project, exc), 4)
+    mcp = run_dir / "mcp.json"
+    shutil.copy2(src, mcp)
+    return mcp
+
+
+def implementer_argv(cfg, project, run_dir, tools, model=None):
     """The step-7 launch line. Every implementer invocation uses it, the fix call included.
 
     No --max-turns: Claude Code 2.1.251 has no such flag (it is an SDK option) and the CLI
@@ -855,11 +904,7 @@ def implementer_argv(cfg, run_dir, tools, model=None):
     (FIX_MODEL, chapter 9). Nothing else on the line moves with it: applying named issues is a
     different job from writing the code, and the tier it deserves is the open question.
     """
-    # The CLI validates --mcp-config against a schema: a bare "{}" is rejected with
-    # 'mcpServers: expected record, received undefined'. Written as a file, so no shell
-    # quoting of JSON is involved and the run directory records what was actually passed.
-    mcp = run_dir / "mcp_empty.json"
-    mcp.write_text('{"mcpServers": {}}\n', encoding="utf-8")
+    mcp = write_mcp_config(project, run_dir)
     return [resolve_cli(), "-p",
             "--model", (model or cfg["MODEL"]), "--effort", cfg["EFFORT"],
             "--max-budget-usd", cfg["MAX_BUDGET_USD"],
@@ -877,7 +922,7 @@ def implementer_argv(cfg, run_dir, tools, model=None):
             "--add-dir", str(run_dir / "methodology")]
 
 
-def launch_implementer(cfg, run_dir, workspace, stdin, tools, out_path, err_path,
+def launch_implementer(cfg, project, run_dir, workspace, stdin, tools, out_path, err_path,
                        model=None, argv_name="cli_argv.txt"):
     """One implementer invocation with cwd = workspace and stdin piped in.
 
@@ -886,7 +931,7 @@ def launch_implementer(cfg, run_dir, workspace, stdin, tools, out_path, err_path
     passes its own `model` and its own `argv_name`: under FIX_MODEL the two launch lines really
     differ, and one file overwriting the other would leave the run directory unable to say which.
     """
-    args = implementer_argv(cfg, run_dir, tools, model)
+    args = implementer_argv(cfg, project, run_dir, tools, model)
     (run_dir / argv_name).write_text("\n".join(args), encoding="utf-8")
     started = time.time()
     timed_out = False
@@ -908,7 +953,7 @@ def launch_implementer(cfg, run_dir, workspace, stdin, tools, out_path, err_path
 def step7_launch_cli(cfg, project, run_dir, workspace, tools):
     """Launch the CLI in the workspace with the project's prompt on stdin."""
     prompt = (ROOT / "projects" / project / "prompt.md").read_text(encoding="utf-8")
-    return launch_implementer(cfg, run_dir, workspace, prompt, tools,
+    return launch_implementer(cfg, project, run_dir, workspace, prompt, tools,
                               run_dir / "result.json", run_dir / "stderr.txt")
 
 
@@ -939,7 +984,7 @@ def step7a_best_of_n(cfg, project, run_dir, template, workspace, tools, n):
         ws = run_dir / ("project_workspace_%d" % i)
         shutil.copytree(template, ws)
         step5_deploy_entry_file(run_dir, ws)
-        wall, timed_out = launch_implementer(cfg, run_dir, ws, prompt, tools,
+        wall, timed_out = launch_implementer(cfg, project, run_dir, ws, prompt, tools,
                                              run_dir / ("result_%d.json" % i),
                                              run_dir / ("stderr_%d.txt" % i))
         out_dir = run_dir / ("bestof_%d" % i)
@@ -1037,7 +1082,7 @@ def step7c_feedback(cfg, project, run_dir, workspace, tools, review_error=False)
         "\n".join(issues),
         (ROOT / "lib" / "feedback_prompt.md").read_text(encoding="utf-8").strip()])
     (run_dir / "fix_input.txt").write_text(stdin, encoding="utf-8")
-    wall, _ = launch_implementer(cfg, run_dir, workspace, stdin, tools,
+    wall, _ = launch_implementer(cfg, project, run_dir, workspace, stdin, tools,
                                  run_dir / "fix.json", run_dir / "fix_stderr.txt",
                                  model=fix_model(cfg), argv_name="fix_argv.txt")
     row["prf_fix_s"] = round(wall, 1)
@@ -1596,7 +1641,7 @@ def _one_run_body(cfg, project, methodology, repeat, stamp, run_id, run_dir):
     _, user_md, cli_version = step6_environment_and_preflight(cfg, project, template, workspace,
                                                               run_dir)
     baseline = read_triple(run_dir / "verification_baseline.txt")
-    tools, cfg_tools = allowed_tools(methodology)
+    tools, cfg_tools = allowed_tools(methodology, project)
     n = best_of_n(cfg)
     bestof = {}
     if n > 1:

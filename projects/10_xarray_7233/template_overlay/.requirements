@@ -1,0 +1,5 @@
+numpy==1.26.4
+pandas==1.5.3
+packaging
+pytest==7.4.4
+dask[array]==2023.5.0

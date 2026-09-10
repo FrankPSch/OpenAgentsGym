@@ -162,7 +162,7 @@ a new project **copies** the machinery instead of writing its own.
 
 | Copy from an existing project | Change only |
 |---|---|
-| `run_verification.py` — the oracle the harness calls, a thin wrapper over `lib/oracle.py` | the four constants at the top: the size and maintainability references, whether the project demands a strict size reduction, whether it ships tests |
+| `run_verification.py` — the oracle the harness calls, a thin wrapper over `lib/oracle.py` | the four constants at the top: the size and maintainability references, whether the project demands a strict size reduction, whether it ships tests (exception: an oracle-less project, below, may write a fully custom `run_verification.py` instead) |
 | the section structure of `prompt.md` (task, specification, files, verification, work order), including which execution tier the agent runs and when (chapter 19.6) | the content |
 | `.environment` and `.requirements` in the template | the pinned version and the packages |
 | the layout `reference/` + `reference/metrics.txt`, and `holdout_tests/` | the solution and the tests |
@@ -170,6 +170,32 @@ a new project **copies** the machinery instead of writing its own.
 **Never re-implement the metrics in a project.** Every project measuring itself with the same
 `lib/oracle.py` is what makes the columns mean the same thing; an oracle that computes its own size
 or complexity produces a column that silently is not the others'.
+
+### Projects without a pytest oracle
+
+Some tasks cannot be judged by running pytest against a local module at all — the correctness
+check is a live external system (an API, a service, an account) rather than code sitting in the
+workspace. `run_master.py` supports this directly: a project whose `project_reset_template/` ships
+no `test_*.py` file is detected as **oracle-less** (`oracle_less = not list(template.glob("test_*.py"))`),
+and pre-flight then only requires the baseline call to `run_verification.py` not to error out
+(exit code 2) — it drops the "baseline must fail on the pristine template" requirement of chapter
+11, since there is nothing to fail (`run_master.py`, step 6).
+
+For such a project, `run_verification.py` need not be a thin `lib/oracle.py` wrapper — it may be a
+fully custom script, provided it keeps the same contract every project's oracle keeps:
+
+- called the same way: `<workspace> <run dir> [baseline|""] [holdout dir] [template dir]`
+- writes `verification.txt` (and `metrics.txt`, if it scores quality) in the same `key=value` shape
+- exit 0 = pass, 1 = fail, 2 = environment/setup error, with the same meaning as elsewhere
+
+If the task still has code worth grading (a solution the agent produces or leaves behind
+somewhere — locally or, as for `06_qc_ema_cross`, in a live project the agent builds), score it
+with `lib/oracle.py`'s own `code_metrics` / `parsimony_factor` against a measured `reference/`
+solution exactly as any other project — never re-implement the metric just because the rest of the
+oracle is custom. `06_qc_ema_cross` is the example: it grades a QuantConnect backtest the agent
+runs through the QuantConnect MCP tools rather than a local Python module, gates on the backtest
+having actually run (compile succeeded, results exist), and scores the parsimony factor on the
+algorithm's source fetched back live from the QuantConnect API.
 
 **The two references are measured, not chosen.** Run the oracle on `reference/` and keep its output
 as `reference/metrics.txt`; the size and maintainability constants are the `sloc` and `mi` lines of

@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "qc_results_01",
+  "description": "Written right after compiling the project, before any backtest is run.",
+  "type": "object",
+  "required": ["project_id", "project_name", "symbol", "resolution", "fast_period", "slow_period",
+               "compile_success"],
+  "properties": {
+    "project_id": {"type": "integer"},
+    "project_name": {"type": "string", "minLength": 1},
+    "symbol": {"type": "string", "enum": ["SPY"]},
+    "resolution": {"type": "string", "enum": ["Daily", "Day"]},
+    "fast_period": {"type": "integer", "enum": [5]},
+    "slow_period": {"type": "integer", "enum": [160]},
+    "compile_success": {"type": "boolean"}
+  }
+}
