@@ -1,0 +1,9 @@
+chars=734
+comment_density=0.0
+complexity=6
+docstring_cov=0.0
+lint_errors=1
+max_func_sloc=7
+max_nesting=4
+mi=54.8
+sloc=16
