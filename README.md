@@ -15,12 +15,17 @@ text, so the difference between two ways of working comes out as numbers in one 
 | Term | Is |
 |---|---|
 | **methodology** | one candidate under test: a directory of plain Markdown under `methodology/`. Prose only — no code, no framework. |
-| **project** | one task: a directory under `projects/` with a prompt, a pristine template, its own oracle and a held-out test suite. |
-| **run** | one methodology executed once against one project, in its own directory, ending in one CSV row. |
+| **project** | one task: a directory under `projects/` with a prompt, a pristine template, its own grader and a held-out test suite. |
+| **run** (trial) | one methodology executed once against one project, in its own directory, ending in one CSV row. |
 | **campaign** | a set of runs compared with each other, with model, effort and every other constant fixed across it. |
+| **grader** | a project's `run_verification.py`: the code that scores one trial's outcome. Every grader calls the same shared metric library, `lib/oracle.py`. |
+| **outcome** | the end state a grader reads — the files on disk, or, for the QuantConnect tiers, the project fetched back live from the API. Never what the agent says it did. |
+| **transcript** | the full record of a trial: `result.json`, the launch line, the logs, the run directory. |
+| **agent harness** (scaffold) | the runtime the model acts through — here, the Claude Code CLI. Held constant across a campaign; the **evaluation harness** (`run_master.py`) is what varies methodologies against it. |
+| **control** | an arm or project that exists to test the apparatus, not to win: `00_empty`, `00_sabotage`, `00_fail`. |
 
 A run deploys the methodology's entry file into a fresh copy of the project, invokes the agent with
-the project's prompt, then scores the result with the project's own oracle:
+the project's prompt, then scores the outcome with the project's own grader:
 
 ```
 score = (visible tests passed / total) × parsimony_factor
@@ -39,10 +44,11 @@ That validity gate, not the leaderboard, is the first thing to read.
 ## First result
 
 Level-3 screen, 8–9 September 2026: all 33 methodologies once on `04_python_xlarge`
-(`claude-opus-5`, low effort, one repeat, `$4.00` cap, review off). Every arm passed all 50 visible
+(`claude-opus-5`, low effort, one trial, `$4.00` cap, review off). Every arm passed all 50 visible
 tests; 31 of 33 passed all 26 held-out tests. The spread is the parsimony factor — how compact the
-passing code is. One repeat orders, it does not decide (manual, chapter 6): arms within 0.05 are
-ties.
+passing code is. pass@1 orders, it does not decide (manual, chapter 6): arms within 0.05 are
+ties. Where scores tie outright, the ordering is Pareto dominance in cost and turns, and it is
+reported as that rather than as a difference in quality.
 
 | # | methodology | score | held-out | MI | SLOC | turns | $ |
 |---|---|---|---|---|---|---|---|
@@ -104,9 +110,9 @@ campaigns cannot be pooled by accident.
 
 ```
 methodology/     43 live candidates (+5 outdated, kept with their rows): 00_empty, 00_sabotage, a four-feature ladder, one idea each, two compositions, one transcribed kernel and its untranscribed source
-projects/        00_fail (impossible by construction) and five Python tasks of growing size
-lib/oracle.py    the shared scorer: tests, SLOC, complexity, Halstead, maintainability index
-run_master.py    the harness — pre-flight, invoke, score, one CSV row
+projects/        00_fail (impossible by construction), five Python tasks of growing size, two QuantConnect tiers driven through MCP
+lib/oracle.py    the shared metric library every grader calls: tests, SLOC, complexity, Halstead, maintainability index
+run_master.py    the evaluation harness — pre-flight, invoke, grade, one CSV row
 *.bat            the entry points
 local/           run directories, logs and the results table (git-ignored, never published)
 ```
@@ -135,10 +141,17 @@ Working apparatus, early results. Read before quoting a number:
   projects, the oracle and the batch files name no vendor — and chapter 18 of the specification
   lists every point a second engine would have to touch.
 - **Python projects only.** A project type that filters which methodologies apply is not built.
-- **One repeat so far.** The level-3 screen above orders the arms; the repeats that make the
-  ordering a result are the next campaign. `05_python_refactor_large` saturates at this level (20
-  arms tie at 1.00) and serves as a cost check only.
-- **Costs are real.** A campaign is methodologies × projects × repeats invocations of a paid CLI.
+- **One trial so far.** The level-3 screen above orders the arms at pass@1; the repeated trials that
+  make the ordering a result are the next campaign. With more than one trial per pair, pass^k — every
+  trial of a pair succeeding — is the number a methodology comparison should carry, because it asks
+  for consistency rather than one lucky draw.
+- **Three projects saturate at level 3.** `05_python_refactor_large` (20 arms tie at 1.00),
+  `06_qc_ema_cross` and `07_qc_bugfix_refactor` (every arm 1.0000, sabotage included, and on 07 the
+  sabotage arm carries the highest maintainability index of all). A project every arm passes orders
+  by cost alone; these three are smoke tests for the plumbing — 06 and 07 for the MCP path — and are
+  not read as a ranking. Difficulty belongs where the empty anchor still fails: calibrate a new
+  project on level 1 before spending a level-3 campaign on it.
+- **Costs are real.** A campaign is methodologies × projects × trials invocations of a paid CLI.
   Start with `run_smoke_model_02.bat` and read `tk_cost_usd` before scaling anything up.
 
 ---

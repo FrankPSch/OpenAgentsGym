@@ -1694,6 +1694,31 @@ def read_table(path):
         return [{plain_name(k): v for k, v in rec.items() if k} for rec in csv.DictReader(fh)]
 
 
+def score_spread_report(records):
+    """One descriptive line per campaign and project: arms, score range, distinct values.
+
+    Deliberately descriptive and not a verdict. Whether a project still discriminates is read off
+    the spread, and a threshold that decided it for the reader would be a constant nobody measured
+    -- on top of rows that are usually a single trial per arm, where a spread of zero can be
+    saturation or can be sampling. So the line states what is there and leaves the judgement to
+    chapter 16 and to the reader: `1 distinct value` across every arm is the whole finding.
+    """
+    groups = {}
+    for r in records:
+        campaign, project = r.get("cfg_campaign", ""), r.get("prj_name", "")
+        score = as_float(r.get("res_score"))
+        if not project or score is None:
+            continue
+        groups.setdefault((campaign, project), []).append((r.get("mth_name", ""), score))
+    lines = []
+    for (campaign, project), arms in sorted(groups.items()):
+        scores = [s for _, s in arms]
+        distinct = len({round(s, 4) for s in scores})
+        lines.append("%s / %s: %d arm(s), res_score %.3f-%.3f, %d distinct value(s)"
+                     % (campaign, project, len(arms), min(scores), max(scores), distinct))
+    return lines
+
+
 def consolidate():
     """Merge every local/runs/*/results_run.csv into results_repository.csv.
 
@@ -1766,6 +1791,8 @@ def consolidate():
         print("  aborted repeats: %d (see local/runs/<id>/abort.txt)" % len(aborted))
         for run_id in aborted:
             print("    %s" % run_id)
+    for line in score_spread_report(records):
+        print("  %s" % line)
     # The chart is written from the rows just written, never from a second read of the file: the
     # two artifacts then cannot disagree about what was consolidated.
     chart = ROOT / "results_pareto.svg"

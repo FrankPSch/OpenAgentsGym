@@ -98,6 +98,25 @@ same methodology can be handed to any model or CLI, a human can write one today,
 job can mutate it tomorrow against a chosen metric — tokens spent, cost, wall-clock, or the
 project's own success criterion.
 
+### 2.1 Vocabulary
+
+The four terms this document uses throughout — **methodology**, **project**, **run**, **campaign** —
+are defined where they are first needed. Five terms from the common vocabulary of agent evaluation
+are used alongside them, and mean here exactly what they mean elsewhere. They rename nothing: no
+directory, column or configuration key changes because of this section.
+
+| Term | Here |
+|---|---|
+| **trial** | one run. `REPEATS` is the number of trials one project × methodology cell gets (chapter 12). |
+| **grader** | a project's `run_verification.py` — the code that scores one run's outcome (chapters 10, 11). Every grader is a *code* grader and calls `lib/oracle.py`; a *model* grader, were one added, would have to be calibrated against human verdicts before its numbers counted, and a *human* grader is not part of this apparatus. |
+| **outcome** | the end state a grader reads: the workspace on disk, or a system fetched back live, as `06_qc_ema_cross` and `07_qc_bugfix_refactor` fetch their project from the QuantConnect API. Never the agent's own account of what it did. |
+| **transcript** | the whole record of a run — `result.json`, `cli_argv.txt`, the logs, the run directory (chapter 13.1). |
+| **agent harness** (scaffold) | the runtime the model acts through: the CLI named by `ENGINE`, held constant across a campaign. `run_master.py` is the **evaluation harness** and is a different layer (chapter 12). |
+
+`REVIEW_PASS` (chapter 9) resembles a model grader and is not one: the reviewer is part of the
+**treatment** an arm is run under, and it scores nothing. Conflating the two would make a treatment
+look like a measurement.
+
 ## 3. Framework or methodology
 
 A **methodology** is prose the agent reads and may or may not comply with; a **framework** is code
@@ -1402,6 +1421,25 @@ A run that aborts before `results_run.csv` exists still leaves `run.log`, an `ab
 the exit code and the message, and an `ABORT` line in `_master.log`; a missing row is therefore
 always explainable, and the repeats after it still run (chapter 12).
 
+### 13.1a The score-spread line
+
+`--consolidate` prints one line per campaign × project after the merge counts, before the chart is
+written:
+
+```
+  <campaign> / <project>: N arm(s), res_score <min>-<max>, D distinct value(s)
+```
+
+It is descriptive and carries no verdict. Whether a project still discriminates is read off that
+spread by the reader and by chapter 16; a threshold deciding it here would be a constant nobody
+measured, applied to rows that are usually one trial per arm, where a spread of zero can be
+saturation and can equally be sampling. `1 distinct value` across every arm of a project is the
+whole finding, and it is the earliest place the apparatus says so — the sabotage condition of
+chapter 16 reports the same state, but only once both `00_sabotage` and the incumbent have run.
+
+Rows without a numeric `res_score`, and rows without a project name, are skipped; the line is
+therefore silent about aborted runs, which chapter 12 already reports by id.
+
 ### 13.2 The Pareto chart
 
 `--consolidate` writes `results_pareto.svg` at the repository root beside the table, from the same
@@ -1671,6 +1709,19 @@ runs and the `00_sabotage` rows of the campaign's ranking runs, judged against t
   one-decimal ratio — and the campaign ranks maintainability while reporting it as methodology.
   `03_python_large` fails this in campaign 1: 24/24 visible on all 23 runs, with the whole 0.80–0.91
   spread coming from the factor.
+- A project whose **score** is flat, not merely its visible fraction, has stopped measuring
+  altogether. `06_qc_ema_cross` and `07_qc_bugfix_refactor` are the current cases: every arm, the
+  sabotage anchor included, scores 1.0000 at level 3, and on 07 the sabotage arm carries the highest
+  maintainability index of the four. Such a project is kept as a smoke test — for those two, of the
+  MCP path — and is reported as a cost comparison, never as a ranking. The score-spread line of
+  chapter 13.1a shows the state as `1 distinct value` from the first two arms onwards.
+
+**Difficulty is calibrated before a campaign, not diagnosed after one.** A new project is run once
+against `00_empty` on capability level 1 — the cheapest model — before any level-3 campaign is spent
+on it. An empty anchor that already passes there means the task sits below the level it was written
+for, and every arm above will return the same score. The project is then either made harder or filed
+at the level where the anchor still fails. Both QuantConnect tiers were built without this step and
+established the same fact at roughly a dollar per arm instead of cents.
 
 ### Further details
 
