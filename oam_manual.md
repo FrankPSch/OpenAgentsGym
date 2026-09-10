@@ -35,27 +35,15 @@ Four words carry the whole system:
 | Term | Is |
 |---|---|
 | **methodology** | one candidate under test: a directory of plain Markdown under `methodology/`. Nothing but prose — no code, no framework. |
-| **project** | one task an agent is asked to do: a directory under `projects/` with a prompt, a pristine template and its own grader. |
-| **run** | one methodology executed once against one project, in its own directory under `runs/`, ending in one CSV row. Elsewhere in the eval literature this is a **trial**; the two are the same thing, and `REPEATS` is how many trials one pair gets. |
+| **project** | one task an agent is asked to do: a directory under `projects/` with a prompt, a pristine template and its own oracle. |
+| **run** | one methodology executed once against one project, in its own directory under `runs/`, ending in one CSV row. |
 | **campaign** | a set of runs compared with each other, with model, effort and every other constant fixed across it. |
 
-Five more, borrowed from the common vocabulary of agent evaluation so that results here can be read
-by someone who has never seen this repository. They rename nothing on disk:
-
-| Term | Is, here |
-|---|---|
-| **grader** | a project's `run_verification.py` — the code that scores one run's outcome. Every grader calls `lib/oracle.py`, the shared metric library, and never re-implements a metric of its own (chapter 4). |
-| **outcome** | the end state the grader reads: the files in the workspace, or — for `06_qc_ema_cross` and `07_qc_bugfix_refactor` — the project fetched back live from the QuantConnect API. Never the agent's own account of what it did. |
-| **transcript** | the whole record of a run: `result.json`, `cli_argv.txt`, the logs, the run directory. Reading transcripts is how you find out whether a grader is grading what you think (chapter 6). |
-| **agent harness** (scaffold) | the runtime the model acts through — here the Claude Code CLI, held constant across a campaign. `run_master.py` is the **evaluation harness**, a different layer: it varies methodologies against that constant. |
-| **control** | an arm or a project that exists to test the apparatus rather than to win: `00_empty`, `00_sabotage`, `00_fail`. A control is never tuned to improve a result. |
-
-Two things the vocabulary does **not** cover, and one confusion it prevents. Code graders, model
-graders and human graders are the three kinds in general use; every grader in this repository is a
-code grader, and the constants it applies are measured, not chosen. `REVIEW_PASS` (chapter 3) looks
-like a model grader and is not one — it is part of the **treatment**, a reviewer the arm works with,
-and it never scores anything. If a model grader is ever added, it has to be calibrated against human
-verdicts before its numbers mean anything.
+Coming from the general literature on agent evaluation, a *run* is a **trial**, the oracle is a
+**grader**, and the CLI is the **agent harness**; chapter 2.1 of the specification lists the whole
+translation. This manual uses the four words above and nothing else. One point from that section is
+worth carrying here, because mistaking it is expensive: `REVIEW_PASS` (chapter 3) is part of the
+**treatment**, a reviewer the arm works with — it grades nothing and never touches the score.
 
 The methodologies form a **ladder** plus a set of **single-feature arms**:
 
@@ -146,7 +134,7 @@ a browser (chapter 13.2).
 ## 4. Extending a project
 
 A project is a directory under `projects/` holding a task, a pristine copy of the code, its own
-grader, a measured reference solution and — for a ranking project — a held-out suite (chapters 7,
+oracle, a measured reference solution and — for a ranking project — a held-out suite (chapters 7,
 8, 10, 11).
 
 Working order:
@@ -174,10 +162,10 @@ Working order:
 6. **Check the gate conditions hold** for the new project before any result from it is read.
 
 Two questions decide whether a task is worth a campaign, and both are cheaper to ask than to skip.
-*Would two domain experts, reading `prompt.md` and the grader alone, independently reach the same
+*Would two domain experts, reading `prompt.md` and the oracle alone, independently reach the same
 pass/fail verdict?* If not, the task is under-specified and its scores are noise — fix the prompt,
-not the grader. *Is there something here an arm can plausibly get wrong?* A task whose specification
-leaves no room to fail measures nothing, however strict the grader is.
+not the oracle. *Is there something here an arm can plausibly get wrong?* A task whose specification
+leaves no room to fail measures nothing, however strict the oracle is.
 
 A project on which every methodology scores at the top ranks by cost alone. That is a statement
 about the project, not about methodology — such a project is kept for smoke runs, not for ranking
@@ -192,7 +180,7 @@ a new project **copies** the machinery instead of writing its own.
 
 | Copy from an existing project | Change only |
 |---|---|
-| `run_verification.py` — the grader the harness calls, a thin wrapper over `lib/oracle.py` | the four constants at the top: the size and maintainability references, whether the project demands a strict size reduction, whether it ships tests (exception: an oracle-less project, below, may write a fully custom `run_verification.py` instead) |
+| `run_verification.py` — the oracle the harness calls, a thin wrapper over `lib/oracle.py` | the four constants at the top: the size and maintainability references, whether the project demands a strict size reduction, whether it ships tests (exception: an oracle-less project, below, may write a fully custom `run_verification.py` instead) |
 | the section structure of `prompt.md` (task, specification, files, verification, work order), including which execution tier the agent runs and when (chapter 19.6) | the content |
 | `.environment` and `.requirements` in the template | the pinned version and the packages |
 | the layout `reference/` + `reference/metrics.txt`, and `holdout_tests/` | the solution and the tests |
@@ -300,26 +288,26 @@ effort, CLI version, review settings and tool set; rows whose served model diffe
 requested one are discarded. The repository deliberately holds every run ever made — the cheap sweep
 included — so a campaign is a filter, not a memory (chapter 17).
 
-**Trials.** One run per cell is a smoke test. Comparison needs at least three, ranked on the
+**Repeats.** One run per cell is a smoke test. Comparison needs at least three, ranked on the
 **median** with the **spread** reported beside it for turns and cost: two runs of the same cell
 differ by more than the gap between two arms (chapter 17).
 
-With more than one trial per cell, report **pass^k** — the share of cells whose every trial passed —
-alongside the median score. pass@1, the single-trial number, says an arm *can* do the task; pass^k
-says it does so reliably, and reliability is what a methodology is supposed to buy. The two diverge
-exactly where a methodology matters most.
+With more than one run per cell, report **pass^k** — the share of cells whose every run passed —
+beside the median score. pass@1, the single-run number, says an arm *can* do the task; pass^k says
+it does so every time, and that is what a methodology is supposed to buy. The two diverge exactly
+where a methodology matters most.
 
 **The rule for reading a ranking**, fixed before the rows are read so the rows cannot bend it:
 
-1. Per arm, the median `res_score` over its trials and the range (min–max).
+1. Per arm, the median `res_score` over its repeats and the range (min–max).
 2. Two arms are **different** only when their medians are more than 0.05 apart *and* their ranges
    do not overlap. 0.05 is the measured noise floor of one cell; anything inside it is a tie
    whatever the ordering says.
 3. Ties are broken by cost (`tk_cost_usd` median), then by turns — never by the third decimal of
    the score.
-4. A single-trial screen — pass@1 — ranks by the same rule with the range collapsed to a point: it
+4. A one-repeat screen — pass@1 — ranks by the same rule with the range collapsed to a point: it
    can separate an arm from `00_empty` when the gap exceeds 0.05, it cannot separate two arms that
-   close. A screen orders; repeated trials decide.
+   close. A screen orders; repeats decide.
 5. The rows read are one campaign label (chapter 17); a comparison across levels or configs is
    a comparison of models, not of methodologies, and is not made.
 

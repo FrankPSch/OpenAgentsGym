@@ -100,22 +100,26 @@ project's own success criterion.
 
 ### 2.1 Vocabulary
 
-The four terms this document uses throughout — **methodology**, **project**, **run**, **campaign** —
-are defined where they are first needed. Five terms from the common vocabulary of agent evaluation
-are used alongside them, and mean here exactly what they mean elsewhere. They rename nothing: no
-directory, column or configuration key changes because of this section.
+This document keeps its own words — **methodology**, **project**, **run**, **campaign**, **oracle**,
+**repeat** — and uses them everywhere. The table below is a **translation**, for a reader who comes
+from the general literature on agent evaluation and expects different names for the same things. It
+defines nothing new and renames nothing: no directory, column, configuration key or sentence
+elsewhere in this document changes because of it.
 
-| Term | Here |
+| Common term | Called here |
 |---|---|
-| **trial** | one run. `REPEATS` is the number of trials one project × methodology cell gets (chapter 12). |
-| **grader** | a project's `run_verification.py` — the code that scores one run's outcome (chapters 10, 11). Every grader is a *code* grader and calls `lib/oracle.py`; a *model* grader, were one added, would have to be calibrated against human verdicts before its numbers counted, and a *human* grader is not part of this apparatus. |
-| **outcome** | the end state a grader reads: the workspace on disk, or a system fetched back live, as `06_qc_ema_cross` and `07_qc_bugfix_refactor` fetch their project from the QuantConnect API. Never the agent's own account of what it did. |
-| **transcript** | the whole record of a run — `result.json`, `cli_argv.txt`, the logs, the run directory (chapter 13.1). |
-| **agent harness** (scaffold) | the runtime the model acts through: the CLI named by `ENGINE`, held constant across a campaign. `run_master.py` is the **evaluation harness** and is a different layer (chapter 12). |
+| trial | **run**, and `REPEATS` is how many of them one project × methodology cell gets (chapter 12) |
+| grader | **oracle** — a project's `run_verification.py`, the code that scores one run (chapters 10, 11) |
+| outcome | what the oracle reads: the workspace on disk, or a system fetched back live, as `06_qc_ema_cross` and `07_qc_bugfix_refactor` fetch their project from the QuantConnect API. Never the agent's own account of what it did |
+| transcript | the run directory — `result.json`, `cli_argv.txt` and the logs (chapter 13.1) |
+| agent harness, scaffold | the CLI named by `ENGINE`, held constant across a campaign. `run_master.py` is the *evaluation* harness, a different layer (chapter 12) |
+| control | the `00_*` arms and projects, which test the apparatus rather than compete (chapter 16) |
 
-`REVIEW_PASS` (chapter 9) resembles a model grader and is not one: the reviewer is part of the
-**treatment** an arm is run under, and it scores nothing. Conflating the two would make a treatment
-look like a measurement.
+Two consequences worth stating once. Graders come in three kinds — code, model and human; every
+oracle here is a **code** grader, and the constants it applies are measured rather than chosen
+(chapter 11). And `REVIEW_PASS` (chapter 9) resembles a model grader without being one: the reviewer
+is part of the **treatment** an arm is run under and scores nothing. Conflating the two would make a
+treatment look like a measurement.
 
 ## 3. Framework or methodology
 
@@ -1432,8 +1436,8 @@ written:
 
 It is descriptive and carries no verdict. Whether a project still discriminates is read off that
 spread by the reader and by chapter 16; a threshold deciding it here would be a constant nobody
-measured, applied to rows that are usually one trial per arm, where a spread of zero can be
-saturation and can equally be sampling. `1 distinct value` across every arm of a project is the
+measured, applied to rows that are usually one run per arm, where a spread of zero can be saturation
+and can equally be sampling. `1 distinct value` across every arm of a project is the
 whole finding, and it is the earliest place the apparatus says so — the sabotage condition of
 chapter 16 reports the same state, but only once both `00_sabotage` and the incumbent have run.
 

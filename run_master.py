@@ -1699,9 +1699,9 @@ def score_spread_report(records):
 
     Deliberately descriptive and not a verdict. Whether a project still discriminates is read off
     the spread, and a threshold that decided it for the reader would be a constant nobody measured
-    -- on top of rows that are usually a single trial per arm, where a spread of zero can be
-    saturation or can be sampling. So the line states what is there and leaves the judgement to
-    chapter 16 and to the reader: `1 distinct value` across every arm is the whole finding.
+    -- on top of rows that are usually one run per arm, where a spread of zero can be saturation or
+    can be sampling. So the line states what is there and leaves the judgement to chapter 16 and to
+    the reader: `1 distinct value` across every arm is the whole finding.
     """
     groups = {}
     for r in records:

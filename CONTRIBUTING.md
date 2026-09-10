@@ -37,8 +37,8 @@ One directory under `projects/`, and it must ship all five of these:
    inputs. It may test **only what `prompt.md` states** — testing unstated requirements penalises a
    methodology for not reading the author's mind. It must pass on the reference and fail on the
    template.
-5. **`run_verification.py`** — the project's **grader**: the thin wrapper over `lib/oracle.py`,
-   with the constants from step 3.
+5. **`run_verification.py`** — the project's oracle: the thin wrapper over `lib/oracle.py`, with the
+   constants from step 3.
 
 Two more things a submission must clear, both cheap and both learned the expensive way:
 
@@ -48,9 +48,9 @@ anchor already passes there, the task is below the level you were aiming at, and
 on it will return one score for every arm. Raise the difficulty or file the project at the level
 where the anchor still fails. State the calibration run in the pull request.
 
-**A task is well posed when two domain experts, reading `prompt.md` and the grader alone, would
+**A task is well posed when two domain experts, reading `prompt.md` and the oracle alone, would
 independently reach the same pass/fail verdict on a given solution.** If they would not, the task is
-under-specified and its scores are noise — fix the prompt, not the grader.
+under-specified and its scores are noise — fix the prompt, not the oracle.
 
 A project on which every methodology scores at the top ranks by cost alone. That is a statement
 about the project, not about methodology: it is kept for smoke runs, not for ranking. `06_qc_ema_cross`
@@ -64,7 +64,7 @@ and `07_qc_bugfix_refactor` are the current examples.
 - If the change can move scores, say so explicitly and name which columns.
 - Do not commit anything under `local/` — run directories, logs and the results table stay local.
   Paste the rows you want to discuss into the pull request instead.
-- Results in an issue or pull request must state model, effort, trials and campaign label. A score
+- Results in an issue or pull request must state model, effort, repeats and campaign label. A score
   without its constants is not comparable to anything.
 
 ## Reporting a result that surprises you
