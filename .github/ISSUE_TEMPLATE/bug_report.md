@@ -8,7 +8,7 @@ labels: bug
 **What happened, and what the specification says should happen** (cite the chapter of
 `oam_targetpicture.md` if you can).
 
-**Entry point and arguments** — e.g. `run.bat 03_python_large 01_process`.
+**Entry point and arguments** — e.g. `run.bat p03_python_large m01_process`.
 
 **Constants** — model, effort, repeats, campaign label, and whether a non-default `--config` was
 used.

@@ -473,7 +473,7 @@ What it does **not** prove is in §7 above — for `gpt` it only checks that
 run_engine_matrix.bat
 ```
 
-`01_python_small` × `00_empty` — the smallest project with the no-methodology
+`p01_python_small` × `m00_empty` — the smallest project with the no-methodology
 anchor — across the local models, plus the `gpt` leg. The claude leg is opt-in
 behind `/billed`, because it costs money and the question here is whether the
 apparatus works.
@@ -489,14 +489,14 @@ APIError and scores 0.0000**.
 Expected on a correctly set-up machine:
 
 ```
-opencode_01  exit=0  PASS   gpt-oss-20b
-opencode_02  exit=0  PASS   qwen3-4b
-opencode_03  exit=0  ?      qwen3-coder-30b   - see below
-model_02     skipped        (billed, not requested)
-gpt_02       exit=6  ABORT  codex not installed - expected
+e06_local_gptoss_20b  exit=0  PASS   gpt-oss-20b
+e07_local_qwen3_4b  exit=0  PASS   qwen3-4b
+e08_local_qwen3coder_30b  exit=0  ?      qwen3-coder-30b   - see below
+e02_claude_sonnet_5     skipped        (billed, not requested)
+e05_gpt_5_codex       exit=6  ABORT  codex not installed - expected
 ```
 
-`opencode_03` fails with `APIError` on a machine whose integrated GPU cannot
+`e08_local_qwen3coder_30b` fails with `APIError` on a machine whose integrated GPU cannot
 hold 18 GB of weights: `llama-server reported out-of-memory during startup`.
 It fails identically at every context from 32768 down to 4096, so it is the
 weights, not the KV cache, and no smaller quantisation of that model exists.

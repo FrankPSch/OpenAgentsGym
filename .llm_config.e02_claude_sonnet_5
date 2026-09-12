@@ -1,0 +1,82 @@
+# Capability level 2 of 4 -- the workhorse model at medium effort. The default of run.bat and
+# of run_master.py when no --config is given; run_smoke_e02.bat runs one pair on it.
+# The model id below is the ONLY vendor-specific line in the repository: the level is what file
+# names, batch files and documents refer to. Read once per run by run_master.py (KEY=VALUE, text
+# after # is a comment). Project and methodology are NOT set here -- they come from the command
+# line: run.bat <project> <methodology>.
+
+ENGINE=claude
+# ENGINE: only valid value is "claude" (chapter 9) — a hard-fail check, not a real choice yet.
+MODEL=claude-sonnet-5
+# MODEL: canonical model id, passed as --model. Never an alias like "opus" — an alias can
+# silently re-point to a different model between campaigns and invalidate comparisons.
+PROVIDER=
+# PROVIDER: blank = anthropic, this vendor's own endpoint. Any other value (moonshot, groq,
+# openrouter, local, ...) needs BASE_URL and is recorded as cfg_provider -- a campaign constant,
+# because one model id served from two places is two populations, not one.
+BASE_URL=
+# BASE_URL: blank = native. The endpoint the CLI is pointed at; recorded as cfg_endpoint.
+# Together the two set cfg_effort_enforced (--effort is this vendor's flag) and cfg_bound (the cap
+# that actually binds: --max-budget-usd only where the endpoint reports cost, else the timeout).
+EFFORT=medium
+# EFFORT: passed as --effort. Valid values: low | medium | high | xhigh | max.
+MAX_TURNS=60
+# MAX_TURNS: NOT passed to the CLI — Claude Code 2.1.251 has no --max-turns flag. Used only
+# after the run to compute res_hit_turn_cap = (num_turns >= MAX_TURNS) in the results row.
+MAX_BUDGET_USD=4.00
+# MAX_BUDGET_USD: passed as --max-budget-usd. The real spending cap on a run — since there
+# is no turn cap on the CLI side, this is what actually bounds cost and runtime. Raised from
+# 2.00 for campaign 2: the dearest campaign-1 run on p03_python_large cost $0.882; x2 for the size
+# of p04_python_xlarge and x2.05 for the level-3 model's price gives ~$3.62, so a 2.00 cap would
+# truncate the R and F arms on that level alone -- a censoring indistinguishable from a methodology effect.
+REPEATS=1
+# REPEATS: how many times run.bat repeats the same <project> <methodology> pair.
+# REPEATS=1 is a smoke-test setting only; comparing arms needs REPEATS>=3 (chapter 17) —
+# agent runs vary enough that one observation per arm can't separate an effect from noise.
+# blank = leave the CLI on the user config dir; set to a path (relative to the repo root)
+# to isolate the campaign from the user profile. Needs a one-time "claude login" in it.
+CLAUDE_CONFIG_DIR=
+
+REVIEW_PASS=none
+# REVIEW_PASS: none | same_model | other_model — the harness-executed independent review pass
+# (chapter 12, step 7b). none is the campaign-1 and campaign-2 setting: the review is a second
+# invocation and a second cost, and it is a treatment, so it is either on for a whole campaign or
+# off for it. Unset or blank reads as none; anything else aborts with exit 4.
+REVIEW_MAX_BUDGET_USD=1.00
+# REVIEW_MAX_BUDGET_USD: passed as --max-budget-usd on the review invocation only. A quarter of
+# the implementer's cap — the reviewer reads a diff and writes at most 20 lines.
+REVIEW_MODEL=
+# REVIEW_MODEL: blank on same_model means the reviewer runs the same model as the implementer.
+# On other_model it is the vendor model id, recorded as cfg_review_model — a foreign CLI does not
+# report back what it served, so the declaration is the only record there is.
+REVIEW_CMD=
+# REVIEW_CMD: other_model only. A command run with the reviewer prompt on stdin and its stdout
+# taken as review.md, e.g. "<cli> exec --json -". Not a shell line: no pipes, no redirection.
+# Blank with REVIEW_PASS=other_model aborts with exit 6, as does an executable not on PATH.
+REVIEW_PROMPT=
+# REVIEW_PROMPT: blank = lib/reviewer_prompt.md. Any other value is a path relative to the repo
+# root, e.g. lib/reviewer_prompt_adversarial.md — same output contract, a reviewer told to break
+# the code against the task and to raise issue: only with a concrete failing input. Recorded as
+# cfg_review_prompt. A path that does not exist aborts with exit 4.
+REVIEW_WEIGHT=1
+# REVIEW_WEIGHT: how many independent reviewers the review pass runs (chapter 9). 1 is the campaign
+# setting. n>1 runs n invocations of the same prompt on the same diff, each in a working directory
+# of its own, concatenates their answers into review.md under a "# reviewer k" header per block and
+# counts findings, issues and actionable issues over all of them; tk_review_* are summed and
+# cfg_review_weight records the number. Non-numeric or below 1 aborts with exit 4.
+REVIEW_FEEDBACK=0
+# REVIEW_FEEDBACK: 0 | 1. 1 turns the review into a methodology element that acts: after review.md
+# is written, and if it carries at least one issue: line, the implementer is invoked once more on
+# those lines (chapter 12, step 7c) and the oracle then scores the fixed code. Its spend lands in
+# tk_fix_*, never in tk_cost_usd. Needs REVIEW_PASS != none; 1 with none aborts with exit 4.
+FIX_MODEL=
+# FIX_MODEL: the model the step-7c fix call runs on. Blank = MODEL, which is what the fix call has
+# always used. Only meaningful with REVIEW_FEEDBACK=1; recorded as cfg_fix_model, blank wherever
+# the feedback loop is off. Canonical id only — the same alias rejection as MODEL, exit 4. It is
+# here so the reviewer tier and the fixer tier can be varied apart: applying named issues may be a
+# smaller job than writing the code, and that is a measurement, not an assumption.
+BEST_OF_N=1
+# BEST_OF_N: how many implementer invocations produce one row. 1 is the campaign setting. N>1 runs
+# N sequentially into project_workspace_1..N, scores each with the project's own oracle and keeps
+# the highest res_score (tie: the cheaper run) as the recorded row; the losers' spend is summed
+# into tk_bestof_cost_usd. Non-numeric or below 1 aborts with exit 4.

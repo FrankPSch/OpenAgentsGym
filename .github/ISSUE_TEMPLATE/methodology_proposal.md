@@ -12,8 +12,8 @@ labels: methodology
 **What you expect it to move** — which columns, in which direction (score, cost, lines written,
 adherence).
 
-**Which arm you would read it against** — `00_empty` for the effect, or the incumbent
-(`08_process_doctypes_roles_guardrails`) for whether it beats current practice.
+**Which arm you would read it against** — `m00_empty` for the effect, or the incumbent
+(`m08_process_doctypes_roles_guardrails`) for whether it beats current practice.
 
 **Is it one idea, or a combination?** Combinations above the ladder are hard to attribute.
 

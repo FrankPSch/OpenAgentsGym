@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 3308" width="800" height="3308">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 4240" width="800" height="4240">
 <style>
 text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fill:#1f2933}
 .ttl{font-size:13px;font-weight:600} .hd{font-size:12px} .lg{font-size:10px;fill:#6b7280} .ax{font-size:10px;fill:#4b5563} .lb{font-size:9px} .lbo{font-size:9px;fill:#9aa3ad}
@@ -6,10 +6,10 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 .pt{fill:#1f2933} .pto{fill:none;stroke:#9aa3ad;stroke-width:1.2}
 .front{fill:none;stroke:#1f2933;stroke-width:1.2;opacity:0.55}
 </style>
-<rect x="0" y="0" width="800" height="3308" fill="#ffffff"/>
+<rect x="0" y="0" width="800" height="4240" fill="#ffffff"/>
 <text class="hd" x="58" y="20">score against cost, one panel per campaign and project</text>
 <text class="lg" x="58" y="36">filled = live arm, hollow = *_outdated; the line is the Pareto front of the live arms</text>
-<text class="ttl" x="58" y="66">01_python_small  &#8212;  .llm_config.model_02</text>
+<text class="ttl" x="58" y="66">p01_python_small  &#8212;  .llm_config.e02_claude_sonnet_5</text>
 <rect x="58" y="80" width="720" height="360" fill="#fbfbfc" stroke="#e5e7eb"/>
 <line class="grid" x1="58" y1="440" x2="778" y2="440"/>
 <text class="ax" x="50" y="443" text-anchor="end">0.90</text>
@@ -33,7 +33,7 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <text class="ax" x="20" y="260" text-anchor="middle" transform="rotate(-90 20 260)">score</text>
 <circle class="pt" cx="172.8" cy="425.6" r="3.2"/>
 <text class="lb" x="177.8" y="421.6">00</text>
-<text class="ttl" x="58" y="532">04_python_xlarge  &#8212;  .llm_config.model_03</text>
+<text class="ttl" x="58" y="532">p04_python_xlarge  &#8212;  .llm_config.e03_claude_opus_5</text>
 <rect x="58" y="546" width="720" height="360" fill="#fbfbfc" stroke="#e5e7eb"/>
 <line class="grid" x1="58" y1="906" x2="778" y2="906"/>
 <text class="ax" x="50" y="909" text-anchor="end">0.80</text>
@@ -99,7 +99,7 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <circle class="pt" cx="194.24" cy="657.6" r="3.2"/>
 <text class="lb" x="199.24" y="653.6">10</text>
 <circle class="pt" cx="194.71" cy="726" r="3.2"/>
-<text class="lb" x="199.71" y="722">00</text>
+<text class="lb" x="199.71" y="722">47</text>
 <circle class="pt" cx="197.68" cy="567.6" r="3.2"/>
 <text class="lb" x="202.68" y="563.6">34</text>
 <circle class="pt" cx="198.67" cy="670.2" r="3.2"/>
@@ -178,7 +178,7 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <text class="lb" x="697.54" y="677">46</text>
 <circle class="pt" cx="703.01" cy="591" r="3.2"/>
 <text class="lb" x="708.01" y="587">44</text>
-<text class="ttl" x="58" y="998">05_python_refactor_large  &#8212;  .llm_config.model_03</text>
+<text class="ttl" x="58" y="998">p05_python_refactor_large  &#8212;  .llm_config.e03_claude_opus_5</text>
 <rect x="58" y="1012" width="720" height="360" fill="#fbfbfc" stroke="#e5e7eb"/>
 <line class="grid" x1="58" y1="1372" x2="778" y2="1372"/>
 <text class="ax" x="50" y="1375" text-anchor="end">0.90</text>
@@ -237,7 +237,7 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <circle class="pt" cx="97.32" cy="1044.4" r="3.2"/>
 <text class="lb" x="116.12" y="1040.4">25</text>
 <circle class="pt" cx="97.51" cy="1224.4" r="3.2"/>
-<text class="lb" x="102.51" y="1220.4">00</text>
+<text class="lb" x="102.51" y="1220.4">47</text>
 <circle class="pt" cx="97.52" cy="1012" r="3.2"/>
 <text class="lb" x="67.92" y="1039">37</text>
 <circle class="pt" cx="99.01" cy="1012" r="3.2"/>
@@ -308,7 +308,7 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <text class="lbo" x="739.9" y="1021">41</text>
 <circle class="pt" cx="768.03" cy="1184.8" r="3.2"/>
 <text class="lb" x="773.03" y="1180.8">44</text>
-<text class="ttl" x="58" y="1464">06_qc_ema_cross  &#8212;  .llm_config.model_03</text>
+<text class="ttl" x="58" y="1464">p06_qc_ema_cross  &#8212;  .llm_config.e03_claude_opus_5</text>
 <rect x="58" y="1478" width="720" height="360" fill="#fbfbfc" stroke="#e5e7eb"/>
 <line class="grid" x1="58" y1="1838" x2="778" y2="1838"/>
 <text class="ax" x="50" y="1841" text-anchor="end">0.90</text>
@@ -339,7 +339,7 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <circle class="pt" cx="436.69" cy="1478" r="3.2"/>
 <text class="lb" x="441.69" y="1487">34</text>
 <circle class="pt" cx="451.05" cy="1478" r="3.2"/>
-<text class="lb" x="456.05" y="1487">00</text>
+<text class="lb" x="456.05" y="1487">47</text>
 <circle class="pt" cx="495.83" cy="1478" r="3.2"/>
 <text class="lb" x="500.83" y="1487">29</text>
 <circle class="pt" cx="500.68" cy="1478" r="3.2"/>
@@ -347,8 +347,8 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <circle class="pt" cx="536.88" cy="1478" r="3.2"/>
 <text class="lb" x="541.88" y="1487">34</text>
 <circle class="pt" cx="547.62" cy="1478" r="3.2"/>
-<text class="lb" x="566.42" y="1487">00</text>
-<text class="ttl" x="58" y="1930">07_qc_bugfix_refactor  &#8212;  .llm_config.model_03</text>
+<text class="lb" x="566.42" y="1487">47</text>
+<text class="ttl" x="58" y="1930">p07_qc_bugfix_refactor  &#8212;  .llm_config.e03_claude_opus_5</text>
 <rect x="58" y="1944" width="720" height="360" fill="#fbfbfc" stroke="#e5e7eb"/>
 <line class="grid" x1="58" y1="2304" x2="778" y2="2304"/>
 <text class="ax" x="50" y="2307" text-anchor="end">0.90</text>
@@ -381,31 +381,31 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <circle class="pt" cx="632.27" cy="1944" r="3.2"/>
 <text class="lb" x="637.27" y="1953">34</text>
 <circle class="pt" cx="739.39" cy="1944" r="3.2"/>
-<text class="lb" x="744.39" y="1953">00</text>
-<text class="ttl" x="58" y="2396">01_python_small  &#8212;  .llm_config.opencode_01</text>
+<text class="lb" x="744.39" y="1953">47</text>
+<text class="ttl" x="58" y="2396">p01_python_small  &#8212;  .llm_config.e06_local_gptoss_20b</text>
 <rect x="58" y="2410" width="720" height="360" fill="#fbfbfc" stroke="#e5e7eb"/>
 <line class="grid" x1="58" y1="2770" x2="778" y2="2770"/>
-<text class="ax" x="50" y="2773" text-anchor="end">0.80</text>
+<text class="ax" x="50" y="2773" text-anchor="end">0.0</text>
 <line class="grid" x1="58" y1="2734" x2="778" y2="2734"/>
-<text class="ax" x="50" y="2737" text-anchor="end">0.82</text>
+<text class="ax" x="50" y="2737" text-anchor="end">0.1</text>
 <line class="grid" x1="58" y1="2698" x2="778" y2="2698"/>
-<text class="ax" x="50" y="2701" text-anchor="end">0.84</text>
+<text class="ax" x="50" y="2701" text-anchor="end">0.2</text>
 <line class="grid" x1="58" y1="2662" x2="778" y2="2662"/>
-<text class="ax" x="50" y="2665" text-anchor="end">0.86</text>
+<text class="ax" x="50" y="2665" text-anchor="end">0.3</text>
 <line class="grid" x1="58" y1="2626" x2="778" y2="2626"/>
-<text class="ax" x="50" y="2629" text-anchor="end">0.88</text>
+<text class="ax" x="50" y="2629" text-anchor="end">0.4</text>
 <line class="grid" x1="58" y1="2590" x2="778" y2="2590"/>
-<text class="ax" x="50" y="2593" text-anchor="end">0.90</text>
+<text class="ax" x="50" y="2593" text-anchor="end">0.5</text>
 <line class="grid" x1="58" y1="2554" x2="778" y2="2554"/>
-<text class="ax" x="50" y="2557" text-anchor="end">0.92</text>
+<text class="ax" x="50" y="2557" text-anchor="end">0.6</text>
 <line class="grid" x1="58" y1="2518" x2="778" y2="2518"/>
-<text class="ax" x="50" y="2521" text-anchor="end">0.94</text>
+<text class="ax" x="50" y="2521" text-anchor="end">0.7</text>
 <line class="grid" x1="58" y1="2482" x2="778" y2="2482"/>
-<text class="ax" x="50" y="2485" text-anchor="end">0.96</text>
+<text class="ax" x="50" y="2485" text-anchor="end">0.8</text>
 <line class="grid" x1="58" y1="2446" x2="778" y2="2446"/>
-<text class="ax" x="50" y="2449" text-anchor="end">0.98</text>
+<text class="ax" x="50" y="2449" text-anchor="end">0.9</text>
 <line class="grid" x1="58" y1="2410" x2="778" y2="2410"/>
-<text class="ax" x="50" y="2413" text-anchor="end">1.00</text>
+<text class="ax" x="50" y="2413" text-anchor="end">1.0</text>
 <line class="grid" x1="58" y1="2410" x2="58" y2="2770"/>
 <text class="ax" x="58" y="2785" text-anchor="middle">0.0</text>
 <line class="grid" x1="778" y1="2410" x2="778" y2="2770"/>
@@ -414,22 +414,41 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <line class="axis" x1="58" y1="2410" x2="58" y2="2770"/>
 <text class="ax" x="418" y="2803" text-anchor="middle">cost (USD)</text>
 <text class="ax" x="20" y="2590" text-anchor="middle" transform="rotate(-90 20 2590)">score</text>
-<circle class="pt" cx="58" cy="2631.4" r="3.2"/>
-<text class="lb" x="63" y="2627.4">00</text>
-<text class="ttl" x="58" y="2862">01_python_small  &#8212;  .llm_config.opencode_02</text>
+<polyline class="front" points="58,2770 58,2689.54 58,2462.2 58,2454.28 58,2441.32"/>
+<circle class="pt" cx="58" cy="2770" r="3.2"/>
+<text class="lb" x="63" y="2766">00</text>
+<circle class="pt" cx="58" cy="2689.54" r="3.2"/>
+<text class="lb" x="63" y="2685.54">00</text>
+<circle class="pt" cx="58" cy="2462.2" r="3.2"/>
+<text class="lb" x="63" y="2458.2">00</text>
+<circle class="pt" cx="58" cy="2454.28" r="3.2"/>
+<text class="lb" x="42.2" y="2450.28">00</text>
+<circle class="pt" cx="58" cy="2441.32" r="3.2"/>
+<text class="lb" x="63" y="2437.32">00</text>
+<text class="ttl" x="58" y="2862">p03_python_large  &#8212;  .llm_config.e06_local_gptoss_20b</text>
 <rect x="58" y="2876" width="720" height="360" fill="#fbfbfc" stroke="#e5e7eb"/>
 <line class="grid" x1="58" y1="3236" x2="778" y2="3236"/>
-<text class="ax" x="50" y="3239" text-anchor="end">0.90</text>
+<text class="ax" x="50" y="3239" text-anchor="end">0.0</text>
+<line class="grid" x1="58" y1="3200" x2="778" y2="3200"/>
+<text class="ax" x="50" y="3203" text-anchor="end">0.1</text>
 <line class="grid" x1="58" y1="3164" x2="778" y2="3164"/>
-<text class="ax" x="50" y="3167" text-anchor="end">0.92</text>
+<text class="ax" x="50" y="3167" text-anchor="end">0.2</text>
+<line class="grid" x1="58" y1="3128" x2="778" y2="3128"/>
+<text class="ax" x="50" y="3131" text-anchor="end">0.3</text>
 <line class="grid" x1="58" y1="3092" x2="778" y2="3092"/>
-<text class="ax" x="50" y="3095" text-anchor="end">0.94</text>
+<text class="ax" x="50" y="3095" text-anchor="end">0.4</text>
+<line class="grid" x1="58" y1="3056" x2="778" y2="3056"/>
+<text class="ax" x="50" y="3059" text-anchor="end">0.5</text>
 <line class="grid" x1="58" y1="3020" x2="778" y2="3020"/>
-<text class="ax" x="50" y="3023" text-anchor="end">0.96</text>
+<text class="ax" x="50" y="3023" text-anchor="end">0.6</text>
+<line class="grid" x1="58" y1="2984" x2="778" y2="2984"/>
+<text class="ax" x="50" y="2987" text-anchor="end">0.7</text>
 <line class="grid" x1="58" y1="2948" x2="778" y2="2948"/>
-<text class="ax" x="50" y="2951" text-anchor="end">0.98</text>
+<text class="ax" x="50" y="2951" text-anchor="end">0.8</text>
+<line class="grid" x1="58" y1="2912" x2="778" y2="2912"/>
+<text class="ax" x="50" y="2915" text-anchor="end">0.9</text>
 <line class="grid" x1="58" y1="2876" x2="778" y2="2876"/>
-<text class="ax" x="50" y="2879" text-anchor="end">1.00</text>
+<text class="ax" x="50" y="2879" text-anchor="end">1.0</text>
 <line class="grid" x1="58" y1="2876" x2="58" y2="3236"/>
 <text class="ax" x="58" y="3251" text-anchor="middle">0.0</text>
 <line class="grid" x1="778" y1="2876" x2="778" y2="3236"/>
@@ -438,6 +457,91 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <line class="axis" x1="58" y1="2876" x2="58" y2="3236"/>
 <text class="ax" x="418" y="3269" text-anchor="middle">cost (USD)</text>
 <text class="ax" x="20" y="3056" text-anchor="middle" transform="rotate(-90 20 3056)">score</text>
-<circle class="pt" cx="58" cy="3045.2" r="3.2"/>
-<text class="lb" x="63" y="3041.2">00</text>
+<polyline class="front" points="58,3236 58,3236 58,3236 58,2948"/>
+<circle class="pt" cx="58" cy="3236" r="3.2"/>
+<text class="lb" x="63" y="3232">00</text>
+<circle class="pt" cx="58" cy="3236" r="3.2"/>
+<text class="lb" x="42.2" y="3232">00</text>
+<circle class="pt" cx="58" cy="3236" r="3.2"/>
+<text class="lb" x="76.8" y="3232">00</text>
+<circle class="pt" cx="58" cy="2948" r="3.2"/>
+<text class="lb" x="63" y="2944">00</text>
+<text class="ttl" x="58" y="3328">p01_python_small  &#8212;  .llm_config.e07_local_qwen3_4b</text>
+<rect x="58" y="3342" width="720" height="360" fill="#fbfbfc" stroke="#e5e7eb"/>
+<line class="grid" x1="58" y1="3702" x2="778" y2="3702"/>
+<text class="ax" x="50" y="3705" text-anchor="end">0.0</text>
+<line class="grid" x1="58" y1="3666" x2="778" y2="3666"/>
+<text class="ax" x="50" y="3669" text-anchor="end">0.1</text>
+<line class="grid" x1="58" y1="3630" x2="778" y2="3630"/>
+<text class="ax" x="50" y="3633" text-anchor="end">0.2</text>
+<line class="grid" x1="58" y1="3594" x2="778" y2="3594"/>
+<text class="ax" x="50" y="3597" text-anchor="end">0.3</text>
+<line class="grid" x1="58" y1="3558" x2="778" y2="3558"/>
+<text class="ax" x="50" y="3561" text-anchor="end">0.4</text>
+<line class="grid" x1="58" y1="3522" x2="778" y2="3522"/>
+<text class="ax" x="50" y="3525" text-anchor="end">0.5</text>
+<line class="grid" x1="58" y1="3486" x2="778" y2="3486"/>
+<text class="ax" x="50" y="3489" text-anchor="end">0.6</text>
+<line class="grid" x1="58" y1="3450" x2="778" y2="3450"/>
+<text class="ax" x="50" y="3453" text-anchor="end">0.7</text>
+<line class="grid" x1="58" y1="3414" x2="778" y2="3414"/>
+<text class="ax" x="50" y="3417" text-anchor="end">0.8</text>
+<line class="grid" x1="58" y1="3378" x2="778" y2="3378"/>
+<text class="ax" x="50" y="3381" text-anchor="end">0.9</text>
+<line class="grid" x1="58" y1="3342" x2="778" y2="3342"/>
+<text class="ax" x="50" y="3345" text-anchor="end">1.0</text>
+<line class="grid" x1="58" y1="3342" x2="58" y2="3702"/>
+<text class="ax" x="58" y="3717" text-anchor="middle">0.0</text>
+<line class="grid" x1="778" y1="3342" x2="778" y2="3702"/>
+<text class="ax" x="778" y="3717" text-anchor="middle">0.5</text>
+<line class="axis" x1="58" y1="3702" x2="778" y2="3702"/>
+<line class="axis" x1="58" y1="3342" x2="58" y2="3702"/>
+<text class="ax" x="418" y="3735" text-anchor="middle">cost (USD)</text>
+<text class="ax" x="20" y="3522" text-anchor="middle" transform="rotate(-90 20 3522)">score</text>
+<polyline class="front" points="58,3702 58,3393.84 58,3380.52 58,3358.92"/>
+<circle class="pt" cx="58" cy="3702" r="3.2"/>
+<text class="lb" x="63" y="3698">00</text>
+<circle class="pt" cx="58" cy="3393.84" r="3.2"/>
+<text class="lb" x="63" y="3389.84">00</text>
+<circle class="pt" cx="58" cy="3380.52" r="3.2"/>
+<text class="lb" x="63" y="3376.52">00</text>
+<circle class="pt" cx="58" cy="3358.92" r="3.2"/>
+<text class="lb" x="63" y="3354.92">00</text>
+<text class="ttl" x="58" y="3794">p03_python_large  &#8212;  .llm_config.e07_local_qwen3_4b</text>
+<rect x="58" y="3808" width="720" height="360" fill="#fbfbfc" stroke="#e5e7eb"/>
+<line class="grid" x1="58" y1="4168" x2="778" y2="4168"/>
+<text class="ax" x="50" y="4171" text-anchor="end">0.0</text>
+<line class="grid" x1="58" y1="4132" x2="778" y2="4132"/>
+<text class="ax" x="50" y="4135" text-anchor="end">0.1</text>
+<line class="grid" x1="58" y1="4096" x2="778" y2="4096"/>
+<text class="ax" x="50" y="4099" text-anchor="end">0.2</text>
+<line class="grid" x1="58" y1="4060" x2="778" y2="4060"/>
+<text class="ax" x="50" y="4063" text-anchor="end">0.3</text>
+<line class="grid" x1="58" y1="4024" x2="778" y2="4024"/>
+<text class="ax" x="50" y="4027" text-anchor="end">0.4</text>
+<line class="grid" x1="58" y1="3988" x2="778" y2="3988"/>
+<text class="ax" x="50" y="3991" text-anchor="end">0.5</text>
+<line class="grid" x1="58" y1="3952" x2="778" y2="3952"/>
+<text class="ax" x="50" y="3955" text-anchor="end">0.6</text>
+<line class="grid" x1="58" y1="3916" x2="778" y2="3916"/>
+<text class="ax" x="50" y="3919" text-anchor="end">0.7</text>
+<line class="grid" x1="58" y1="3880" x2="778" y2="3880"/>
+<text class="ax" x="50" y="3883" text-anchor="end">0.8</text>
+<line class="grid" x1="58" y1="3844" x2="778" y2="3844"/>
+<text class="ax" x="50" y="3847" text-anchor="end">0.9</text>
+<line class="grid" x1="58" y1="3808" x2="778" y2="3808"/>
+<text class="ax" x="50" y="3811" text-anchor="end">1.0</text>
+<line class="grid" x1="58" y1="3808" x2="58" y2="4168"/>
+<text class="ax" x="58" y="4183" text-anchor="middle">0.0</text>
+<line class="grid" x1="778" y1="3808" x2="778" y2="4168"/>
+<text class="ax" x="778" y="4183" text-anchor="middle">0.5</text>
+<line class="axis" x1="58" y1="4168" x2="778" y2="4168"/>
+<line class="axis" x1="58" y1="3808" x2="58" y2="4168"/>
+<text class="ax" x="418" y="4201" text-anchor="middle">cost (USD)</text>
+<text class="ax" x="20" y="3988" text-anchor="middle" transform="rotate(-90 20 3988)">score</text>
+<polyline class="front" points="58,4168 58,4168"/>
+<circle class="pt" cx="58" cy="4168" r="3.2"/>
+<text class="lb" x="63" y="4164">00</text>
+<circle class="pt" cx="58" cy="4168" r="3.2"/>
+<text class="lb" x="42.2" y="4164">00</text>
 </svg>

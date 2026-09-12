@@ -51,7 +51,7 @@ exit codes and measured constants. Reading only the leads gives the whole design
 | Term | Meaning here |
 |---|---|
 | **harness** | the scripts that set a run up, launch the CLI, verify the result and record the row — `run_master.py` and its callers. It never does the task itself. |
-| **methodology** | one candidate being compared: a directory under `methodology/`, e.g. `03_roles`. |
+| **methodology** | one candidate being compared: a directory under `methodology/`, e.g. `m03_roles`. |
 | **entry file** | the single Markdown file a methodology deploys into the project_workspace. Held on disk as `agents_or_claude.md` and deployed as `CLAUDE.md` — the only engine there is. `AGENTS.md` is the name the same file takes under the GPT branch, which is open (chapter 18). |
 | **project** | one task the agent is asked to do: a directory under `projects/` with a prompt, a reset template and an oracle. |
 | **project_reset_template** | the pristine copy of a project. Every run starts from a fresh copy of it; it is never modified. |
@@ -64,7 +64,7 @@ exit codes and measured constants. Reading only the leads gives the whole design
 | **held-out suite** | a second test suite the project keeps in `holdout_tests/` and the agent never sees: the same contract as the visible suite on different inputs, copied into the run directory at verification time and scored as `res_score_holdout` (chapter 11). |
 | **baseline** | the measurement taken on the pristine project_workspace before the agent starts. |
 | **pre-flight** | the baseline check itself: environment built, oracle run, run aborted if the project cannot measure anything. |
-| **review pass** | a second, independent invocation the harness makes between the agent exiting and the oracle running (chapter 12, step 7b). It is given the reviewer prompt, the project's `prompt.md` and the diff — never the implementer's output — and its findings are counted. `none` by default; `REVIEW_WEIGHT` sets how many independent reviewers one pass runs. The in-session variant of the same idea is the methodology `09_foureyes`. |
+| **review pass** | a second, independent invocation the harness makes between the agent exiting and the oracle running (chapter 12, step 7b). It is given the reviewer prompt, the project's `prompt.md` and the diff — never the implementer's output — and its findings are counted. `none` by default; `REVIEW_WEIGHT` sets how many independent reviewers one pass runs. The in-session variant of the same idea is the methodology `m09_foureyes`. |
 | **feedback** | `REVIEW_FEEDBACK=1`: the review pass acted on rather than only counted. One further implementer invocation on the reviewer's `issue:` lines (chapter 12, step 7c), after which the oracle scores the fixed code. Off by default, and meaningless without a review pass. |
 | **validity gate** | the conditions that must hold before any result is interpreted (chapter 16). |
 | **snapshot** | the frozen copy of the methodology stored inside the run directory — the record of what actually ran. |
@@ -110,7 +110,7 @@ elsewhere in this document changes because of it.
 |---|---|
 | trial | **run**, and `REPEATS` is how many of them one project × methodology cell gets (chapter 12) |
 | grader | **oracle** — a project's `run_verification.py`, the code that scores one run (chapters 10, 11) |
-| outcome | what the oracle reads: the workspace on disk, or a system fetched back live, as `06_qc_ema_cross` and `07_qc_bugfix_refactor` fetch their project from the QuantConnect API. Never the agent's own account of what it did |
+| outcome | what the oracle reads: the workspace on disk, or a system fetched back live, as `p06_qc_ema_cross` and `p07_qc_bugfix_refactor` fetch their project from the QuantConnect API. Never the agent's own account of what it did |
 | transcript | the run directory — `result.json`, `cli_argv.txt` and the logs (chapter 13.1) |
 | agent harness, scaffold | the CLI named by `ENGINE`, held constant across a campaign. `run_master.py` is the *evaluation* harness, a different layer (chapter 12) |
 | control | the `00_*` arms and projects, which test the apparatus rather than compete (chapter 16) |
@@ -141,16 +141,16 @@ stays an outcome to be measured rather than something the harness forces.
 The prefix `00_` marks an **anchor**: a degenerate case that exists to bound the measurement range,
 never a candidate to be improved. Arms `01`–`08` form a feature ladder over four features — process
 (P), document types (D), roles (R), guardrails (G): the low numbers are single features, the high
-numbers combinations, and `08_process_doctypes_roles_guardrails` is the full stack. It was the
+numbers combinations, and `m08_process_doctypes_roles_guardrails` is the full stack. It was the
 incumbent to beat until the level-3 screen of 8 September put it last on the ranking project;
-the incumbent is now `29_invariants_test_first_relative_stop`, the composition that led that
+the incumbent is now `m29_invariants_test_first_relative_stop`, the composition that led that
 screen at the lowest cost — provisional until repeats confirm it (chapter 16). A name is its
 feature list, as every combination's is; `08` was `08_all` until the arms outside the ladder made
 "all" untrue. The convention applies identically to
 methodologies and projects.
 
 Arms `09` and upwards sit outside the ladder. Each is one prose feature of its own — a candidate
-the ladder's four do not express — read against `00_empty` for the main effect and against the
+the ladder's four do not express — read against `m00_empty` for the main effect and against the
 incumbent for whether it beats it, never combined into a grid. `28` and `29` are the exception
 that proves the rule: compositions of screen winners, built from data rather than from a guess. A new one joins by existing: the harness reads the two directory listings rather than a
 matrix, so nothing outside the arm's own directory is edited to add it. That is what makes the
@@ -162,7 +162,7 @@ Anchors are never tuned. Tuning an anchor destroys the reference it provides.
 ## 5. Methodologies
 
 Methodologies are structural contrasts. Length is not controlled: the harness records `mth_chars`, the byte
-count of the deployed entry file (0 for `00_empty`), and length is treated as a covariate in the
+count of the deployed entry file (0 for `m00_empty`), and length is treated as a covariate in the
 analysis.
 
 Four features, one file each: **P** `process.md` (plan → implement → run tests → stop), **D**
@@ -171,61 +171,61 @@ Four features, one file each: **P** `process.md` (plan → implement → run tes
 
 | Methodology | Features | Contains |
 |---|---|---|
-| `00_empty` | — | nothing; the model works from the task prompt alone — anchor, does methodology matter at all |
-| `00_sabotage` | — | contradictory instructions, vague done-criteria — anchor, if this does not score worse the apparatus is broken |
-| `01_process` | P | `process.md` |
-| `02_doctypes` | D | `doc_types.md` |
-| `03_roles` | R | `roles.md` |
-| `04_guardrails` | G | `guardrails.md` |
-| `05_process_doctypes` | P+D | `process.md`, `doc_types.md` |
-| `06_process_roles` | P+R | `process.md`, `roles.md` |
-| `07_process_doctypes_roles` | P+D+R | `process.md`, `doc_types.md`, `roles.md` |
-| `08_process_doctypes_roles_guardrails` | P+D+R+G | all four — the practical baseline |
-| `09_foureyes` | F | `four_eyes.md` — blind subagent review of task and diff only; every `issue:` blocks |
-| `10_planner_executor` | Pl | `planner_executor.md` — plan as a numbered file list in the reply, then execute exactly it; deviations stated |
-| `11_stop_criteria` | S | `stop_criteria.md` — explicit stop rules; nothing built that the task did not name |
-| `12_handoff_schema` | H | `handoff_schema.md` — five fixed hand-off fields; no roles, no process |
-| `13_domain_roles` | Dr | `domain_roles.md` — two roles as persona briefs: Owns / Not yours / Rules / Delivers, plus an authority line each; the reviewer is a subagent, one round |
-| `14_negative_scope` | N | `negative_scope.md` — an explicit do-not-read / do-not-consider list, and the omissions stated in the answer |
-| `15_invariants` | I | `invariants.md` — five task-independent never-violate rules and a three-row table of what a change costs |
-| `16_product_goal` | Pg | `product_goal.md` — one line above the task saying what the result is for and who reads it; every change justified against it |
-| `17_finding_schema` | Fs | `finding_schema.md` — reviewer findings as severity / claim / evidence / changes / confidence, one per line |
-| `18_justify_file` | J | `justify_file.md` — one written reason per new or reopened file, listed in the answer |
-| `19_relative_stop` | Rs | `relative_stop.md` — each step compared with the previous one, not only with the task |
-| `20_clean_restraint` | Cr | `clean_restraint.md` — the material issues worth fixing and the prohibitions that bound the fix; the smallest coherent change |
-| `21_clean_catalog` | Cc | `clean_catalog.md` — named rule families with IDs, strict enforcement, the whole unit suite after every change |
-| `22_clean_both` | Cr+Cc | both files, byte-identical copies — the catalog enforces, the restraint bounds it |
-| `23_self_review` | Sr | `self_review.md` — once the tests pass, read the diff as a reviewer would, list the defects, fix that list; one round, no subagent |
-| `24_two_proposals` | Tp | `two_proposals.md` — two approaches drafted in the reply before the first edit, one chosen with a stated reason, only that one built |
-| `25_context_discipline` | Cd | `context_discipline.md` — what to read before the first edit, when to re-read, when to summarise; never re-read what has not changed |
-| `26_test_first` | Tf | `test_first.md` — the test for the change written before the change; the agent's own tests are allowed and are not scored |
-| `27_escalation` | Es | `escalation.md` — when the task, the tests and the code cannot all be satisfied, stop and name the contradiction; a guessed resolution is a failed run |
-| `28_invariants_test_first` | I+Tf | `invariants.md` + `test_first.md`, byte-identical copies — the two single-feature arms that led the level-3 screen on `04_python_xlarge`; composed, not restated |
-| `29_invariants_test_first_relative_stop` | I+Tf+Rs | `28` plus `relative_stop.md` — three short output constraints against the four long process layers of `08` |
-| `30_delivery_kernel` | DK | `kernel.md` — a working real-world methodology's kernel transcribed, composite by intent: staged cycle with an exit condition per stage, producer never certifies (a reviewer subagent, `review_rounds=1`), finding schema with a severity ladder, change discipline against over-delivery, escalate rather than guess, halt after three. What needs a second task, a second seat or a person is left out (its `notes.md` lists it) |
-| `31_pipeline_source` | PS | the same source untranscribed: its own entry file as it stands (4 KB) and its kernel directory verbatim — dangling project references, vendor names and role talk included, declared as deviations from 19.5. Read against `30`: what the transcription lost or added |
-| `32_invariants_relative_stop` | I+Rs | `invariants.md` + `relative_stop.md` — the two cheapest arms on the level-3 front composed, without test first |
-| `33_justify_file_invariants` | J+I | `justify_file.md` + `invariants.md` — the cheapest front arm with the strongest single constraint |
-| `34_pipeline_source_with_reviewer` | PS+R | `31` plus the source's `team_roles.md` verbatim, which carries its reviewer rule; the reviewer seat's cost and benefit |
-| `35_pipeline_source_with_reviewer_instance` | PS+R+i | `34` plus two sentences: the second reader is a separate instance with a fresh context, never the author's own — forces the seat `34` satisfied by self-check |
-| `36_pipeline_change_discipline` | Cd | `change_discipline.md` — section 3 of the source's entry file verbatim (the eight over-delivery rules) behind the standard frame; the cheapest cut of the source |
-| `37_pipeline_team_roles_only` | TR | `team_roles.md` verbatim behind the standard frame — the one file that separated `34` from `31`, alone |
-| `38_pipeline_source_with_reviewer_relative_stop` | PS+R+Rs | `34` plus `relative_stop.md` first on its reading list — the best front arm with the cheapest stopping rule |
+| `m00_empty` | — | nothing; the model works from the task prompt alone — anchor, does methodology matter at all |
+| `m47_sabotage` | — | contradictory instructions, vague done-criteria — anchor, if this does not score worse the apparatus is broken |
+| `m01_process` | P | `process.md` |
+| `m02_doctypes` | D | `doc_types.md` |
+| `m03_roles` | R | `roles.md` |
+| `m04_guardrails` | G | `guardrails.md` |
+| `m05_process_doctypes` | P+D | `process.md`, `doc_types.md` |
+| `m06_process_roles` | P+R | `process.md`, `roles.md` |
+| `m07_process_doctypes_roles` | P+D+R | `process.md`, `doc_types.md`, `roles.md` |
+| `m08_process_doctypes_roles_guardrails` | P+D+R+G | all four — the practical baseline |
+| `m09_foureyes` | F | `four_eyes.md` — blind subagent review of task and diff only; every `issue:` blocks |
+| `m10_planner_executor` | Pl | `planner_executor.md` — plan as a numbered file list in the reply, then execute exactly it; deviations stated |
+| `m11_stop_criteria` | S | `stop_criteria.md` — explicit stop rules; nothing built that the task did not name |
+| `m12_handoff_schema` | H | `handoff_schema.md` — five fixed hand-off fields; no roles, no process |
+| `m13_domain_roles` | Dr | `domain_roles.md` — two roles as persona briefs: Owns / Not yours / Rules / Delivers, plus an authority line each; the reviewer is a subagent, one round |
+| `m14_negative_scope` | N | `negative_scope.md` — an explicit do-not-read / do-not-consider list, and the omissions stated in the answer |
+| `m15_invariants` | I | `invariants.md` — five task-independent never-violate rules and a three-row table of what a change costs |
+| `m16_product_goal` | Pg | `product_goal.md` — one line above the task saying what the result is for and who reads it; every change justified against it |
+| `m17_finding_schema` | Fs | `finding_schema.md` — reviewer findings as severity / claim / evidence / changes / confidence, one per line |
+| `m18_justify_file` | J | `justify_file.md` — one written reason per new or reopened file, listed in the answer |
+| `m19_relative_stop` | Rs | `relative_stop.md` — each step compared with the previous one, not only with the task |
+| `m20_clean_restraint` | Cr | `clean_restraint.md` — the material issues worth fixing and the prohibitions that bound the fix; the smallest coherent change |
+| `m21_clean_catalog` | Cc | `clean_catalog.md` — named rule families with IDs, strict enforcement, the whole unit suite after every change |
+| `m22_clean_both` | Cr+Cc | both files, byte-identical copies — the catalog enforces, the restraint bounds it |
+| `m23_self_review` | Sr | `self_review.md` — once the tests pass, read the diff as a reviewer would, list the defects, fix that list; one round, no subagent |
+| `m24_two_proposals` | Tp | `two_proposals.md` — two approaches drafted in the reply before the first edit, one chosen with a stated reason, only that one built |
+| `m25_context_discipline` | Cd | `context_discipline.md` — what to read before the first edit, when to re-read, when to summarise; never re-read what has not changed |
+| `m26_test_first` | Tf | `test_first.md` — the test for the change written before the change; the agent's own tests are allowed and are not scored |
+| `m27_escalation` | Es | `escalation.md` — when the task, the tests and the code cannot all be satisfied, stop and name the contradiction; a guessed resolution is a failed run |
+| `m28_invariants_test_first` | I+Tf | `invariants.md` + `test_first.md`, byte-identical copies — the two single-feature arms that led the level-3 screen on `p04_python_xlarge`; composed, not restated |
+| `m29_invariants_test_first_relative_stop` | I+Tf+Rs | `28` plus `relative_stop.md` — three short output constraints against the four long process layers of `08` |
+| `m30_delivery_kernel` | DK | `kernel.md` — a working real-world methodology's kernel transcribed, composite by intent: staged cycle with an exit condition per stage, producer never certifies (a reviewer subagent, `review_rounds=1`), finding schema with a severity ladder, change discipline against over-delivery, escalate rather than guess, halt after three. What needs a second task, a second seat or a person is left out (its `notes.md` lists it) |
+| `m31_pipeline_source` | PS | the same source untranscribed: its own entry file as it stands (4 KB) and its kernel directory verbatim — dangling project references, vendor names and role talk included, declared as deviations from 19.5. Read against `30`: what the transcription lost or added |
+| `m32_invariants_relative_stop` | I+Rs | `invariants.md` + `relative_stop.md` — the two cheapest arms on the level-3 front composed, without test first |
+| `m33_justify_file_invariants` | J+I | `justify_file.md` + `invariants.md` — the cheapest front arm with the strongest single constraint |
+| `m34_pipeline_source_with_reviewer` | PS+R | `31` plus the source's `team_roles.md` verbatim, which carries its reviewer rule; the reviewer seat's cost and benefit |
+| `m35_pipeline_source_with_reviewer_instance` | PS+R+i | `34` plus two sentences: the second reader is a separate instance with a fresh context, never the author's own — forces the seat `34` satisfied by self-check |
+| `m36_pipeline_change_discipline` | Cd | `change_discipline.md` — section 3 of the source's entry file verbatim (the eight over-delivery rules) behind the standard frame; the cheapest cut of the source |
+| `m37_pipeline_team_roles_only` | TR | `team_roles.md` verbatim behind the standard frame — the one file that separated `34` from `31`, alone |
+| `m38_pipeline_source_with_reviewer_relative_stop` | PS+R+Rs | `34` plus `relative_stop.md` first on its reading list — the best front arm with the cheapest stopping rule |
 | `39`–`43` `*_outdated` | — | the first GSD transcriptions; their text named the framework's enforcement layer (hook events, tool names, flags) and two were edited after a run. Kept with their rows as the record; not run again |
-| `44_gsd_core_full` | GSD-C/F | `GSD Core - Faithful Methodology.md` — the Get Shit Done framework at its current head (gsd-core v1.13), fifteen roles, as pure method: six-stage per-phase cycle behind gates, a plan reviewed before execution, one fresh instance per plan, goal-backward verification, the planning tree under `.planning/`; `doc_types=planning_tree`, `review_rounds=3` |
-| `45_gsd_core_lean` | GSD-C/L | `GSD Core - Lean Methodology.md` — `44` cut to a single run: six roles, three artefacts under `.work/` (`doc_types=spec_plan_report`) |
-| `46_gsd_surface_lean` | GSD-S/L | `Get-Shit-Done Lean Methodology.md` — the framework's May-2026 snapshot cut to one run: eight roles, four phase artefacts; the session-discipline rules its enforcement layer used to impose, as rules |
+| `m44_gsd_core_full` | GSD-C/F | `GSD Core - Faithful Methodology.md` — the Get Shit Done framework at its current head (gsd-core v1.13), fifteen roles, as pure method: six-stage per-phase cycle behind gates, a plan reviewed before execution, one fresh instance per plan, goal-backward verification, the planning tree under `.planning/`; `doc_types=planning_tree`, `review_rounds=3` |
+| `m45_gsd_core_lean` | GSD-C/L | `GSD Core - Lean Methodology.md` — `44` cut to a single run: six roles, three artefacts under `.work/` (`doc_types=spec_plan_report`) |
+| `m46_gsd_surface_lean` | GSD-S/L | `Get-Shit-Done Lean Methodology.md` — the framework's May-2026 snapshot cut to one run: eight roles, four phase artefacts; the session-discipline rules its enforcement layer used to impose, as rules |
 
 ### Further details
 
 The ladder is the author's chosen subset of the 2⁴ factorial, not the full grid: the four
 single-feature methodologies give the main effects, `05`–`07` the interactions with process, and
-`08_process_doctypes_roles_guardrails` the full stack. The six unbuilt cells are the ones no
+`m08_process_doctypes_roles_guardrails` the full stack. The six unbuilt cells are the ones no
 current question needs.
 
 `09`–`27` are single-feature arms outside that ladder (chapter 4), one file each and no
-combinations except `22`: `09_foureyes` isolates review, `10_planner_executor` plan-then-act without the roles
-feature, `11_stop_criteria` the stopping rule without the rest of G, `12_handoff_schema` the
+combinations except `22`: `m09_foureyes` isolates review, `m10_planner_executor` plan-then-act without the roles
+feature, `m11_stop_criteria` the stopping rule without the rest of G, `m12_handoff_schema` the
 reporting format alone. `13`–`19` are the second set, each taken from a working multi-agent
 methodology and reduced to the one thing it does: a role written as a charter rather than a
 procedure (`13`), scope stated as what not to read (`14`), rules that hold whatever the task says
@@ -268,23 +268,23 @@ must not see the options it is not running under.
 written into every methodology at that fixed value, so the methodologies render identically on those points and the
 values are still extracted into the CSV. `doc_types` is not held constant: it is `full` in the methodologies
 that contain D and `none` in the rest, set by the methodology rather than varied against it, and extracted
-the same way. `00_empty` deploys nothing and therefore carries no parameters; its `mth_param_*`
+the same way. `m00_empty` deploys nothing and therefore carries no parameters; its `mth_param_*`
 columns are blank.
 
-The anchors are outside the scheme in the same way. `00_empty` deploys no entry file at all and
-`00_sabotage` deploys one that carries no placeholders and no Constraints/Task split — a degenerate
+The anchors are outside the scheme in the same way. `m00_empty` deploys no entry file at all and
+`m47_sabotage` deploys one that carries no placeholders and no Constraints/Task split — a degenerate
 case is not a rendering of the ladder's template, and giving it one would make it a candidate. Both
 therefore leave every `mth_param_*` column blank.
 
-Campaign 1 was 37 runs: `03_python_large` × 11 methodologies × 3 repeats = 33, the validity gate
-`00_fail` × {`00_empty`, `00_sabotage`, `08_process_doctypes_roles_guardrails`} × 1 repeat = 3, and
-1 smoke run on `01_python_small`. Campaign 2 is the same shape over the twenty-nine methodologies of
-chapter 5 and is **91 runs**: `04_python_xlarge` × 29 × 3 = 87, the same gate = 3, and 1 smoke run
+Campaign 1 was 37 runs: `p03_python_large` × 11 methodologies × 3 repeats = 33, the validity gate
+`p00_fail` × {`m00_empty`, `m47_sabotage`, `m08_process_doctypes_roles_guardrails`} × 1 repeat = 3, and
+1 smoke run on `p01_python_small`. Campaign 2 is the same shape over the twenty-nine methodologies of
+chapter 5 and is **91 runs**: `p04_python_xlarge` × 29 × 3 = 87, the same gate = 3, and 1 smoke run
 (chapter 17). The formula is `ranking project × arms × REPEATS + 3 + 1`, so a new arm costs three
 runs and nothing else.
 
 **Exactly one parameter is wired at a time.** Unwired is not absent. Campaign 2 wires
-`definition_of_done` inside `08_process_doctypes_roles_guardrails`. `review_rounds`, `gate_style`,
+`definition_of_done` inside `m08_process_doctypes_roles_guardrails`. `review_rounds`, `gate_style`,
 `phase_budget` and
 `retry_policy` are present at one fixed value each and are therefore held constant, not wired: they
 render, they are extracted, and nothing varies them.
@@ -309,24 +309,24 @@ decision log). Documents are pure cost on single-session work with no downstream
 expected to pay off only on handover or multi-session tasks; `adr` and the `AGENT_BACKLOG.md` the feature
 may ship are the multi-session shapes (chapter 19.3). No arm is on `adr` today.
 
-**`review_rounds`** — a whole number, `1` on `09_foureyes`. How many blind review rounds the
+**`review_rounds`** — a whole number, `1` on `m09_foureyes`. How many blind review rounds the
 methodology asks for; `four_eyes.md` refers to the number in the entry file rather than stating one,
 so the round count is a rendered value and not a text edit. Held at `1`.
 
 **`gate_style`** — `none` | `self_declared` | `artifact`. Whether a phase may be left on the agent's
 own word (`self_declared`), only against a file it had to write (`artifact`), or not gated at all.
 `artifact` is the only one that leaves evidence a later reader can check. Held at `none` on
-`01_process`.
+`m01_process`.
 
 **`phase_budget`** — `none` | `<n>`. A cap on the steps a phase may take before it must report and
 stop, borrowed from the frameworks that bound a phase rather than a run. Held at `none` on
-`01_process`; the harness's own bound is the budget cap, which is a different thing.
+`m01_process`; the harness's own bound is the budget cap, which is a different thing.
 
 **`retry_policy`** — `none` | `once_different_approach`. What happens after a failed attempt: stop
 and report, or one further attempt that must differ in approach rather than in effort. Held at
-`none` on `01_process`.
+`none` on `m01_process`.
 
-The last three are on `01_process` at their off value on purpose: a documented candidate that
+The last three are on `m01_process` at their off value on purpose: a documented candidate that
 renders and is extracted is a column ready to carry a treatment, and an arm that reads `none` for it
 is the control the first wired campaign will need.
 
@@ -334,39 +334,39 @@ is the control the first wired campaign will need.
 
 | Project | Content | Held-out tests | Role |
 |---|---|---|---|
-| `00_fail` | a task whose `prompt.md` contradicts the shipped test — the prompt specifies `f(2) == 5` in one place and `f(2) == 6` in another | — | anchor — the oracle cannot pass; catches a pipeline that reports success regardless |
-| `01_python_small` | one function in `textstats.py`, 4 tests | — | smallest real oracle; the one harness smoke run |
-| `02_python_medium` | three functions and a small class over closed integer intervals, 20 tests | 10 | the default pair of `run_smoke_model_02.bat`: real oracle, short run |
-| `03_python_large` | a `ledger/` package of four sub-modules, three of them imported by `cli.py`, a 10-step work order in `prompt.md`, 24 tests, reference solution 82 SLOC | 12 | the ranking project for campaign 1; the first project large enough for structure to matter |
-| `04_python_xlarge` | order intake and stock allocation: a `warehouse/` package — 11 source files over three packages, a semicolon CSV price list and a JSON order feed in `fixtures/` as the only definition of the two formats, a 14-step work order in `prompt.md`, 50 tests, reference solution 177 SLOC | 26 | the ranking project for campaign 2 |
-| `05_python_refactor_large` | working but over-complex module, behaviour pinned by golden tests | 9 | refactor against fixed expected results; passes only if the golden tests stay green *and* SLOC falls below baseline. Saturates at level 3 (20 arms tie at 1.00): a cost check, not a ranking project |
+| `p00_fail` | a task whose `prompt.md` contradicts the shipped test — the prompt specifies `f(2) == 5` in one place and `f(2) == 6` in another | — | anchor — the oracle cannot pass; catches a pipeline that reports success regardless |
+| `p01_python_small` | one function in `textstats.py`, 4 tests | — | smallest real oracle; the one harness smoke run |
+| `p02_python_medium` | three functions and a small class over closed integer intervals, 20 tests | 10 | the default pair of `run_smoke_e02.bat`: real oracle, short run |
+| `p03_python_large` | a `ledger/` package of four sub-modules, three of them imported by `cli.py`, a 10-step work order in `prompt.md`, 24 tests, reference solution 82 SLOC | 12 | the ranking project for campaign 1; the first project large enough for structure to matter |
+| `p04_python_xlarge` | order intake and stock allocation: a `warehouse/` package — 11 source files over three packages, a semicolon CSV price list and a JSON order feed in `fixtures/` as the only definition of the two formats, a 14-step work order in `prompt.md`, 50 tests, reference solution 177 SLOC | 26 | the ranking project for campaign 2 |
+| `p05_python_refactor_large` | working but over-complex module, behaviour pinned by golden tests | 9 | refactor against fixed expected results; passes only if the golden tests stay green *and* SLOC falls below baseline. Saturates at level 3 (20 arms tie at 1.00): a cost check, not a ranking project |
 
-The two anchors carry no held-out suite: `00_fail` cannot pass its visible tests and
-`01_python_small` is a smoke run, so on neither would the gap mean anything. The four ranking
+The two anchors carry no held-out suite: `p00_fail` cannot pass its visible tests and
+`p01_python_small` is a smoke run, so on neither would the gap mean anything. The four ranking
 projects carry one each, sized at roughly half the visible suite (chapter 11).
 
-`00_fail` runs the same pytest oracle as the others; only the task is unsatisfiable. It
-bounds the project side exactly as `00_sabotage` bounds the methodology side. Together they answer
+`p00_fail` runs the same pytest oracle as the others; only the task is unsatisfiable. It
+bounds the project side exactly as `m47_sabotage` bounds the methodology side. Together they answer
 the only question that matters before a campaign: can this apparatus detect *worse*.
 
 A project on which every methodology scores 1.00 ranks methodologies by cost alone and is not used for
 ranking — the cheapest methodology wins by construction, which is a statement about the project, not about
-methodology. `01_python_small` is that case by design and is used for exactly one smoke run.
+methodology. `p01_python_small` is that case by design and is used for exactly one smoke run.
 
 ### Further details
 
-`04_python_xlarge` is the ranking project: on the level-3 screen of 8 September every arm passed
+`p04_python_xlarge` is the ranking project: on the level-3 screen of 8 September every arm passed
 all 50 visible and 26 held-out tests and the 0.86–0.99 spread was the maintainability factor alone,
-which is the discriminator this project was built to expose. `05_python_refactor_large` on the same
+which is the discriminator this project was built to expose. `p05_python_refactor_large` on the same
 screen had 20 of 29 arms at 1.00 and a 0.94–1.00 field: it separates nothing at that level and is
-kept as a cost and sanity check. `03_python_large` is the retained secondary. On `03` the visible fraction is 24/24 on every run of
+kept as a cost and sanity check. `p03_python_large` is the retained secondary. On `03` the visible fraction is 24/24 on every run of
 campaign 1, so correctness carries no variance there and the whole ranking is produced by the
 parsimony factor — a clamped one-decimal ratio that has already reached both ends of its range
-(0.911 at the top, 0.801 on the floor). `04_python_xlarge` moves the discriminator back to the
+(0.911 at the top, 0.801 on the floor). `p04_python_xlarge` moves the discriminator back to the
 tests and leaves MI as the tiebreaker; `03` stays in the campaign for continuity, not for the
 ranking.
 
-`05_python_refactor_large` inverts the usual shape: the baseline already passes its tests, so baseline
+`p05_python_refactor_large` inverts the usual shape: the baseline already passes its tests, so baseline
 verification fails on the metric instead — the module is by definition not yet simplified. A no-op
 therefore keeps every test green and still does not pass, which is what makes the project measure
 simplification rather than caution. Its post-run score is 0.80, not 1.00: the untouched module's MI
@@ -376,11 +376,11 @@ is 1.00 on the same workspace, because the baseline is the unscaled test fractio
 75 SLOC / complexity 23 / MI 34.1; the stored reference reaches 30 SLOC / complexity 14 / MI 45.6
 with all 17 golden tests and all 9 held-out tests green.
 
-Build order: `00_fail` and `01_python_small` first, then `02_python_medium`, then
-`03_python_large` as the campaign-1 ranking project, `05_python_refactor_large` once that has
-produced a first campaign, and `04_python_xlarge` last, built from what campaign 1 showed about
+Build order: `p00_fail` and `p01_python_small` first, then `p02_python_medium`, then
+`p03_python_large` as the campaign-1 ranking project, `p05_python_refactor_large` once that has
+produced a first campaign, and `p04_python_xlarge` last, built from what campaign 1 showed about
 where the variance was not.
-The retired intervals project `03_python_tests` is superseded by `02_python_medium`, which is the
+The retired intervals project `03_python_tests` is superseded by `p02_python_medium`, which is the
 same shape with a class and 20 tests instead of 12.
 
 ## 8. Directory structure
@@ -391,20 +391,20 @@ OpenAgentsGym/
 ├─ oam_manual.md                         # the user manual: how to use the apparatus. It explains
 │                                       #   use and cites the chapter for every rule; this
 │                                       #   document remains the definition of behaviour
-├─ .llm_config.model_01                 # capability level 1: cheapest model, lowest effort (chapter 9)
-├─ .llm_config.model_02                 # level 2: workhorse model; run.bat and run_smoke_model_02.bat
-├─ .llm_config.model_03                 # level 3: frontier model, low effort; run_all_model_03.bat
-├─ .llm_config.model_04                 # level 4: above the frontier tier; run_all_ and run_selected_model_04.bat
+├─ .llm_config.e01_claude_haiku_4_5                 # capability level 1: cheapest model, lowest effort (chapter 9)
+├─ .llm_config.e02_claude_sonnet_5                 # level 2: workhorse model; run.bat and run_smoke_e02.bat
+├─ .llm_config.e03_claude_opus_5                 # level 3: frontier model, low effort; run_all_e03.bat
+├─ .llm_config.e04_claude_fable_5_1                 # level 4: above the frontier tier; run_all_ and run_selected_e04.bat
 ├─ .gitignore                           # local/ (runs, archive, to_delete), __pycache__/,
 │                                       #   .pytest_cache/, .claude_config/
-├─ run_smoke_model_02.bat               # one pair on level 2; no arguments
+├─ run_smoke_e02.bat               # one pair on level 2; no arguments
 ├─ run.bat                              # single run: run.bat <project> <methodology> [--config <path>]
 ├─ run_master.py                        # the only file that does work; stdlib only
-├─ run_selected_model_04.bat            # the validity gate on level 4: a list of run.bat calls
-├─ run_turbo_model_01.bat               # the whole matrix once on level 1
-├─ run_screen_model_03.bat              # every methodology once on 04_python_xlarge, level 3, 3 workers
-├─ run_all_model_03.bat                 # full matrix on level 3: every methodology on every project
-├─ run_all_model_04.bat                 # full matrix on level 4
+├─ run_selected_e04.bat            # the validity gate on level 4: a list of run.bat calls
+├─ run_turbo_e01.bat               # the whole matrix once on level 1
+├─ run_screen_e03.bat              # every methodology once on p04_python_xlarge, level 3, 3 workers
+├─ run_all_e03.bat                 # full matrix on level 3: every methodology on every project
+├─ run_all_e04.bat                 # full matrix on level 4
 ├─ rebuild_results_table.bat            # rebuilds results_repository.csv; also called by the above
 ├─ results_repository.csv               # consolidated table; merged with the local runs, published
 ├─ results_pareto.svg                   # cost/score chart of that table, rewritten on every
@@ -429,45 +429,45 @@ OpenAgentsGym/
 │                                       #   never deployed and read by no code
 │
 ├─ methodology/
-│  ├─ 00_empty/
+│  ├─ m00_empty/
 │  │  ├─ copy_to_root/                  # intentionally empty: no entry file is deployed
 │  │  └─ notes.md                       # documentation only, never deployed
-│  ├─ 00_sabotage/
+│  ├─ m47_sabotage/
 │  │  ├─ copy_to_root/agents_or_claude.md
 │  │  └─ notes.md
-│  ├─ 01_process/
+│  ├─ m01_process/
 │  │  ├─ copy_to_root/agents_or_claude.md   # active entry file, carries {{key=value}}
 │  │  ├─ process.md                     # referenced from the entry file
 │  │  ├─ tools.txt                      # optional, none shipped: one tool per line, replacing the
 │  │  │                                 #   default --allowedTools list for this arm (chapter 15)
 │  │  └─ notes.md
-│  ├─ 08_process_doctypes_roles_guardrails/
+│  ├─ m08_process_doctypes_roles_guardrails/
 │  │  ├─ copy_to_root/agents_or_claude.md
 │  │  ├─ process.md
 │  │  ├─ doc_types.md
 │  │  ├─ roles.md
 │  │  ├─ guardrails.md
 │  │  └─ notes.md
-│  ├─ 09_foureyes/
+│  ├─ m09_foureyes/
 │  │  ├─ copy_to_root/agents_or_claude.md
 │  │  ├─ four_eyes.md
 │  │  └─ notes.md
-│  ├─ 10_planner_executor/
+│  ├─ m10_planner_executor/
 │  │  ├─ copy_to_root/agents_or_claude.md
 │  │  ├─ planner_executor.md
 │  │  └─ notes.md
 │  └─ …                                 # 02–07: the combinations listed in chapter 5; and
-│                                       #   11_stop_criteria, 12_handoff_schema, 13_domain_roles,
-│                                       #   14_negative_scope, 15_invariants, 16_product_goal,
-│                                       #   17_finding_schema, 18_justify_file, 19_relative_stop,
-│                                       #   20_clean_restraint, 21_clean_catalog, 23_self_review,
-│                                       #   24_two_proposals, 25_context_discipline,
-│                                       #   26_test_first, 27_escalation — same layout, one side
-│                                       #   file each; 22_clean_both carries both of
+│                                       #   m11_stop_criteria, m12_handoff_schema, m13_domain_roles,
+│                                       #   m14_negative_scope, m15_invariants, m16_product_goal,
+│                                       #   m17_finding_schema, m18_justify_file, m19_relative_stop,
+│                                       #   m20_clean_restraint, m21_clean_catalog, m23_self_review,
+│                                       #   m24_two_proposals, m25_context_discipline,
+│                                       #   m26_test_first, m27_escalation — same layout, one side
+│                                       #   file each; m22_clean_both carries both of
 │                                       #   20 and 21, byte-identical copies
 │
 ├─ projects/
-│  ├─ 00_fail/
+│  ├─ p00_fail/
 │  │  ├─ prompt.md                      # harness: the task given to the agent; self-contradictory
 │  │  ├─ run_verification.py            # harness: the same pytest oracle every project uses
 │  │  ├─ reference/                     # fail.py + metrics.txt: the reference passes the two
@@ -477,7 +477,7 @@ OpenAgentsGym/
 │  │     ├─ .requirements
 │  │     ├─ <module>.py
 │  │     └─ test_<module>.py            # contradicts prompt.md; cannot pass
-│  ├─ 01_python_small/
+│  ├─ p01_python_small/
 │  │  ├─ prompt.md
 │  │  ├─ run_verification.py            # thin wrapper over lib/oracle.py; SIZE_REF 9, MI_REF 63.3
 │  │  ├─ reference/                     # textstats.py + metrics.txt
@@ -486,7 +486,7 @@ OpenAgentsGym/
 │  │     ├─ .requirements               # pytest — one package per line
 │  │     ├─ textstats.py
 │  │     └─ test_textstats.py           # 4 tests; fails at baseline, passes when done
-│  ├─ 03_python_large/
+│  ├─ p03_python_large/
 │  │  ├─ prompt.md                      # spec plus a 10-step work order
 │  │  ├─ run_verification.py            # SIZE_REF 82, MI_REF 31.7
 │  │  ├─ reference/                     # ledger/ + metrics.txt, the measured known-good solution
@@ -502,7 +502,7 @@ OpenAgentsGym/
 │  │     │  ├─ report.py                # round_half_away, aggregate, format_report
 │  │     │  └─ cli.py                   # main(argv), imports the three above
 │  │     └─ test_ledger.py              # 24 tests; the visible suite
-│  ├─ 04_python_xlarge/
+│  ├─ p04_python_xlarge/
 │  │  ├─ prompt.md                      # spec plus a 14-step work order, 882 words
 │  │  ├─ run_verification.py            # SIZE_REF 177, MI_REF 16.0
 │  │  ├─ reference/                     # harness-side only; never copied into a workspace
@@ -550,9 +550,9 @@ OpenAgentsGym/
 │  │     ├─ test_feeds.py               # 18
 │  │     ├─ test_rules.py               # 18
 │  │     └─ test_pipeline.py            # 14
-│  └─ …                                 # 02_python_medium and 05_python_refactor_large, same
+│  └─ …                                 # p02_python_medium and p05_python_refactor_large, same
 │                                       #   layout, `reference/` and `holdout_tests/` included;
-│                                       #   00_fail and 01_python_small ship no held-out suite
+│                                       #   p00_fail and p01_python_small ship no held-out suite
 │
 └─ local/runs/                          # detail of the git-ignored run directory shown above
    ├─ _matrix_<campaign>_<YYYYMMDD_HHMMSS>.log   # one `--matrix` invocation's whole output, every
@@ -609,22 +609,22 @@ OpenAgentsGym/
 ```
 
 Example run id:
-`run_08_process_doctypes_roles_guardrails_03_python_large_20260907_143012_r01`.
+`run_m08_process_doctypes_roles_guardrails_p03_python_large_20260907_143012_r01`.
 
 ### Further details
 
 **Requirement: one batch file runs one specific project under one specific methodology.** That file
 is `run.bat <project> <methodology>`, e.g.
-`run.bat 03_python_large 08_process_doctypes_roles_guardrails`; it does nothing but
+`run.bat p03_python_large m08_process_doctypes_roles_guardrails`; it does nothing but
 `py -3 run_master.py %1 %2 %3 %4` and exits with that exit code, the third and fourth arguments
-being the optional `--config <path>` pair. `run_selected_model_04.bat` is a plain list of
+being the optional `--config <path>` pair. `run_selected_e04.bat` is a plain list of
 `run.bat` calls; `rebuild_results_table.bat` rebuilds `results_repository.csv`. Any Python
 ≥3.9 on the machine runs the master; the project venv is separate.
 
 ```
-call run.bat 03_python_large 00_empty
-call run.bat 03_python_large 00_sabotage
-call run.bat 03_python_large 08_process_doctypes_roles_guardrails
+call run.bat p03_python_large m00_empty
+call run.bat p03_python_large m47_sabotage
+call run.bat p03_python_large m08_process_doctypes_roles_guardrails
 ```
 
 ## 9. Configuration
@@ -635,10 +635,10 @@ the documents and the campaign label can name it without naming a vendor:
 
 | file | level | meaning | wired to |
 |---|---|---|---|
-| `.llm_config.model_01` | 1 | the cheapest model at the lowest effort; apparatus checks, rows never ranked | `run_turbo_model_01.bat` |
-| `.llm_config.model_02` | 2 | the workhorse model at medium effort; single pairs and the smoke test | `run.bat` (default), `run_smoke_model_02.bat` |
-| `.llm_config.model_03` | 3 | the frontier model at low effort; the full matrix | `run_all_model_03.bat` |
-| `.llm_config.model_04` | 4 | the model above the frontier tier; the full campaign and the gate | `run_all_model_04.bat`, `run_selected_model_04.bat` |
+| `.llm_config.e01_claude_haiku_4_5` | 1 | the cheapest model at the lowest effort; apparatus checks, rows never ranked | `run_turbo_e01.bat` |
+| `.llm_config.e02_claude_sonnet_5` | 2 | the workhorse model at medium effort; single pairs and the smoke test | `run.bat` (default), `run_smoke_e02.bat` |
+| `.llm_config.e03_claude_opus_5` | 3 | the frontier model at low effort; the full matrix | `run_all_e03.bat` |
+| `.llm_config.e04_claude_fable_5_1` | 4 | the model above the frontier tier; the full campaign and the gate | `run_all_e04.bat`, `run_selected_e04.bat` |
 
 A batch file that is bound to a level carries it in its name; `run.bat` and
 `rebuild_results_table.bat` are the two that are not.
@@ -671,7 +671,7 @@ BEST_OF_N=1
 
 The values shown are the smoke-run setting. Campaign 1 sets `REPEATS=3`; campaign 2 sets
 `REPEATS=3` and `MAX_BUDGET_USD=4.00`. The raise is required rather than cosmetic: the dearest
-campaign-1 run on `03_python_large` cost $0.882, and ×2 for the size of `04_python_xlarge` ×2.05
+campaign-1 run on `p03_python_large` cost $0.882, and ×2 for the size of `p04_python_xlarge` ×2.05
 for the level-3 model is ≈$3.62, so a $2.00 cap would truncate the R and F arms on that level alone — a censoring
 indistinguishable from a methodology effect.
 
@@ -819,7 +819,7 @@ reads passed and total per test file from the junit XML, and exits with one of t
 in the run directory, which makes that file the one and only inifile: a `pytest.ini`, `tox.ini`,
 `setup.cfg` or `pyproject.toml` in the project_workspace is not read at all, and `-o addopts=`
 clears any `addopts` that reached pytest another way. Without this an added
-`addopts = -k test_origin` deselected every test that contradicted the code and `00_fail` scored
+`addopts = -k test_origin` deselected every test that contradicted the code and `p00_fail` scored
 1.00 with `res_tests_tampered=false`.
 
 **It runs the template's test files, never tests the agent added.** The fifth argument is what
@@ -879,7 +879,7 @@ entirely: `passed = tests − failures − errors − skipped` as before, but `t
 so a `skipif` on the machine's interpreter or on a missing package no longer lowers a score for a
 reason that has nothing to do with methodology. The master reads it into `res_score`; `res_verification_passed` is the oracle's own verdict, exit
 code 0 on the post-run check, and blank when the project ships no tests. It is deliberately not
-`score == 1.0`: on `05_python_refactor_large` a run can hold every golden test green, fail the
+`score == 1.0`: on `p05_python_refactor_large` a run can hold every golden test green, fail the
 strict-reduction gate and still carry a score of 1.00, and a threshold on the score would record
 that as a pass. A binary outcome needs
 roughly an order of magnitude more runs than a continuous one to reach the same confidence,
@@ -976,23 +976,23 @@ reproducible, so they are recorded here as well as in the code:
 
 | Project | `SIZE_REF` | `MI_REF` | `EXPECTS_TESTS` | `REQUIRE_SMALLER_THAN_BASELINE` |
 |---|---|---|---|---|
-| `00_fail` | 4 | 77.3 | true | false |
-| `01_python_small` | 9 | 63.3 | true | false |
-| `02_python_medium` | 42 | 41.7 | true | false |
-| `03_python_large` | 82 | 31.7 | true | false |
-| `04_python_xlarge` | 177 | 16.0 | true | false |
-| `05_python_refactor_large` | 30 | 45.6 | true | true |
+| `p00_fail` | 4 | 77.3 | true | false |
+| `p01_python_small` | 9 | 63.3 | true | false |
+| `p02_python_medium` | 42 | 41.7 | true | false |
+| `p03_python_large` | 82 | 31.7 | true | false |
+| `p04_python_xlarge` | 177 | 16.0 | true | false |
+| `p05_python_refactor_large` | 30 | 45.6 | true | true |
 
 Every pair is measured, and the solution it was measured on is on disk: `projects/<P>/reference/`
 holds the module or package plus `reference/metrics.txt`, the oracle's own output on it. No value
 in this table is a literal any more — a constant that cannot be re-measured from an artefact is a
 number the reader has to trust. Each reference passes its project's visible **and** held-out suite,
-except `00_fail`, whose task is unsatisfiable by construction: its reference satisfies the two
+except `p00_fail`, whose task is unsatisfiable by construction: its reference satisfies the two
 tests that can be satisfied and the oracle exits 1 on it, as it must on every run of that project.
-`05_python_refactor_large`'s reference passes the strict-reduction gate as well, at 30 SLOC against
+`p05_python_refactor_large`'s reference passes the strict-reduction gate as well, at 30 SLOC against
 the template's 75.
 
-`04_python_xlarge`'s two values are the oracle's own output on its `reference/`, kept there as
+`p04_python_xlarge`'s two values are the oracle's own output on its `reference/`, kept there as
 `reference/metrics.txt` beside the solution they were measured on: 177 SLOC, complexity 67, MI
 16.0. The magnitude is what the size predicts — MI falls with `ln(SLOC)`, so 82 → 177 costs about
 15 MI points — and it is the reason MI is the tiebreaker and not the discriminator here: the
@@ -1006,7 +1006,7 @@ project whose `MI_REF` is unset scores on correctness alone and is not comparabl
 which is why every project carries one.
 
 **The strict-reduction gate.** `REQUIRE_SMALLER_THAN_BASELINE` is the extra condition
-`05_python_refactor_large` needs and no other project has. Its template already passes its own tests, so the
+`p05_python_refactor_large` needs and no other project has. Its template already passes its own tests, so the
 oracle inverts at baseline: green returns exit 1, because a module that has not been touched is by
 definition not yet simplified, and anything else returns 2. After the run it returns 0 only if the
 suite is still green *and* the workspace SLOC is strictly below the baseline SLOC read back from
@@ -1033,7 +1033,7 @@ name matches `test_*.py`, `conftest.py`, `pytest.ini`, `pyproject.toml`, `.requi
 missing from the project_workspace or differs
 byte-for-byte from the template, blank when the project ships none of them. All are restored from
 the template before scoring. Fixtures are in the set because on a project whose input formats are
-defined by a fixture and nowhere else (`04_python_xlarge`) rewriting the file the code failed to
+defined by a fixture and nowhere else (`p04_python_xlarge`) rewriting the file the code failed to
 parse is the same move as weakening a test, and would score 1.00 against the agent's own input. The
 `test_*.py` glob is root-level only, which is why a project's visible suite stays at the template
 root: a suite in a subdirectory would not be restored.
@@ -1099,12 +1099,12 @@ triple. The path stays: a project that ships none records blank, never `false` �
 ## 12. Run sequence
 
 `run.bat <project> <methodology> [--config <path>]` is the single-run entry point and calls
-`run_master.py`; `run_selected_model_04.bat` is the multi-run list. There is no per-combination file.
+`run_master.py`; `run_selected_e04.bat` is the multi-run list. There is no per-combination file.
 
-`run_smoke_model_02.bat` takes no arguments and exists to be double-clicked: it runs one fixed pair on
-level 1 (`.llm_config.model_01`), rebuilds the table and pauses so the window survives. It is `run_turbo_model_01.bat`
+`run_smoke_e02.bat` takes no arguments and exists to be double-clicked: it runs one fixed pair on
+level 1 (`.llm_config.e01_claude_haiku_4_5`), rebuilds the table and pauses so the window survives. It is `run_turbo_e01.bat`
 with one pair in place of the matrix; the two files differ in nothing else. The default pair is
-`02_python_medium 00_empty` — the smallest project with a real oracle that still has surface,
+`p02_python_medium m00_empty` — the smallest project with a real oracle that still has surface,
 combined with the cheapest methodology, and it exercises the full path including venv, pre-flight,
 pytest and scoring. Changing the default is a one-line edit in that file.
 
@@ -1113,13 +1113,13 @@ pytest and scoring. Changing the default is a one-line edit in that file.
 | File | Does | Order of magnitude |
 |---|---|---|
 | `run.bat <P> <M> [--config <path>]` | one pair, `REPEATS` times; exits 2 on fewer than two arguments | 1 pair × `REPEATS` |
-| `run_smoke_model_02.bat` | `02_python_medium 00_empty --config .llm_config.model_02`, then rebuilds | 1 run on level 2 |
+| `run_smoke_e02.bat` | `p02_python_medium m00_empty --config .llm_config.e02_claude_sonnet_5`, then rebuilds | 1 run on level 2 |
 | `run_master.py --matrix` | every pair of the two listings once, then consolidation and `--gate` | up to 174 × `REPEATS` |
-| `run_turbo_model_01.bat` | `--matrix --workers 1 --config .llm_config.model_01`, then rebuilds | 174 runs on level 1 |
-| `run_selected_model_04.bat` | the chapter 16 validity gate on `00_fail`, level 4, then rebuilds | 3 pairs × `REPEATS` |
-| `run_screen_model_03.bat` | `--matrix --config .llm_config.model_03 --projects 04_python_xlarge --workers 3 --skip-existing` | 29 runs on level 3 |
-| `run_all_model_03.bat` | `--matrix --config .llm_config.model_03 --workers 1` | 174 × `REPEATS` on level 3 |
-| `run_all_model_04.bat` | `--matrix --config .llm_config.model_04 --workers 1` | 174 × `REPEATS` on level 4 |
+| `run_turbo_e01.bat` | `--matrix --workers 1 --config .llm_config.e01_claude_haiku_4_5`, then rebuilds | 174 runs on level 1 |
+| `run_selected_e04.bat` | the chapter 16 validity gate on `p00_fail`, level 4, then rebuilds | 3 pairs × `REPEATS` |
+| `run_screen_e03.bat` | `--matrix --config .llm_config.e03_claude_opus_5 --projects p04_python_xlarge --workers 3 --skip-existing` | 29 runs on level 3 |
+| `run_all_e03.bat` | `--matrix --config .llm_config.e03_claude_opus_5 --workers 1` | 174 × `REPEATS` on level 3 |
+| `run_all_e04.bat` | `--matrix --config .llm_config.e04_claude_fable_5_1 --workers 1` | 174 × `REPEATS` on level 4 |
 | `rebuild_results_table.bat` | consolidation, then `--gate`: the chapter 16 conditions per campaign as PASS or FAIL; no runs. Pauses at the end, so double-clicking it shows the result | free |
 
 ### Further details
@@ -1153,7 +1153,7 @@ verdict is printed but does not decide it, because a matrix answers "did every p
 16 answers "is the apparatus sound". `--gate` exits 0 when every campaign holds all three conditions
 and 1 when one does not. Either takes exit 2 on a malformed flag.
 
-1. Read the constants from `.llm_config.model_02`, or from the file `--config` names; the entry filename is
+1. Read the constants from `.llm_config.e02_claude_sonnet_5`, or from the file `--config` names; the entry filename is
    `CLAUDE.md`. A second engine is a separate branch (chapter 18). Then, once for the whole
    invocation and before repeat 1, the checks that cannot come right on a later repeat: the config
    keys including `MODEL` and the fallback model (exit 4), every flag of the launch line against
@@ -1180,7 +1180,7 @@ and 1 when one does not. Either takes exit 2 on a malformed flag.
    `local/runs/<id>/methodology/copy_to_root/agents_or_claude.md`, never `methodology/<M>/`:
    deploying from the source directory meant an edit landing between the two steps gave the agent a
    file the snapshot does not contain, and the run directory then recorded something other than
-   what ran. `00_empty` deploys nothing, `mth_chars=0`; the master
+   what ran. `m00_empty` deploys nothing, `mth_chars=0`; the master
    tolerates an empty `copy_to_root`. A key occurring twice in one entry file aborts here, with
    exit 4 — before pre-flight, because the deployed file is already wrong and no environment work
    can make it right.
@@ -1439,7 +1439,7 @@ spread by the reader and by chapter 16; a threshold deciding it here would be a 
 measured, applied to rows that are usually one run per arm, where a spread of zero can be saturation
 and can equally be sampling. `1 distinct value` across every arm of a project is the
 whole finding, and it is the earliest place the apparatus says so — the sabotage condition of
-chapter 16 reports the same state, but only once both `00_sabotage` and the incumbent have run.
+chapter 16 reports the same state, but only once both `m47_sabotage` and the incumbent have run.
 
 Rows without a numeric `res_score`, and rows without a project name, are skipped; the line is
 therefore silent about aborted runs, which chapter 12 already reports by id.
@@ -1458,8 +1458,8 @@ The chart is a derived file: it is regenerated on every consolidation and never 
 ### Further details
 
 The seven parameter columns are always present and blank when the key is not in the entry file —
-`mth_param_review_rounds` therefore carries a value on `09_foureyes` alone, and the three candidate
-keys on `01_process` alone. Consolidation merges by column name and writes this header in full, so
+`mth_param_review_rounds` therefore carries a value on `m09_foureyes` alone, and the three candidate
+keys on `m01_process` alone. Consolidation merges by column name and writes this header in full, so
 a run that predates a column gets a blank cell for it and a column no run has produced yet is blank
 in every row rather than absent from the file.
 
@@ -1481,7 +1481,7 @@ deployed entry file (`CLAUDE.md`/`AGENTS.md`) and the D documents `PLAN.md`, `DE
 `SUMMARY.md`**, which the review diff excludes for its own reason (chapter 12, step 7b). Neither is
 code the agent chose to add: the entry file is the harness's own deployment, and the three
 documents are what the methodology demanded and what `res_artifacts` already records — counting
-them made the restraint columns grow with `mth_chars`, reading 4 on every `02_doctypes` row of
+them made the restraint columns grow with `mth_chars`, reading 4 on every `m02_doctypes` row of
 campaign 1 for compliance rather than for sprawl.
 
 `res_files_added_src` is the count of added files whose suffix is `.py`, a subset of
@@ -1519,7 +1519,7 @@ counters are summed across the reviewers, so the columns describe the pass and n
 
 `res_review_actionable` is the subset of `res_review_issues` whose line also carries a `changes=`
 field naming an edit. The field is the optional suffix `lib/reviewer_prompt.md` allows and the
-schema `17_finding_schema` deploys asks for; it runs to the next `key=` field or to the end of the
+schema `m17_finding_schema` deploys asks for; it runs to the next `key=` field or to the end of the
 line, so it reads the same whether a `confidence=` follows it or nothing does. An `issue:` with no
 such field named no edit, and one with `changes=none` said in the schema's own words that there is
 none — neither is actionable. The split is the point: a reviewer that files twenty issues nobody can
@@ -1534,8 +1534,8 @@ treatments, and the name is what separates them without opening a run directory.
 reason. It is a treatment like the prompt — three reviewers find more than one does — so rows whose
 weight differs are not pooled (chapter 17).
 
-`cfg_campaign` is the base name of the config file the run read — `.llm_config.model_02`,
-`.llm_config.model_01` — set from the file that was actually used, never from a key inside it. Seven
+`cfg_campaign` is the base name of the config file the run read — `.llm_config.e02_claude_sonnet_5`,
+`.llm_config.e01_claude_haiku_4_5` — set from the file that was actually used, never from a key inside it. Seven
 `cfg_` columns now decide what may be pooled, and reconstructing that set row by row is how two
 campaigns get mixed; one label is the first filter (chapter 17) and the unit `--gate` groups by.
 
@@ -1607,7 +1607,7 @@ exactly that, in the published table and in each run's own `results_run.csv`, so
 reproduces it.
 
 `mth_version` is the first line of the entry file, an HTML comment
-`<!-- mth_version: 08_process_doctypes_roles_guardrails.v1 -->`; blank for `00_empty`. The full
+`<!-- mth_version: m08_process_doctypes_roles_guardrails.v1 -->`; blank for `m00_empty`. The full
 snapshot in the run directory
 is the authoritative record of what ran.
 
@@ -1690,38 +1690,38 @@ would corrupt a campaign without any visible error.
 
 ## 16. Validity gate
 
-Before any campaign result is interpreted, both anchors must behave. The gate is the 3 `00_fail`
-runs and the `00_sabotage` rows of the campaign's ranking runs, judged against the incumbent:
+Before any campaign result is interpreted, both anchors must behave. The gate is the 3 `p00_fail`
+runs and the `m47_sabotage` rows of the campaign's ranking runs, judged against the incumbent:
 
-- `00_sabotage` scores worse than the incumbent, `29_invariants_test_first_relative_stop`, on the
+- `m47_sabotage` scores worse than the incumbent, `m29_invariants_test_first_relative_stop`, on the
   same project with an oracle. The condition is evaluated **per project the campaign holds rows for**, and a project
   carrying one of the two anchors but not the other makes the campaign **INCOMPLETE**, printed as
   such and exit 1 — never PASS. Skipping such a project silently let a campaign missing half its
   gate report that the gate held. A project carrying neither anchor — the smoke run on
-  `01_python_small` — is not a ranking project of that campaign and is not a gap.
-- `00_fail` never reaches `res_verification_passed` under any methodology.
+  `p01_python_small` — is not a ranking project of that campaign and is not a gap.
+- `p00_fail` never reaches `res_verification_passed` under any methodology.
 - The pristine baseline of an oracle project fails pre-flight. If it passes, the project cannot
   measure anything.
 - The held-out suite passes on the project's reference solution and fails on the pristine template.
   A suite that fails the reference is testing something the prompt does not state;
-  one that passes the template tests nothing. `05_python_refactor_large` inverts the second half as
+  one that passes the template tests nothing. `p05_python_refactor_large` inverts the second half as
   it inverts everything else: its template already holds the pinned behaviour, so both its suites
   are green at baseline and the strict-reduction gate is what fails.
 - The ranking project's visible suite discriminates. A project is accepted for ranking only if its
   first three-repeat run shows a visible-fraction range of at least 0.15 across the twenty-nine arms.
   Where correctness is flat, the ranking is produced by the parsimony factor alone — a clamped
   one-decimal ratio — and the campaign ranks maintainability while reporting it as methodology.
-  `03_python_large` fails this in campaign 1: 24/24 visible on all 23 runs, with the whole 0.80–0.91
+  `p03_python_large` fails this in campaign 1: 24/24 visible on all 23 runs, with the whole 0.80–0.91
   spread coming from the factor.
 - A project whose **score** is flat, not merely its visible fraction, has stopped measuring
-  altogether. `06_qc_ema_cross` and `07_qc_bugfix_refactor` are the current cases: every arm, the
+  altogether. `p06_qc_ema_cross` and `p07_qc_bugfix_refactor` are the current cases: every arm, the
   sabotage anchor included, scores 1.0000 at level 3, and on 07 the sabotage arm carries the highest
   maintainability index of the four. Such a project is kept as a smoke test — for those two, of the
   MCP path — and is reported as a cost comparison, never as a ranking. The score-spread line of
   chapter 13.1a shows the state as `1 distinct value` from the first two arms onwards.
 
 **Difficulty is calibrated before a campaign, not diagnosed after one.** A new project is run once
-against `00_empty` on capability level 1 — the cheapest model — before any level-3 campaign is spent
+against `m00_empty` on capability level 1 — the cheapest model — before any level-3 campaign is spent
 on it. An empty anchor that already passes there means the task sits below the level it was written
 for, and every arm above will return the same score. The project is then either made harder or filed
 at the level where the anchor still fails. Both QuantConnect tiers were built without this step and
@@ -1746,7 +1746,7 @@ label is not reported as an unfinished one.
 `rebuild_results_table.bat` runs it after every consolidation — the gate is worth nothing if it is
 only checked when someone remembers to. The incumbent is `GATE_INCUMBENT_MTH` in `run_master.py`;
 where a campaign has no rows of it the gate falls back to the previous incumbent,
-`08_process_doctypes_roles_guardrails`, so campaigns that predate the change still have a
+`m08_process_doctypes_roles_guardrails`, so campaigns that predate the change still have a
 comparison, and a gate that silently found no incumbent rows would otherwise report the absence as
 PASS.
 
@@ -1778,18 +1778,18 @@ If any of these does not hold, the finding is about the apparatus, not about met
   suite is the check on the ranking, not the ranking. A methodology that wins on `res_score` while
   its holdout column trails the field won by fitting to the visible tests, and that is a finding to
   state, not a number to fold in.
-- Draw conclusions from the campaign's ranking project — `03_python_large` in campaign 1,
-  `04_python_xlarge` in campaign 2; `02_python_medium`, `03_python_large` and
-  `05_python_refactor_large` are secondary. `00_fail` is the gate and `01_python_small` is used for exactly one
+- Draw conclusions from the campaign's ranking project — `p03_python_large` in campaign 1,
+  `p04_python_xlarge` in campaign 2; `p02_python_medium`, `p03_python_large` and
+  `p05_python_refactor_large` are secondary. `p00_fail` is the gate and `p01_python_small` is used for exactly one
   harness smoke run.
 - **Campaign 2** holds `MODEL=claude-sonnet-5`, `EFFORT=medium`, `REPEATS=3`,
-  `MAX_BUDGET_USD=4.00` and is **91 runs**: `04_python_xlarge` × 29 methodologies × 3 repeats = 87,
-  the chapter-16 gate `00_fail` × {`00_empty`, `00_sabotage`,
-  `08_process_doctypes_roles_guardrails`} × 1 = 3, and 1 smoke run on
-  `01_python_small`. Optionally 87 continuity runs of `03_python_large` × 29 × 3 under the corrected
+  `MAX_BUDGET_USD=4.00` and is **91 runs**: `p04_python_xlarge` × 29 methodologies × 3 repeats = 87,
+  the chapter-16 gate `p00_fail` × {`m00_empty`, `m47_sabotage`,
+  `m08_process_doctypes_roles_guardrails`} × 1 = 3, and 1 smoke run on
+  `p01_python_small`. Optionally 87 continuity runs of `p03_python_large` × 29 × 3 under the corrected
   held-out suite, which are a separate 87 and not part of the ranking. Estimated ≈$60.6 at
   level 2, ≈$124.2 at level 3, from a campaign-1 per-run mean of $0.348 on
-  `03_python_large` doubled for project size.
+  `p03_python_large` doubled for project size.
 - The cost axis is `tk_cost_usd`, the first implementer call's spend. `tk_review_cost_usd`,
   `tk_fix_cost_usd` and `tk_bestof_cost_usd` are reported beside it, never summed into it by default: the review pass is a treatment, so a campaign that runs it
   compares arms that all carry it, and adding a per-arm-constant second invoice to the axis only
@@ -1806,7 +1806,7 @@ If any of these does not hold, the finding is about the apparatus, not about met
   the seven columns confirm it. `--gate` and `--consolidate` check that much of it automatically and
   print a campaign whose rows disagree as MIXED (chapter 16); the remaining columns are the
   reader's. The tool set is an axis like the model: rows with differing `cfg_tools` are not pooled. The repository
-  holds every run ever made, including the `run_turbo_model_01.bat` sweep at `cfg_effort=low` and any row
+  holds every run ever made, including the `run_turbo_e01.bat` sweep at `cfg_effort=low` and any row
   from an earlier CLI; a campaign is the subset that shares its constants, and the constants are on
   every row so that subset is a filter rather than a memory.
 - Reading a losing cell is a separate act from ranking, and `lib/failure_taxonomy.md` is the
@@ -1863,7 +1863,7 @@ If any of these does not hold, the finding is about the apparatus, not about met
   Both are settled once, together with a second engine, or not at all.
 - **Enforced variants.** The CLI can *enforce* through `--tools` and `--agents` what a methodology
   can only request; running a parameter both ways measures the compliance gap. Two halves of this
-  are now built — `REVIEW_FEEDBACK` against `09_foureyes` (chapter 19.2) and `tools.txt` against a
+  are now built — `REVIEW_FEEDBACK` against `m09_foureyes` (chapter 19.2) and `tools.txt` against a
   methodology's tool policy (chapter 15) — and `--agents` role enforcement stays deferred until an
   effect exists to explain.
 
@@ -1882,7 +1882,7 @@ a file, an abstraction or a dependency requires one line of justification first*
 ### 19.2 Four eyes
 
 Self-review inside one session shares the context and the blind spots that produced the code, so it
-is close to worthless. `09_foureyes` is the built answer and it is the **in-session subagent
+is close to worthless. `m09_foureyes` is the built answer and it is the **in-session subagent
 variant**: the implementer hands the task text and the diff — nothing else — to a subagent with a
 fresh context, and every `issue:` it reports blocks. Its adherence evidence is
 `res_subagents_spawned` and the presence of `REVIEW.md`.
@@ -1894,16 +1894,16 @@ of the implementation, is built and lives in the harness, not in a methodology: 
 runs: one reviewer's silence is not evidence, and `n` of them on the same diff separate a sound
 diff from a quiet reviewer at a cost the row records.
 
-`17_finding_schema` is the methodology-side counterpart of the actionable count. It asks the
+`m17_finding_schema` is the methodology-side counterpart of the actionable count. It asks the
 in-session reviewer for the same five fields the harness pass's optional `changes=` suffix carries,
 and its claim is that a review output shaped as a schema produces fewer findings that name nothing
 to do. The harness measures that claim on its own reviewer, where every arm gets the same one; the
 arm measures whether a methodology can get an agent to produce it.
 
-`REVIEW_FEEDBACK=1` is the **enforced variant** of `09_foureyes`: the same blind review, but the
+`REVIEW_FEEDBACK=1` is the **enforced variant** of `m09_foureyes`: the same blind review, but the
 harness makes the fix happen instead of asking the methodology to. The findings block by
 construction — the implementer is invoked again on them and the oracle scores what comes back —
-where `09_foureyes` can only instruct an agent to block on its own subagent's findings, and
+where `m09_foureyes` can only instruct an agent to block on its own subagent's findings, and
 `res_subagents_spawned` measures whether it complied. Running both is the compliance gap of
 chapter 18 with a number on it. `REVIEW_PASS=other_model` with `REVIEW_FEEDBACK=1` is the
 cross-provider four-eyes arm: one vendor writes, another finds, the first fixes.
@@ -1912,7 +1912,7 @@ The reviewer's own prompt is a treatment too. `REVIEW_PROMPT` (chapter 9) select
 `lib/reviewer_prompt_adversarial.md` is the harder setting — the same output contract with a
 reviewer told to break the code and to raise `issue:` only where it can name a failing input. A
 review pass that files no `issue:` measures the reviewer as much as the code, which is why the
-prompt is recorded as `cfg_review_prompt` rather than assumed. The two are deliberately not the same thing. `09_foureyes` measures whether a
+prompt is recorded as `cfg_review_prompt` rather than assumed. The two are deliberately not the same thing. `m09_foureyes` measures whether a
 methodology can *get* an agent to review its own work — the review is inside the treatment, and
 `res_subagents_spawned` is the adherence evidence. The harness pass takes the review out of the
 treatment entirely: every arm gets the same reviewer on the same input, so the findings count is a

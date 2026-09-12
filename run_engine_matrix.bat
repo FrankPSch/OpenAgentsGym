@@ -4,8 +4,8 @@ REM Engine bring-up matrix: one [project] x [methodology] pair across engines.
 REM
 REM USAGE
 REM   run_engine_matrix.bat                       defaults below, local only
-REM   run_engine_matrix.bat 03_python_large       other project, same methodology
-REM   run_engine_matrix.bat 03_python_large 29_x  both named
+REM   run_engine_matrix.bat p03_python_large       other project, same methodology
+REM   run_engine_matrix.bat p03_python_large 29_x  both named
 REM   run_engine_matrix.bat /billed               also runs the two cloud legs
 REM
 REM The project and the methodology are parameters, not edits. Editing a .bat
@@ -28,8 +28,8 @@ setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
 REM --- parameters ------------------------------------------------------------
-set "PROJECT=01_python_small"
-set "METHODOLOGY=00_empty"
+set "PROJECT=p01_python_small"
+set "METHODOLOGY=m00_empty"
 set "BILLED=0"
 
 set "POS=0"
@@ -99,19 +99,19 @@ REM --- cloud legs first ------------------------------------------------------
 REM Both are billed, so both sit behind the same opt-in. Running them first
 REM means the fast known-good reference lands before hours of local waiting.
 if "!BILLED!"=="1" (
-  call :leg model_02 "claude-sonnet-5 cloud  BILLED"
-  call :leg gpt_02   "gpt-5-codex     cloud  BILLED"
+  call :leg e02_claude_sonnet_5 "claude-sonnet-5 cloud  BILLED"
+  call :leg e05_gpt_5_codex   "gpt-5-codex     cloud  BILLED"
 ) else (
   echo.
-  echo ==== model_02 and gpt_02 SKIPPED - pass /billed to include them ====
-  echo model_02  skipped  ^(billed, not requested^) >> "%SUMMARY%"
-  echo gpt_02    skipped  ^(billed, not requested^) >> "%SUMMARY%"
+  echo ==== e02_claude_sonnet_5 and e05_gpt_5_codex SKIPPED - pass /billed to include them ====
+  echo e02_claude_sonnet_5  skipped  ^(billed, not requested^) >> "%SUMMARY%"
+  echo e05_gpt_5_codex    skipped  ^(billed, not requested^) >> "%SUMMARY%"
 )
 
 REM --- local legs ------------------------------------------------------------
-call :leg opencode_01 "gpt-oss-20b     local  free"
-call :leg opencode_02 "qwen3-4b        local  free"
-call :leg opencode_03 "qwen3-coder-30b local  free"
+call :leg e06_local_gptoss_20b "gpt-oss-20b     local  free"
+call :leg e07_local_qwen3_4b "qwen3-4b        local  free"
+call :leg e08_local_qwen3coder_30b "qwen3-coder-30b local  free"
 
 echo.
 echo ============ SUMMARY ============

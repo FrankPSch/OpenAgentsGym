@@ -1,0 +1,37 @@
+# Bring-up config, second engine, SMALL local model. Same caveats as .llm_config.e06_local_gptoss_20b:
+# not a capability level, not a campaign, rows must not be published beside claude rows.
+# This file differs from e06_local_gptoss_20b in exactly one line -- MODEL -- because the question it
+# answers is whether a 4B model can drive opencode's tool loop at all.
+#
+# PRIOR EVIDENCE, and the reason this is a separate file rather than an edit: qwen3-4b answers a
+# direct /v1/chat/completions probe in 5.7 s and benchmarks at 13.4 tok/s, but under opencode's
+# system prompt it did not return within ~10 minutes. That is unexplained. It may be prompt
+# processing (opencode ships a large system prompt plus many tool schemas, and a 4B at 32k context
+# must chew through all of it before the first token), or it may be a hard failure. Nobody has
+# waited long enough to know. A run under this file settles it either way, and CLI_TIMEOUT_S
+# (3600 s) is what ends it if the answer is "never".
+
+ENGINE=opencode
+MODEL=litellm/qwen3-4b
+# MODEL: provider/model. `litellm` is the provider in ~/.config/opencode/opencode.jsonc pointing
+# at 127.0.0.1:4000; `qwen3-4b` is the gateway name for Ollama qwen3:4b.
+PROVIDER=
+BASE_URL=
+# Both blank, and both MUST be: base_url_env is None on this engine, so a value aborts (exit 4).
+EFFORT=medium
+# Declared, not delivered -- no effort flag on opencode's line; cfg_effort_enforced comes out false.
+MAX_TURNS=60
+MAX_BUDGET_USD=4.00
+# Does not bind. cfg_bound=walltime; CLI_TIMEOUT_S is the only real stop.
+REPEATS=1
+CLAUDE_CONFIG_DIR=
+
+REVIEW_PASS=none
+REVIEW_MAX_BUDGET_USD=1.00
+REVIEW_MODEL=
+REVIEW_CMD=
+REVIEW_PROMPT=
+REVIEW_WEIGHT=1
+REVIEW_FEEDBACK=0
+FIX_MODEL=
+BEST_OF_N=1

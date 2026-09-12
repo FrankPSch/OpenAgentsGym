@@ -8,7 +8,7 @@
     py -3 run_master.py --gate [--campaign <name>] [--apparatus-only]
 
 --config selects the campaign constants file. The files are the four capability levels
-.llm_config.model_01 .. .llm_config.model_04 (chapter 9); the default is .llm_config.model_02, and a
+.llm_config.e01_claude_haiku_4_5 .. .llm_config.e04_claude_fable_5_1 (chapter 9); the default is .llm_config.e02_claude_sonnet_5, and a
 relative path is resolved against the repository root.
 """
 import csv
@@ -29,9 +29,9 @@ ROOT = Path(__file__).resolve().parent
 # table is rebuildable from them and lives at the repo root so it is published with the repo.
 LOCAL = ROOT / "local"
 RESULTS_TABLE = ROOT / "results_repository.csv"
-# Capability levels (chapter 9): .llm_config.model_01 (cheapest, apparatus checks) .. model_04
+# Capability levels (chapter 9): .llm_config.e01_claude_haiku_4_5 (cheapest, apparatus checks) .. e04_claude_fable_5_1
 # (above the frontier tier). Level 2 is the default here; the model id lives only in the file.
-DEFAULT_CONFIG = ".llm_config.model_02"
+DEFAULT_CONFIG = ".llm_config.e02_claude_sonnet_5"
 # Run directories live under local/ too: they are per-run artifacts and account data, never source.
 RUNS = LOCAL / "runs"
 IS_WIN = os.name == "nt"
@@ -76,7 +76,7 @@ TOOL_LINE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*\*?(\(.*\))?$")
 # label's case are tolerated. The label itself is not: a line without one is not a finding.
 REVIEW_LINE = re.compile(r"^\s*(?:[-*+]\s+|\d+[.)]\s+)?(issue|nitpick|question|praise)\s*:", re.I)
 # The optional `changes=` suffix a finding may carry (lib/reviewer_prompt.md, and the schema
-# 17_finding_schema deploys). It runs to the next `key=` field or to the end of the line, so it
+# m17_finding_schema deploys). It runs to the next `key=` field or to the end of the line, so it
 # reads the same whether the schema puts `confidence=` after it or nothing does. `changes=none` is
 # how the schema says a finding needs no edit, so it is not actionable and neither is a blank one.
 CHANGES_FIELD = re.compile(r"\bchanges\s*=\s*(.*?)(?=\s+[a-z_]+\s*=|$)", re.I)
@@ -367,7 +367,7 @@ ARTIFACT_GLOBS = ("docs/adr/*.md",)
 
 # Outside every diff figure (chapter 13): the entry file the harness itself deploys, and the three
 # documents the D feature asks for. Neither is code the agent chose to add, and counting them made
-# the restraint columns grow with mth_chars -- res_files_added read 4 on every 02_doctypes row for
+# the restraint columns grow with mth_chars -- res_files_added read 4 on every m02_doctypes row for
 # writing exactly what its methodology demanded. res_artifacts already records the three.
 DIFF_EXCLUDED = ("CLAUDE.md", "AGENTS.md", "PLAN.md", "DECISIONS.md", "SUMMARY.md")
 
@@ -403,8 +403,8 @@ def die(msg, code):
 def step1_read_config(config=DEFAULT_CONFIG):
     """Read the campaign constants from the config file (KEY=VALUE, # comments allowed).
 
-    The default is .llm_config.model_02; --config selects another level, so a cheap sweep
-    (.llm_config.model_01) and the campaign proper differ by a file rather than by an edit.
+    The default is .llm_config.e02_claude_sonnet_5; --config selects another level, so a cheap sweep
+    (.llm_config.e01_claude_haiku_4_5) and the campaign proper differ by a file rather than by an edit.
     A relative path is resolved against the repository root, not the caller's cwd.
     """
     cfg = {}
@@ -665,7 +665,7 @@ def allowed_tools(methodology, project):
     else:
         base, cfg = DEFAULT_TOOLS, "default"
 
-    # A project may need tools no methodology asks for -- 06_qc_ema_cross drives the
+    # A project may need tools no methodology asks for -- p06_qc_ema_cross drives the
     # QuantConnect MCP server and cannot be done with the default list. That need belongs to
     # the task, not to the arm, so `projects/<P>/tools.txt` is APPENDED to whatever the arm
     # runs with: the treatment stays the arm's list, and every arm on that project gets the
@@ -2060,7 +2060,7 @@ def read_metrics(run_dir):
 def artifacts_present(template, workspace):
     """Which declared artifacts the agent actually produced -- adherence evidence.
 
-    A name the project itself ships (04_python_xlarge's TASK_BACKLOG.md) is not evidence of anything:
+    A name the project itself ships (p04_python_xlarge's TASK_BACKLOG.md) is not evidence of anything:
     every arm would be credited with an artifact it was handed, so template-shipped names are
     filtered out and only what the agent added is listed.
 
@@ -2128,7 +2128,7 @@ def diff_stats(template, workspace):
 def tamper_names(template):
     """The tamper set: the root test_*.py glob, the fixed config names, every file under fixtures/.
 
-    A project whose format is defined by a fixture (04_python_xlarge) is otherwise passable by
+    A project whose format is defined by a fixture (p04_python_xlarge) is otherwise passable by
     rewriting the file the code failed to parse, which would score 1.00 on the agent's own input.
     """
     return sorted({p.name for p in template.glob("test_*.py")} |
@@ -2170,7 +2170,7 @@ def step8_tamper_and_verify(project, template, workspace, run_dir):
     if metric_value(run_dir / "verification.txt", "timeout") == "1":
         print("TIMEOUT: verification exceeded the oracle's own bound -- scored 0.00")
     # The oracle's own verdict, not a threshold on the score: a project with an extra gate
-    # (05_python_refactor_large's strict reduction) can be fully green on the tests and still not
+    # (p05_python_refactor_large's strict reduction) can be fully green on the tests and still not
     # have done the task, and score == 1.0 would read that as a pass. Blank stays blank -- a
     # project that ships no tests measures nothing and must not report false.
     passed = "" if triple["score"] == "" else str(rc == 0).lower()
@@ -2606,9 +2606,14 @@ def write_pareto_svg(records, out_path):
             continue
         name = (rec.get("mth_name") or "").strip()
         key = ((rec.get("cfg_campaign") or "").strip(), (rec.get("prj_name") or "").strip())
-        # The arm's number: what stands before the first `_`, cut to two characters. A name that
-        # is not numbered still gets its first two, so no point on the chart is unlabelled.
-        label = name.split("_")[0][:2] or name[:2]
+        # The arm's number: what stands before the first `_`, minus the kind letter the naming
+        # standard puts in front of it (m29_... -> 29), cut to two characters. Without the strip
+        # every methodology on the chart would read "m2", "m3", "m4". A name that is not numbered
+        # still gets its first two characters, so no point on the chart is unlabelled.
+        head = name.split("_")[0]
+        if head[:1] in ("p", "m", "e") and head[1:3].isdigit():
+            head = head[1:]
+        label = head[:2] or name[:2]
         groups.setdefault(key, []).append((cost, score, label, name.endswith("_outdated")))
 
     body, panels, total = [], sorted(groups), 0
@@ -2748,15 +2753,15 @@ def pareto_panel(key, points, top):
     return out
 
 
-GATE_ANCHOR_MTH = "00_sabotage"
+GATE_ANCHOR_MTH = "m47_sabotage"
 # The incumbent is the arm the sabotage anchor must lose to (chapter 16). It was the four-feature
-# stack 08_process_doctypes_roles_guardrails until the level-3 screen of 8 Sep put that arm last on
+# stack m08_process_doctypes_roles_guardrails until the level-3 screen of 8 Sep put that arm last on
 # the ranking project; since 9 Sep it is the composition that led the screen at the lowest cost,
 # provisionally until repeats confirm it. The legacy name lets rows of the previous incumbent still
 # be found by campaigns that predate the change -- they are read only when no current rows exist.
-GATE_INCUMBENT_MTH = "29_invariants_test_first_relative_stop"
-GATE_INCUMBENT_LEGACY = "08_process_doctypes_roles_guardrails"
-GATE_ANCHOR_PRJ = "00_fail"
+GATE_INCUMBENT_MTH = "m29_invariants_test_first_relative_stop"
+GATE_INCUMBENT_LEGACY = "m08_process_doctypes_roles_guardrails"
+GATE_ANCHOR_PRJ = "p00_fail"
 
 
 # Chapter 17 forbids pooling rows whose constants differ, and cfg_campaign is only the config
@@ -2911,7 +2916,7 @@ def gate(campaign=None, apparatus_only=False):
             good = scores(GATE_INCUMBENT_MTH) or scores(GATE_INCUMBENT_LEGACY)
             if not bad and not good:
                 # Not a ranking project of this campaign at all -- the smoke run on
-                # 01_python_small carries neither anchor and is not a gap in the gate.
+                # p01_python_small carries neither anchor and is not a gap in the gate.
                 continue
             if not bad or not good:
                 # One anchor and not the other: the comparison cannot be made, and skipping the
@@ -3068,7 +3073,7 @@ def matrix_drain(fh, worker, rc):
 def run_matrix(args):
     """`--matrix`: run the whole pair list, then consolidate and gate (chapter 12).
 
-    One implementation of the matrix, which `run_all_model_04.bat` and `run_turbo_model_01.bat` both call: two nested
+    One implementation of the matrix, which `run_all_e04.bat` and `run_turbo_e01.bat` both call: two nested
     `for /d` loops in a batch file cannot skip what has already run, cannot run two pairs at once
     and cannot say at the end how many rows they produced. Each pair is one `run_master.py P M`
     subprocess and runs once; `REPEATS` applies inside it, as it always has.

@@ -11,7 +11,7 @@ labels: project
 on here. A task every arm passes ranks by cost alone.
 
 **Size** — roughly how much code the agent must read and write, and where it would sit against the
-existing ladder (`01_python_small` … `04_python_xlarge`).
+existing ladder (`p01_python_small` … `p04_python_xlarge`).
 
 **Runtime** — Python version and dependencies.
 

@@ -16,7 +16,7 @@ Two jobs, both learned from the 2026-09-11 matrix:
        FAIL   subtype not success, or score 0, or nothing was edited
 
 Usage:  py -3 _leg_verdict.py unload  litellm/qwen3-4b
-        py -3 _leg_verdict.py verdict opencode_01
+        py -3 _leg_verdict.py verdict e06_local_gptoss_20b
 Exit 0 = PASS, 1 = FAIL, 2 = could not tell.
 """
 import csv

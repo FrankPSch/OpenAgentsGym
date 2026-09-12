@@ -16,7 +16,7 @@ One directory under `methodology/`, Markdown only. No code, no scripts, no frame
 - One idea per methodology. The numbered ladder combines features deliberately; above it, arms test
   one element each so a result can be attributed.
 - It must be readable as a normal agent entry file — nothing that depends on this harness.
-- Do not tune against the anchors. `00_empty` and `00_sabotage` bound the measurement and are never
+- Do not tune against the anchors. `m00_empty` and `m47_sabotage` bound the measurement and are never
   adjusted to make a result look better.
 - Say in the pull request what you expect it to change, and against which arm you read it: the empty
   anchor for the effect, the incumbent for whether it beats current practice.
@@ -43,7 +43,7 @@ One directory under `projects/`, and it must ship all five of these:
 Two more things a submission must clear, both cheap and both learned the expensive way:
 
 **Calibrate the difficulty before you spend a campaign on it.** Run the new project once against
-`00_empty` on capability level 1 (`run_turbo_model_01.bat`, the cheapest model, cents). If the empty
+`m00_empty` on capability level 1 (`run_turbo_e01.bat`, the cheapest model, cents). If the empty
 anchor already passes there, the task is below the level you were aiming at, and a level-3 campaign
 on it will return one score for every arm. Raise the difficulty or file the project at the level
 where the anchor still fails. State the calibration run in the pull request.
@@ -53,14 +53,14 @@ independently reach the same pass/fail verdict on a given solution.** If they wo
 under-specified and its scores are noise — fix the prompt, not the oracle.
 
 A project on which every methodology scores at the top ranks by cost alone. That is a statement
-about the project, not about methodology: it is kept for smoke runs, not for ranking. `06_qc_ema_cross`
-and `07_qc_bugfix_refactor` are the current examples.
+about the project, not about methodology: it is kept for smoke runs, not for ranking. `p06_qc_ema_cross`
+and `p07_qc_bugfix_refactor` are the current examples.
 
 ---
 
 ## Pull requests
 
-- Run `run_smoke_model_02.bat` and paste the exit code.
+- Run `run_smoke_e02.bat` and paste the exit code.
 - If the change can move scores, say so explicitly and name which columns.
 - Do not commit anything under `local/` — run directories, logs and the results table stay local.
   Paste the rows you want to discuss into the pull request instead.

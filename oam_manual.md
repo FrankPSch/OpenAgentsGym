@@ -60,7 +60,7 @@ above it        specific methodologies       one idea each, never combined into 
 ```
 
 Anchors (`00_*`) bound the measurement and are never tuned. The projects form the same kind of
-ladder — `00_fail` is impossible by construction, the rest grow in size (chapters 4, 5, 7).
+ladder — `p00_fail` is impossible by construction, the rest grow in size (chapters 4, 5, 7).
 
 Everything is a directory listing: a new methodology or project joins the matrix by existing.
 
@@ -93,22 +93,22 @@ All entry points are batch files in the repository root; the exit code says what
 
 | You want | Run |
 |---|---|
-| the quickest proof the whole chain works | `run_smoke_model_02.bat` — double-click, no arguments; one pair on capability level 2 |
+| the quickest proof the whole chain works | `run_smoke_e02.bat` — double-click, no arguments; one pair on capability level 2 |
 | one specific pair | `run.bat <project> <methodology>` |
 | the same pair under different constants | `run.bat <project> <methodology> --config <path>` |
-| every pair once, cheaply | `run_turbo_model_01.bat` — every pair on level 1, the cheapest model |
-| every methodology once on the xlarge project, level 3 | `run_screen_model_03.bat` (the screen; edit `PROJECT` in the file) |
-| every pair on level 3 or 4 | `run_all_model_03.bat`, `run_all_model_04.bat` |
-| a hand-picked list, e.g. the validity gate | `run_selected_model_04.bat` (edit the list in the file) |
+| every pair once, cheaply | `run_turbo_e01.bat` — every pair on level 1, the cheapest model |
+| every methodology once on the xlarge project, level 3 | `run_screen_e03.bat` (the screen; edit `PROJECT` in the file) |
+| every pair on level 3 or 4 | `run_all_e03.bat`, `run_all_e04.bat` |
+| a hand-picked list, e.g. the validity gate | `run_selected_e04.bat` (edit the list in the file) |
 | the results table and the gate, without running anything | `rebuild_results_table.bat` |
 
-**Settings.** All campaign constants live in the four `.llm_config.model_01` … `model_04` files and
+**Settings.** All campaign constants live in the four `.llm_config.e01_claude_haiku_4_5` … `e04_claude_fable_5_1` files and
 nowhere else — model, effort, budget cap, repeats, and the review and best-of-N keys (chapter 9).
 Each file is one capability level: 1 the cheapest model for the apparatus sweep
-(`run_turbo_model_01.bat`), 2 the workhorse for single pairs and the smoke test (`run.bat`,
-`run_smoke_model_02.bat`), 3 the frontier model at low effort for the full matrix (`run_all_model_03.bat`), 4 the
-model above the frontier tier for the full matrix and the gate (`run_all_model_04.bat`,
-`run_selected_model_04.bat`). A batch file bound to a level carries it in its name. For a one-off, copy a file,
+(`run_turbo_e01.bat`), 2 the workhorse for single pairs and the smoke test (`run.bat`,
+`run_smoke_e02.bat`), 3 the frontier model at low effort for the full matrix (`run_all_e03.bat`), 4 the
+model above the frontier tier for the full matrix and the gate (`run_all_e04.bat`,
+`run_selected_e04.bat`). A batch file bound to a level carries it in its name. For a one-off, copy a file,
 edit the copy, and pass it with `--config`; the file's base name becomes the campaign label on every row, so
 two campaigns can never be pooled by accident.
 
@@ -143,7 +143,7 @@ Working order:
    runtime in the template's `.environment` and `.requirements`.
 2. **Ship a visible test suite in the template that fails on the pristine code.** Pre-flight expects
    that failure; a template that already passes cannot measure anything and aborts the run
-   (chapter 11). `05_python_refactor_large` shows the inverted case, where the metric fails instead.
+   (chapter 11). `p05_python_refactor_large` shows the inverted case, where the metric fails instead.
 3. **Solve it yourself and keep the solution** under `reference/`. Run the oracle on it and store
    its output. The oracle constants — the size reference and the maintainability reference the
    parsimony factor divides by — are read off that measurement, never chosen. A constant that cannot
@@ -154,10 +154,10 @@ Working order:
    on the pristine template, and a scope test must assert a positive behaviour beside the absence
    (chapters 11, 16).
 5. **Calibrate the difficulty before spending a campaign on it.** Run the project once against
-   `00_empty` on capability level 1 — `run_turbo_model_01.bat`, the cheapest model, cents. If the
+   `m00_empty` on capability level 1 — `run_turbo_e01.bat`, the cheapest model, cents. If the
    empty anchor already passes there, the task sits below the level you were aiming at and a
    level-3 campaign will hand back one score for every arm. Raise the difficulty, or file the
-   project at the level where the anchor still fails. `06_qc_ema_cross` was built without this step
+   project at the level where the anchor still fails. `p06_qc_ema_cross` was built without this step
    and cost four level-3 runs to learn the same thing.
 6. **Check the gate conditions hold** for the new project before any result from it is read.
 
@@ -207,10 +207,10 @@ fully custom script, provided it keeps the same contract every project's oracle 
 - exit 0 = pass, 1 = fail, 2 = environment/setup error, with the same meaning as elsewhere
 
 If the task still has code worth grading (a solution the agent produces or leaves behind
-somewhere — locally or, as for `06_qc_ema_cross`, in a live project the agent builds), score it
+somewhere — locally or, as for `p06_qc_ema_cross`, in a live project the agent builds), score it
 with `lib/oracle.py`'s own `code_metrics` / `parsimony_factor` against a measured `reference/`
 solution exactly as any other project — never re-implement the metric just because the rest of the
-oracle is custom. `06_qc_ema_cross` is the example: it grades a QuantConnect backtest the agent
+oracle is custom. `p06_qc_ema_cross` is the example: it grades a QuantConnect backtest the agent
 runs through the QuantConnect MCP tools rather than a local Python module, gates on the backtest
 having actually run (compile succeeded, results exist), and scores the parsimony factor on the
 algorithm's source fetched back live from the QuantConnect API.
@@ -254,7 +254,7 @@ feature. Copy the nearest existing arm and edit it.
   whole, the deviation is recorded on the row, and its rows are then never pooled with the rest
   (chapter 15).
 
-New arms outside the ladder are single features, read against `00_empty` for the main effect and
+New arms outside the ladder are single features, read against `m00_empty` for the main effect and
 against the incumbent for whether they beat it — never combined into a grid (chapter 4). Add nothing
 outside the arm's own directory: the harness reads the listing.
 
@@ -306,7 +306,7 @@ where a methodology matters most.
 3. Ties are broken by cost (`tk_cost_usd` median), then by turns — never by the third decimal of
    the score.
 4. A one-repeat screen — pass@1 — ranks by the same rule with the range collapsed to a point: it
-   can separate an arm from `00_empty` when the gap exceeds 0.05, it cannot separate two arms that
+   can separate an arm from `m00_empty` when the gap exceeds 0.05, it cannot separate two arms that
    close. A screen orders; repeats decide.
 5. The rows read are one campaign label (chapter 17); a comparison across levels or configs is
    a comparison of models, not of methodologies, and is not made.
@@ -317,9 +317,9 @@ where a methodology matters most.
   consolidation prints one descriptive line per project (arms, lowest and highest `res_score`,
   distinct values) so this is visible without a threshold anyone had to invent: `1 distinct value`
   across every arm is the whole finding. At level 3 this is the state of
-  `05_python_refactor_large`, `06_qc_ema_cross` and `07_qc_bugfix_refactor` — on 07 the sabotage arm
+  `p05_python_refactor_large`, `p06_qc_ema_cross` and `p07_qc_bugfix_refactor` — on 07 the sabotage arm
   even carries the highest maintainability index of the four. A saturated project is not broken; it
-  is a smoke test, and a task belongs at the capability level where `00_empty` still fails
+  is a smoke test, and a task belongs at the capability level where `m00_empty` still fails
   (`CONTRIBUTING.md`).
 - *An empty patch* — no files added and no diff. The agent finished without touching the code, which
   is a different failure from a wrong edit even though both leave the score at baseline.

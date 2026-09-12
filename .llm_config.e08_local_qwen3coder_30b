@@ -1,0 +1,34 @@
+# Bring-up config, second engine, LARGE local MoE. Same caveats as .llm_config.e06_local_gptoss_20b.
+# Differs from it in one line -- MODEL.
+#
+# PRIOR EVIDENCE: qwen3-coder:30b is 18 GB of weights (30B total, 3.3B active). It OOM'd on the
+# Vulkan path in an earlier attempt. It is included because the memory ceiling is the thing worth
+# measuring here: an MoE reads only its active experts per token, so if it loads at all it should
+# be no slower than the 20B, while being the most capable local model available. If it OOMs again
+# the row is still informative -- it fixes the ceiling on this hardware.
+#
+# BEFORE RUNNING THIS ONE: check free RAM. 18 GB of weights plus KV cache against ~18 GB free is
+# marginal, and Ollama will fall back to CPU or fail rather than warn. Consider raising the Intel
+# Shared GPU Memory Override, and do not run it while another model is still resident
+# (`/api/ps` on 11434 shows what is loaded; models expire on their own after a few minutes).
+
+ENGINE=opencode
+MODEL=litellm/qwen3-coder-30b
+# MODEL: provider/model. `qwen3-coder-30b` is the gateway name for Ollama qwen3-coder:30b.
+PROVIDER=
+BASE_URL=
+EFFORT=medium
+MAX_TURNS=60
+MAX_BUDGET_USD=4.00
+REPEATS=1
+CLAUDE_CONFIG_DIR=
+
+REVIEW_PASS=none
+REVIEW_MAX_BUDGET_USD=1.00
+REVIEW_MODEL=
+REVIEW_CMD=
+REVIEW_PROMPT=
+REVIEW_WEIGHT=1
+REVIEW_FEEDBACK=0
+FIX_MODEL=
+BEST_OF_N=1
