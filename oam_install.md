@@ -1,0 +1,368 @@
+# oam_install — bringing a machine up to run OpenAgentsGym
+
+Written for an agent executing it. Every step has a verification command; run it
+and read the output before continuing. A step that "looks installed" but fails
+its check is not installed.
+
+Target: Windows. The harness runs elsewhere, but the interpreter pin behaves
+differently and a non-Windows run is a smoke test of the plumbing, not a
+measurement.
+
+Nothing here is optional-by-taste: each item exists because a run aborts without
+it, and the abort code is named.
+
+---
+
+## 0. Read this first: where you are installing to
+
+**If you are an agent running inside a packaged/sandboxed host application, your
+`%APPDATA%` writes may be virtualized.** A global npm or uv install then lands in
+something like
+`…\AppData\Local\Packages\<AppId>\LocalCache\Roaming\` while *appearing* at the
+normal path to you. The user's own shell cannot see it, and every batch that
+looks for the binary reports "not installed" on a machine where you just
+installed it.
+
+Check before installing anything global:
+
+```powershell
+Test-Path "$env:LOCALAPPDATA\Packages\*\LocalCache\Roaming"
+```
+
+If a package container exists for your host app, **the user must run the npm and
+uv installs themselves in their own terminal.** You can still install Ollama and
+Python (real system installers, not affected), write config files, and verify.
+
+This cost an afternoon on 2026-09-11. Do not skip it.
+
+---
+
+## 1. Python 3.10 — required, not optional
+
+Projects pin their interpreter (`.environment` → `python=3.10`) and
+`interpreter_cmd()` looks for `py -3.10`. Without it **every run exits 3**
+(SKIPPED: interpreter not available) before any model is contacted.
+
+```powershell
+winget install --id Python.Python.3.10 --silent --accept-source-agreements --accept-package-agreements
+```
+
+Verify — the launcher must know it, not just the filesystem:
+
+```powershell
+py -0p          # expect a -V:3.10 line
+py -3.10 -V
+```
+
+A uv- or conda-managed 3.10 does **not** satisfy this: it is not registered with
+the `py` launcher.
+
+---
+
+## 2. Ollama — local model server
+
+```powershell
+winget install --id Ollama.Ollama --silent --accept-source-agreements --accept-package-agreements
+```
+
+### 2.1 Two environment variables that change everything
+
+```powershell
+[Environment]::SetEnvironmentVariable("OLLAMA_IGPU_ENABLE","1","User")
+[Environment]::SetEnvironmentVariable("OLLAMA_CONTEXT_LENGTH","32768","User")
+```
+
+- **`OLLAMA_IGPU_ENABLE=1`** — without it Ollama logs
+  `dropping integrated GPU; to enable, set OLLAMA_IGPU_ENABLE=1` and runs
+  **CPU-only**. On a laptop with an integrated GPU this is the difference between
+  usable and not.
+- **`OLLAMA_CONTEXT_LENGTH`** — the default is **4096 tokens**, far too small for
+  an agent loop that re-sends a system prompt plus tool schemas every turn.
+
+Restart the server after setting them, then confirm it answers:
+
+```powershell
+Get-Process ollama* | Stop-Process -Force
+Start-Process "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" -ArgumentList "serve" -WindowStyle Hidden
+Start-Sleep 10
+(Invoke-RestMethod "http://127.0.0.1:11434/api/version").version
+```
+
+### 2.2 Models
+
+Pull **one at a time**. Concurrent pulls stall each other.
+
+```powershell
+ollama pull qwen3:4b            #  2.5 GB
+ollama pull gpt-oss:20b         #   13 GB
+ollama pull qwen3-coder:30b     #   18 GB
+```
+
+Progress note: Ollama **preallocates** the blob to full size, so file size is
+useless as a progress indicator — a 13 GB file appears instantly and does not
+grow. Watch `ollama pull`'s own output, or poll `ollama list` for completion.
+
+```powershell
+ollama list     # all three must appear with plausible sizes
+```
+
+**Memory:** an 18 GB model needs ~20 GB free or it spills to CPU / fails to
+load. Check `FreePhysicalMemory` before expecting the 30B to work, and do not run
+two models at once (`/api/ps` shows what is resident; models expire after a few
+minutes of disuse).
+
+---
+
+## 3. LiteLLM — the protocol gateway
+
+It is **not a router here and not an agent**. It exists because clients speak
+different wire formats: the Claude CLI wants Anthropic `/v1/messages`, opencode
+and everything else want OpenAI `/v1/chat/completions`, and Ollama serves only
+the latter. LiteLLM translates, and prices every provider so `tk_cost_usd` works.
+
+```powershell
+uv tool install "litellm[proxy]"
+```
+
+### 3.1 It crashes on startup without UTF-8
+
+LiteLLM prints an ASCII-art banner that cannot be encoded in Windows cp1252:
+`UnicodeEncodeError: 'charmap' codec can't encode characters` inside
+`click.echo`, and the proxy exits before serving anything. **Always start it
+with UTF-8 forced:**
+
+```powershell
+$env:PYTHONUTF8 = "1"
+$env:PYTHONIOENCODING = "utf-8"
+litellm --config <path>\config.yaml --port 4000
+```
+
+### 3.2 Config
+
+Minimal, honest, no fallbacks. A fallback would silently substitute one model
+for another — precisely what `check_model()` forbids for `--fallback-model`,
+because it corrupts a comparison with no visible error.
+
+```yaml
+model_list:
+  - model_name: qwen3-4b
+    litellm_params:
+      model: ollama_chat/qwen3:4b
+      api_base: http://127.0.0.1:11434
+      timeout: 3600
+    model_info: {mode: chat, input_cost_per_token: 0.0, output_cost_per_token: 0.0, supports_function_calling: true}
+
+  - model_name: gpt-oss-20b
+    litellm_params:
+      model: ollama_chat/gpt-oss:20b
+      api_base: http://127.0.0.1:11434
+      timeout: 3600
+    model_info: {mode: chat, input_cost_per_token: 0.0, output_cost_per_token: 0.0, supports_function_calling: true}
+
+  - model_name: qwen3-coder-30b
+    litellm_params:
+      model: ollama_chat/qwen3-coder:30b
+      api_base: http://127.0.0.1:11434
+      timeout: 3600
+    model_info: {mode: chat, input_cost_per_token: 0.0, output_cost_per_token: 0.0, supports_function_calling: true}
+
+router_settings:
+  num_retries: 0          # a retry that succeeds hides an instability the campaign should record
+
+litellm_settings:
+  drop_params: true       # strip params a local backend rejects
+  request_timeout: 3600
+  json_logs: true
+
+general_settings:
+  master_key: sk-oag-local
+  store_model_in_db: false
+```
+
+Add a cloud model later by adding an entry — `anthropic/claude-opus-5`,
+`openai/gpt-5`, `groq/...` — plus its API key. The client never learns which
+vendor answered.
+
+Verify both the health endpoint and that every model name resolves:
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:4000/health/liveliness"
+(Invoke-RestMethod "http://127.0.0.1:4000/v1/models" -Headers @{Authorization="Bearer sk-oag-local"}).data.id
+```
+
+---
+
+## 4. opencode — the model-agnostic engine (`ENGINE=opencode`)
+
+### 4.1 Install — three traps in one command
+
+```cmd
+npm.cmd install -g --allow-scripts=opencode-ai opencode-ai
+```
+
+- **`npm.cmd`, not `npm`** — in PowerShell, `npm` resolves to `npm.ps1`, which the
+  default execution policy refuses: *"Die Datei npm.ps1 kann nicht geladen
+  werden"* / *"cannot be loaded because running scripts is disabled"*. Using
+  `npm.cmd` (or running from `cmd`) avoids changing the policy.
+- **`--allow-scripts=opencode-ai`** — the postinstall script is what downloads the
+  ~180 MB binary. Without it npm prints `npm warn allow-scripts` and you get a
+  package with no executable.
+- **Not elevated** — an elevated shell resolves `%APPDATA%` to a different
+  profile.
+
+### 4.2 The binary the harness needs is NOT the one on PATH
+
+npm puts `opencode.cmd` (a shim) on PATH. `resolve_cli()` **correctly refuses
+it** — `CreateProcess` cannot launch a `.cmd` directly — and the run aborts with
+**exit 6**: `'opencode' not found on PATH (shutil.which)`.
+
+The real binary is at `<npm-global>\node_modules\opencode-ai\bin\opencode.exe`
+and that directory must be **prepended to PATH** before running the harness.
+`run_engine_matrix.bat` does this via `engine_find_opencode.py`, which probes several
+locations rather than trusting `%APPDATA%`.
+
+```powershell
+py -3 engine_find_opencode.py      # prints the directory, or NONE plus a diagnosis
+```
+
+### 4.3 Provider config — user level, not per-run
+
+The harness runs the CLI with cwd set to each run's `project_workspace/`, so a
+cwd-level config would have to be planted into every run directory. Put it at
+`%USERPROFILE%\.config\opencode\opencode.jsonc`:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "litellm": {
+      "npm": "@ai-sdk/openai-compatible",
+      "options": { "baseURL": "http://127.0.0.1:4000/v1", "apiKey": "sk-oag-local" },
+      "models": {
+        "qwen3-4b": {}, "gpt-oss-20b": {}, "qwen3-coder-30b": {}
+      }
+    }
+  },
+  "model": "litellm/gpt-oss-20b",
+  "small_model": "litellm/gpt-oss-20b",
+  "autoupdate": false,
+  "share": "disabled"
+}
+```
+
+- Models must be **listed explicitly** — opencode does not discover them from the
+  gateway. A name in LiteLLM but missing here will not resolve.
+- Set `small_model` too, or opencode's session-title call goes to an
+  unconfigured provider.
+
+Verify end to end before trusting the harness:
+
+```cmd
+opencode run "reply with the single word OK" --format json -m litellm/gpt-oss-20b
+```
+
+Expect newline-delimited JSON: `step_start`, `tool_use`, `text`, `step_finish`.
+Accounting is nested under `part` (`part.cost`, `part.tokens.*`) and is
+**per-step**, not cumulative. Exit 0 clean, 1 on failure. No event carries a
+model id, which is why `res_model_served` is blank on this engine.
+
+---
+
+## 5. Claude Code CLI — the reference engine (`ENGINE=claude`)
+
+The engine every published row was produced with. Install per Anthropic's own
+instructions and sign in; the harness only needs `claude` launchable on PATH.
+
+```powershell
+(Get-Command claude).Source
+claude --version        # recorded as cfg_cli_version
+```
+
+**Auth mode changes two columns**, and the choice is a campaign decision:
+
+| | subscription login | API key |
+|---|---|---|
+| `tk_cost_usd` | blank — no cost reported | populated |
+| `cfg_bound` | `walltime` | `usd` |
+| `MAX_BUDGET_USD` | does not bind | binds |
+
+Do not mix modes inside a campaign.
+
+**Pre-flight requirement (chapter 15):** no `CLAUDE.md` or `AGENTS.md` may exist
+in any parent directory of the repository. The CLI walks upwards and would load
+it into every run; the harness aborts rather than measure it.
+
+**Do not point this CLI at a gateway serving non-Claude models.** It is
+unsupported by Anthropic, and it does not work: `HEAD /api/hello` returning 404
+stalls it indefinitely, unknown model ids are refused before any network call
+(`[claude-code:unrecognized_model]`), and `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1`
+does not widen the accepted set. Use `ENGINE=opencode` to reach other models.
+
+---
+
+## 6. Codex CLI — the third engine (`ENGINE=gpt`)
+
+**Not installed and never executed.** Everything about this engine's row in the
+registry is documentation-derived: subcommand, flag names, prompt position and
+stdout shape are all unverified. A run aborts in pre-flight with **exit 6**
+(`'codex' not found on PATH`) — which is the expected result today, and is itself
+worth recording, since it proves engine dispatch reaches the binary check.
+
+To bring it up: install the Codex CLI, authenticate (ChatGPT login **or** API
+key — same two-column fork as claude in §5), then correct the registry row
+against observed behaviour before trusting any number it produces.
+
+Its `model_rule` is `free`: no alias check is applied, so a bare alias that
+silently re-points between campaigns would **not** be caught. That is a gap, not
+a decision.
+
+---
+
+## 7. Verification — run this, not a mental checklist
+
+```cmd
+check_engine_matrix.bat
+```
+
+It verifies, and prints FAIL with a reason for each: opencode resolves to a
+launchable `.exe`; `claude` present; `py -3.10` present; Ollama and LiteLLM
+answering; all three model names served by the gateway; the opencode provider
+config present; every `.llm_config.*` readable.
+
+`RESULT: READY` means a run will reach a model. Then:
+
+```cmd
+run_engine_matrix.bat           local engines only, free
+run_engine_matrix.bat /billed   adds claude-sonnet-5 (~$0.08)
+```
+
+---
+
+## 8. Failure codes
+
+| Exit | Meaning | Usual cause |
+|---|---|---|
+| 3 | interpreter missing | `py -3.10` not registered — §1 |
+| 4 | config rejected | a key set that this engine cannot apply (`BASE_URL` or `CLAUDE_CONFIG_DIR` on opencode), a model id failing the engine's alias rule, an unparseable number |
+| 6 | binary missing/unlaunchable | npm `.cmd` shim on PATH instead of the `.exe` — §4.2; or `codex` not installed — §6 |
+| 9 | batch pre-flight | opencode not found anywhere, or `py` not on PATH in that window |
+
+Two symptoms with non-obvious causes, both cost real time:
+
+- **A double-clicked window vanishes instantly.** The batch hit a FATAL guard and
+  `exit /b` closed the console. Both batches now `pause` at every exit.
+- **`for /f` returns nothing from a quoted path.** `for /f ... in ('py -3 "%~dp0x.py"')`
+  silently yields no output; it needs backquotes: `for /f "usebackq" ... in (`py -3 "%~dp0x.py"`)`.
+  The symptom is a guard that reports "not found" for something that exists.
+
+---
+
+## 9. What is NOT required
+
+- **A GPU.** Everything runs on CPU, slower. The iGPU switch in §2.1 matters only
+  if one is present.
+- **Docker.** LiteLLM runs fine as a `uv` tool.
+- **API keys**, for local-only campaigns. Only the claude and gpt engines, and
+  cloud models behind LiteLLM, need them.
+- **An internet connection at run time**, once models are pulled — local
+  campaigns are fully offline.
