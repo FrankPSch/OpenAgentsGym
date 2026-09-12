@@ -1,0 +1,68 @@
+# LiteLLM — local OpenAI-compatible gateway in front of Ollama.
+#
+# The Claude-CLI integration was removed on 2026-09-11 at the owner's request,
+# and with it the wire-name aliases that mapped recognised Claude model ids onto
+# local models. Those existed only because Claude Code refuses to send a request
+# for a model id it does not know; nothing else needs them, and they made a
+# result row name a model that did not serve it.
+#
+# What remains is a plain local stack: every model is listed under its real name.
+# Any OpenAI-compatible client (aider, Continue.dev, Cline, curl, a Python
+# script) can use it directly.
+#
+#   start:  litellm --config <this file> --port 4000
+#   test :  curl http://127.0.0.1:4000/v1/chat/completions \
+#             -H "Authorization: Bearer sk-oag-local" \
+#             -H "Content-Type: application/json" \
+#             -d '{"model":"qwen3-coder-30b","messages":[{"role":"user","content":"hi"}]}'
+#
+# NO FALLBACKS, deliberately: a fallback silently substitutes one model for
+# another, which would corrupt any measurement taken through this gateway.
+
+model_list:
+
+  - model_name: qwen3-4b
+    litellm_params:
+      model: ollama_chat/qwen3:4b
+      api_base: http://127.0.0.1:11434
+      timeout: 3600
+    model_info: {mode: chat, input_cost_per_token: 0.0, output_cost_per_token: 0.0, supports_function_calling: true}
+
+  - model_name: gpt-oss-20b
+    litellm_params:
+      model: ollama_chat/gpt-oss:20b
+      api_base: http://127.0.0.1:11434
+      timeout: 3600
+    model_info: {mode: chat, input_cost_per_token: 0.0, output_cost_per_token: 0.0, supports_function_calling: true}
+
+  - model_name: qwen3-coder-30b
+    litellm_params:
+      model: ollama_chat/qwen3-coder:30b
+      api_base: http://127.0.0.1:11434
+      timeout: 3600
+    model_info: {mode: chat, input_cost_per_token: 0.0, output_cost_per_token: 0.0, supports_function_calling: true}
+
+  # Same weights, two parameters baked in: num_ctx 8192 and num_gpu 10. See
+  # Modelfile.qwen3-coder-30b-tuned beside this file for the arithmetic. It is a
+  # separate model_name rather than an edit to the one above so that cfg_model
+  # in the results table distinguishes the two: every 30B row so far is an
+  # APIError from the Vulkan allocator refusing a 1 GB buffer at 32768 context,
+  # and rows taken under the new parameters must not be pooled with them.
+  - model_name: qwen3-coder-30b-tuned
+    litellm_params:
+      model: ollama_chat/qwen3-coder:30b-tuned
+      api_base: http://127.0.0.1:11434
+      timeout: 3600
+    model_info: {mode: chat, input_cost_per_token: 0.0, output_cost_per_token: 0.0, supports_function_calling: true}
+
+router_settings:
+  num_retries: 0
+
+litellm_settings:
+  drop_params: true
+  request_timeout: 3600
+  json_logs: true
+
+general_settings:
+  master_key: sk-oag-local
+  store_model_in_db: false

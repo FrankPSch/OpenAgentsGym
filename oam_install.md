@@ -220,10 +220,30 @@ with UTF-8 forced:**
 ```powershell
 $env:PYTHONUTF8 = "1"
 $env:PYTHONIOENCODING = "utf-8"
-litellm --config <path>\config.yaml --port 4000
+litellm --config .\litellm\config.yaml --port 4000
+```
+
+**LiteLLM reads its config once, at startup.** Adding a model to the file does
+nothing to a running proxy: the leg then fails at the gateway, which reads like
+a model failure and is not one. After any change to `litellm/config.yaml`,
+restart it and check what is actually served:
+
+```powershell
+curl.exe http://127.0.0.1:4000/v1/models -H "Authorization: Bearer sk-oag-local"
 ```
 
 ### 3.2 Config
+
+`litellm/config.yaml` in this repository is the live file, not an example of
+one — it is versioned here because it decides what `cfg_model` means in a
+published row. `litellm/Modelfile.qwen3-coder-30b-tuned` sits beside it for the
+same reason: it defines the `qwen3-coder:30b-tuned` tag that `e11` runs on, and
+a row naming a model built from a file nobody kept is a row nobody can
+reproduce. Build it with:
+
+```powershell
+ollama create qwen3-coder:30b-tuned -f .\litellm\Modelfile.qwen3-coder-30b-tuned
+```
 
 Minimal, honest, no fallbacks. A fallback would silently substitute one model
 for another — precisely what `check_model()` forbids for `--fallback-model`,

@@ -1,0 +1,29 @@
+# qwen3-coder:30b with the two parameters that decide whether it loads at all.
+#
+#   ollama create qwen3-coder:30b-tuned -f Modelfile.qwen3-coder-30b-tuned
+#
+# Baked into a derived model rather than set as OLLAMA_* environment, because
+# environment is invisible in the results table: cfg_model would still read
+# qwen3-coder-30b while the run conditions had changed, and the new rows would
+# silently not be comparable with the 132 old ones. A distinct tag makes the
+# change a column instead of a secret.
+#
+# num_ctx 8192, against the 32768 that OLLAMA_CONTEXT_LENGTH sets for EVERY
+# model. From the model's own geometry, read out of /api/show:
+#   48 blocks x 4 KV heads x (128 key + 128 value) x 2 bytes = 96 KB per token
+#   32768 tokens -> 3.0 GB of KV cache, on top of 18 GB of weights
+# That is ~21 GB against a shared-GPU budget of about 15.5 GB on this machine,
+# which is why the Vulkan allocator refused a 1 GB buffer and every 30B leg died
+# with APIError. 8192 tokens costs 0.75 GB instead. For comparison gpt-oss:20b
+# is 24 blocks x 48 KB = 1.5 GB at the same 32768, which is why it never failed.
+#
+# num_gpu 10, against auto. Each block is roughly 18 GB / 48 = 384 MB, so ten
+# blocks is about 3.8 GB placed on the iGPU and the remaining 38 on the CPU.
+# Auto is what tried to place more than the allocator would hand out. Note this
+# does NOT save system memory: on an integrated GPU the VRAM is system RAM, so
+# offload buys compute placement rather than headroom, and prompt processing
+# gains more from it than decode, which is bandwidth-bound either way.
+FROM qwen3-coder:30b
+
+PARAMETER num_ctx 8192
+PARAMETER num_gpu 10
