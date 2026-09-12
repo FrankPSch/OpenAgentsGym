@@ -354,6 +354,38 @@ COLUMNS = [
     # cfg_engine. Rows written before this column existed leave it blank, which is correct --
     # they were all CLAUDE.md, but the row itself did not record that.
     "cfg_entry_file",
+    # --- how the run ended, and how much machinery it used ------------------------------------
+    # Appended for the same reason as cfg_entry_file and under the same rule: never inserted,
+    # nothing above renamed, rows written before them blank. Blank is the honest cell -- it says
+    # this row cannot answer, not that the answer was zero.
+    #
+    # Why these and not the other sixty fields the payloads carry. res_subtype already says
+    # whether a run succeeded; none of the columns said WHY it stopped or WHAT went wrong. A run
+    # that ran out of turns, one that stopped of its own accord and one that died on a provider
+    # error were all distinguishable only through res_hit_turn_cap, which is derived from a cap
+    # that is often unset. On 2026-09-12 four opencode runs were workspace permission rejections
+    # and one was a Vulkan OOM, and every one of them read `APIError` in the table: the
+    # diagnosis had to be reconstructed by hand from stderr.txt.
+    #
+    # res_stop_reason and res_error_name/res_error_status are cross-engine -- claude reports
+    # stop_reason/terminal_reason and api_error_status, opencode reports part.reason and
+    # error.name/error.data.statusCode -- so they are comparable and worth scoring on.
+    "res_stop_reason", "res_error_name", "res_error_status",
+    # Tool calls are what an agent DID, as opposed to how many model calls it took (prf_turns).
+    # opencode names every tool part in its stream; the claude result object does not carry a
+    # count, so this stays blank there rather than being guessed from turns.
+    "res_tool_calls",
+    # The subagent columns already had `spawned`. A methodology that asks for delegation it never
+    # gets looks identical to one that never asks, unless the refusals are visible.
+    "res_subagents_failed", "res_subagents_refused",
+    # claude-only, and deliberately so: these have no counterpart on a local engine and a reader
+    # must not average them across engines. cfg_engine is a campaign constant, so rows are not
+    # pooled across engines anyway and a column blank on every opencode row costs nothing.
+    "res_web_searches", "res_context_window", "res_service_tier",
+    # prf_duration_s is wall-clock for the whole run. prf_api_s is the part of it spent waiting
+    # on the model, so the difference is the harness's own overhead plus tool execution -- the
+    # thing to look at before blaming a model for being slow. prf_ttft_s is time to first token.
+    "prf_api_s", "prf_ttft_s",
 ]
 
 METRIC_COLUMNS = {
@@ -1751,6 +1783,10 @@ def stream_result_record(raw, exit_code=None):
     """
     steps = 0
     finishes = 0
+    tool_calls = 0
+    stop_reason = ""
+    error_name = ""
+    error_status = None
     cost = None
     # None until an event reports the field, so a count that stays None is one the engine never
     # gave rather than one it gave as zero.
@@ -1764,6 +1800,10 @@ def stream_result_record(raw, exit_code=None):
         kind = ev.get("type") or ev.get("event") or ""
         if kind == "step_start":
             steps += 1
+        elif kind == "tool_use":
+            # What the agent DID, as against how many model calls it took. Counted from the
+            # stream because the run record has no such total anywhere.
+            tool_calls += 1
         elif kind == "step_finish":
             finishes += 1
             # `part` is where opencode puts it; the event itself is the fallback so a stream that
@@ -1771,6 +1811,12 @@ def stream_result_record(raw, exit_code=None):
             # totalling nothing, which is the exact way this failed before.
             part = ev.get("part")
             part = part if isinstance(part, dict) else ev
+            # The LAST step's reason is how the run ended. "stop" is a model that chose to stop;
+            # anything else -- a length cap, a tool limit -- is the run being cut short, which
+            # res_subtype cannot distinguish because both reach exit 0.
+            reason = part.get("reason") or ev.get("reason")
+            if isinstance(reason, str) and reason.strip():
+                stop_reason = reason.strip()[:40]
             c = _num(part.get("cost"))
             if c is None:
                 c = _num(ev.get("cost"))
@@ -1804,6 +1850,16 @@ def stream_result_record(raw, exit_code=None):
             name = (err.get("name") or ev.get("name") or data.get("message")
                     or err.get("message") or ev.get("message") or "error")
             error = str(name)[:80]
+            # Kept separately from the subtype as well. res_subtype carries whatever this
+            # resolved to and is what --gate reads, but it collapses every failure into one
+            # string: four workspace permission rejections and a Vulkan OOM all read APIError
+            # on 2026-09-12. The class and the HTTP status are what separate them.
+            error_name = str(err.get("name") or name)[:60]
+            status = _num(data.get("statusCode"))
+            if status is None:
+                status = _num(err.get("statusCode") or ev.get("statusCode"))
+            if status is not None:
+                error_status = status
 
     if error:
         subtype = error
@@ -1827,6 +1883,17 @@ def stream_result_record(raw, exit_code=None):
     rec = {"usage": usage, "subtype": subtype}
     if cost is not None:
         rec["total_cost_usd"] = round(cost, 6)
+    # Absent, not zero, on the same rule as the token counts above: a stream that named no
+    # reason, no error class and no tool use leaves those cells blank rather than asserting
+    # "stopped normally, no errors, did nothing".
+    if stop_reason:
+        rec["stop_reason"] = stop_reason
+    if error_name:
+        rec["error_name"] = error_name
+    if error_status is not None:
+        rec["error_status"] = error_status
+    if tool_calls:
+        rec["tool_calls"] = tool_calls
     if steps or finishes:
         # A stream that produced step events can answer how many; one that produced none cannot,
         # and 0 turns would read as a run that did nothing rather than a run that did not say.
@@ -2254,6 +2321,11 @@ def step9_parse_and_write(cfg, run_dir, row):
                 return (float(entry.get("costUSD") or 0), int(entry.get("outputTokens") or 0))
             key, entry = max(mu.items(), key=spend)
             row["res_model_served"] = entry.get("canonicalModel", key) if isinstance(entry, dict) else key
+            # From the same winning entry, so it describes the model that did the work rather
+            # than the auxiliary one. It is what tk_input has to be read against: 277k tokens
+            # means one thing in a 200k window and another in a 1M one.
+            if isinstance(entry, dict):
+                row["res_context_window"] = entry.get("contextWindow", "")
         else:
             # An endpoint that is not this vendor's own may report no modelUsage at all
             # (cfg_provider, chapter 9): the block is absent, or every costUSD in it is zero and
@@ -2268,6 +2340,48 @@ def step9_parse_and_write(cfg, run_dir, row):
         ms = data.get("duration_ms")
         if isinstance(ms, (int, float)):
             row["prf_duration_s"] = round(ms / 1000.0, 1)
+
+        # --- how it ended ----------------------------------------------------------------
+        # Both engines answer, under different names: claude writes stop_reason (and
+        # terminal_reason when the CLI itself ended the run), opencode's last step carries
+        # `reason`, normalised to stop_reason by stream_result_record.
+        stop = data.get("stop_reason") or data.get("terminal_reason")
+        row["res_stop_reason"] = str(stop).strip()[:40] if isinstance(stop, str) and stop.strip() else ""
+
+        # claude signals an error with is_error plus api_error_status; opencode names the class
+        # and the HTTP status. res_subtype keeps carrying whichever string --gate reads, and
+        # these two say what it actually was.
+        err_name = data.get("error_name")
+        if not err_name and data.get("is_error"):
+            err_name = data.get("api_error_status") or "error"
+        row["res_error_name"] = str(err_name).strip()[:60] if err_name else ""
+        status = data.get("error_status")
+        if status is None:
+            status = data.get("api_error_status")
+        row["res_error_status"] = status if isinstance(status, (int, float)) else ""
+
+        # --- how much machinery ----------------------------------------------------------
+        row["res_tool_calls"] = data.get("tool_calls", "")
+        if isinstance(stats, dict) and stats:
+            row["res_subagents_failed"] = stats.get("failed", "")
+            refused = stats.get("refused")
+            # A dict of reasons (budget, concurrency_limit, depth_limit): the total is what says
+            # a methodology asked for delegation it did not get.
+            row["res_subagents_refused"] = (
+                sum(v for v in refused.values() if isinstance(v, (int, float)))
+                if isinstance(refused, dict) else (refused if isinstance(refused, (int, float)) else ""))
+
+        server_tools = usage.get("server_tool_use")
+        if isinstance(server_tools, dict):
+            row["res_web_searches"] = server_tools.get("web_search_requests", "")
+        row["res_service_tier"] = usage.get("service_tier", "")
+
+        api_ms = data.get("duration_api_ms")
+        if isinstance(api_ms, (int, float)):
+            row["prf_api_s"] = round(api_ms / 1000.0, 1)
+        ttft = data.get("ttft_ms")
+        if isinstance(ttft, (int, float)):
+            row["prf_ttft_s"] = round(ttft / 1000.0, 2)
 
     with open(run_dir / "results_run.csv", "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh, lineterminator="\n")

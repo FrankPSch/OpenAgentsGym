@@ -31,6 +31,8 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <line class="axis" x1="58" y1="80" x2="58" y2="440"/>
 <text class="ax" x="418" y="473" text-anchor="middle">cost (USD)</text>
 <text class="ax" x="20" y="260" text-anchor="middle" transform="rotate(-90 20 260)">score</text>
+<circle class="pt" cx="170.85" cy="414.8" r="3.2"/>
+<text class="lb" x="175.85" y="410.8">00</text>
 <circle class="pt" cx="172.8" cy="425.6" r="3.2"/>
 <text class="lb" x="177.8" y="421.6">00</text>
 <text class="ttl" x="58" y="532">p04_python_xlarge  &#8212;  .llm_config.e03_claude_opus_5</text>
@@ -414,7 +416,7 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <line class="axis" x1="58" y1="2410" x2="58" y2="2770"/>
 <text class="ax" x="418" y="2803" text-anchor="middle">cost (USD)</text>
 <text class="ax" x="20" y="2590" text-anchor="middle" transform="rotate(-90 20 2590)">score</text>
-<polyline class="front" points="58,2770 58,2770 58,2689.54 58,2462.2 58,2454.28 58,2441.32"/>
+<polyline class="front" points="58,2770 58,2770 58,2689.54 58,2462.2 58,2457.88 58,2454.28 58,2441.32"/>
 <circle class="pt" cx="58" cy="2770" r="3.2"/>
 <text class="lb" x="63" y="2766">00</text>
 <circle class="pt" cx="58" cy="2770" r="3.2"/>
@@ -423,8 +425,10 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <text class="lb" x="63" y="2685.54">00</text>
 <circle class="pt" cx="58" cy="2462.2" r="3.2"/>
 <text class="lb" x="63" y="2458.2">00</text>
+<circle class="pt" cx="58" cy="2457.88" r="3.2"/>
+<text class="lb" x="42.2" y="2453.88">00</text>
 <circle class="pt" cx="58" cy="2454.28" r="3.2"/>
-<text class="lb" x="42.2" y="2450.28">00</text>
+<text class="lb" x="76.8" y="2450.28">00</text>
 <circle class="pt" cx="58" cy="2441.32" r="3.2"/>
 <text class="lb" x="63" y="2437.32">00</text>
 <text class="ttl" x="58" y="2862">p03_python_large  &#8212;  .llm_config.e06_local_gptoss_20b</text>
