@@ -131,7 +131,13 @@ echo ============ SUMMARY ============
 type "%SUMMARY%"
 echo.
 echo Logs: %LOGDIR%\
-echo Rows are NOT consolidated. Run: py -3 run_master.py --consolidate
+echo.
+REM Every other batch that runs a SET of pairs merges its rows itself -- the
+REM --matrix entry points call consolidate() internally, and the smoke/turbo/
+REM selected batches call rebuild_results_table.bat. This one printed a
+REM reminder instead, so a finished matrix left its rows in run directories
+REM and the published table unchanged until someone noticed.
+call "%~dp0rebuild_results_table.bat"
 echo.
 pause
 exit /b 0
