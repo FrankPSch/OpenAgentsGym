@@ -145,10 +145,12 @@ Working apparatus, early results. Read before quoting a number:
 
 - **Windows only.** The harness runs elsewhere, but the interpreter pin behaves differently and a
   non-Windows run is a smoke test of the plumbing, not a measurement.
-- **Three engines, one of them measured.** `ENGINE` accepts `claude`, `opencode` and `gpt`.
-  `claude` is the reference engine and every published row comes from it. `opencode` (a
-  model-agnostic CLI, pointed at any OpenAI-compatible endpoint) is implemented and has produced
-  scored rows against local models. `gpt` (the `codex` CLI) is **structural only** — its
+- **Three engines, two of them measured.** `ENGINE` accepts `claude`, `opencode` and `gpt`.
+  `claude` is the reference engine and most published rows come from it. `opencode` (a
+  model-agnostic CLI, pointed at any OpenAI-compatible endpoint) has been run end to end and
+  produces scored rows against local models; its one unobserved part is cost arithmetic on a paid
+  model, since every opencode run so far used a model priced at zero. `gpt` (the `codex` CLI) is
+  **structural only** — its
   subcommand, flags, stdout shape and model rule are documentation-derived and have never been
   executed; a run aborts with exit 6 until the CLI is installed and the registry row corrected
   against observed behaviour. The coupling stays confined to `run_master.py`: the methodologies,

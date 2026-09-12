@@ -191,20 +191,24 @@ ENGINES = {
         "allowed_tools": False,
         "launch_style": "opencode",
         "result_style": "opencode_stream",
-        # Still False, but for a narrower reason than before. opencode 1.18.30 is now installed,
-        # and the launch line and the stdout contract HAVE been observed against it: `run
-        # --format json -m provider/model` with the prompt positional runs, writes
-        # newline-delimited JSON, and exits 0 clean / 1 failed. stream_result_record was rewritten
-        # against that capture and two of its assumptions turned out to be wrong (accounting is
-        # nested under `part`, and no event carries a model id at all).
+        # True since 2026-09-12. opencode 1.18.30 has now been run end to end through this
+        # harness -- project, methodology, oracle, row -- twenty times across p01_python_small
+        # and p03_python_large with all three local models. The launch line and the stdout
+        # contract were observed first (`run --format json -m provider/model`, prompt
+        # positional, newline-delimited JSON, exit 0 clean / 1 failed), and
+        # stream_result_record was rewritten against that capture when two of its assumptions
+        # proved wrong: accounting is nested under `part`, and no event carries a model id.
         #
-        # What has NOT happened is an end-to-end run of this harness under ENGINE=opencode: no
-        # project, no methodology, no oracle, no row. The observation was of the CLI, not of the
-        # campaign around it, and the parts this row cannot yet vouch for are the ones only a real
-        # run exercises -- whether AGENTS.md is picked up from the workspace, whether the agent's
-        # own test run works without --add-dir, what a long multi-turn stream costs to accumulate.
-        # Treat the first campaign as a bring-up and do not publish its rows beside claude rows.
-        "tested": False,
+        # What the campaign then settled, which the CLI capture could not: AGENTS.md IS picked
+        # up from the workspace (cfg_entry_file records it on every row), the agent's own test
+        # run works without --add-dir, verification and scoring produce real values (0.953 on
+        # p01 with qwen3-4b), and a 24-turn stream accumulates its token counts correctly
+        # (tk_input in the hundreds of thousands).
+        #
+        # One thing is still unobserved and is NOT what this flag covers: every opencode run so
+        # far used a local model priced at zero, so tk_cost_usd has never been non-zero on this
+        # engine. The per-step accounting is exercised; the arithmetic on a paid model is not.
+        "tested": True,
         # tools.txt is not translated. Its grammar is the other CLI's, opencode has no equivalent
         # allowlist on the run line, and a silent partial translation would make cfg_tools claim
         # a restriction the run did not have. An arm that ships tools.txt still records it in
