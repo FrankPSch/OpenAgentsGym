@@ -1,6 +1,6 @@
 @echo off
 REM ===========================================================================
-REM The engine matrix for 02_python_medium, with the no-methodology anchor.
+REM The engine matrix for 10_xarray_7233, with the no-methodology anchor.
 REM
 REM This is a one-line wrapper. The matrix itself - preflight, the billed
 REM opt-in, the per-leg unload, the verdict and the consolidation - lives in
@@ -10,12 +10,12 @@ REM fixed, and the split into per-project files exists only so a project can
 REM be started by double-clicking rather than by remembering an argument.
 REM
 REM USAGE
-REM   run_engine_matrix.project_02.bat            local engines, 00_empty
-REM   run_engine_matrix.project_02.bat 29_x       another methodology
-REM   run_engine_matrix.project_02.bat /billed    also the two cloud legs
+REM   run_engine_matrix.project_10.bat            local engines, 00_empty
+REM   run_engine_matrix.project_10.bat 29_x       another methodology
+REM   run_engine_matrix.project_10.bat /billed    also the two cloud legs
 REM
 REM Anything passed here is forwarded, so the first positional argument lands
 REM on the methodology and /billed is recognised wherever it sits.
 REM ===========================================================================
-call "%~dp0run_engine_matrix.bat" 02_python_medium %*
+call "%~dp0run_engine_matrix.bat" 10_xarray_7233 %*
 exit /b %ERRORLEVEL%
