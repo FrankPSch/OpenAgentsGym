@@ -11,6 +11,7 @@
 .llm_config.e01_claude_haiku_4_5 .. .llm_config.e04_claude_fable_5_1 (chapter 9); the default is .llm_config.e02_claude_sonnet_5, and a
 relative path is resolved against the repository root.
 """
+import ast
 import csv
 import json
 import os
@@ -386,6 +387,19 @@ COLUMNS = [
     # on the model, so the difference is the harness's own overhead plus tool execution -- the
     # thing to look at before blaming a model for being slow. prf_ttft_s is time to first token.
     "prf_api_s", "prf_ttft_s",
+    # --- did the code even parse? -------------------------------------------------------------
+    # res_score cannot tell "wrote code that fails some tests" from "wrote a file that does not
+    # compile", and the difference is the whole diagnosis. On 2026-09-12 gpt-oss-20b worked 22
+    # minutes on p02_python_medium, made 12 tool calls, wrote 39 lines -- and left an unterminated
+    # triple-quoted string on line 69 of intervals.py. Nothing imported, pytest reported
+    # `collection failure`, and the row read score=0.0000 exactly like a model that produced
+    # nothing. One is a capability limit; the other is an emission defect a single retry would
+    # fix, and a table that spells them the same way hides the cheapest improvement available.
+    #
+    # res_syntax_ok is measured directly with ast.parse over the workspace, not inferred from the
+    # test result: a suite can fail to collect for reasons that are not syntax (a missing import,
+    # a module-level exception), and those are a different finding again.
+    "res_syntax_ok", "res_syntax_error", "res_collection_errors",
 ]
 
 METRIC_COLUMNS = {
@@ -2261,6 +2275,12 @@ def step8_tamper_and_verify(project, template, workspace, run_dir):
             "res_verification_passed": passed,
             "res_verification_error": str(rc == 2).lower(),
             "res_verification_exit": rc}
+    # Read from the workspace as the agent left it, in the same step that scores it, so the two
+    # always describe the same bytes.
+    ok, err = workspace_syntax(workspace)
+    out["res_syntax_ok"] = ok
+    out["res_syntax_error"] = err
+    out["res_collection_errors"] = collection_errors(run_dir)
     out.update(read_metrics(run_dir))
     # The pre-flight metrics are already on disk; lifting the baseline SLOC into the row is what
     # makes res_sloc readable without opening the run directory -- 210 SLOC means one thing on a
@@ -2271,6 +2291,53 @@ def step8_tamper_and_verify(project, template, workspace, run_dir):
     except (KeyError, TypeError, ValueError):
         out["res_sloc_delta"] = ""
     return out
+
+
+def workspace_syntax(workspace):
+    """(ok, first_error) for every .py the agent left behind, by parsing them.
+
+    ast.parse rather than importing: importing runs module-level code, which is the agent's code
+    and must not execute inside the harness. Parsing answers exactly the question asked -- is
+    this a Python file at all -- and answers it for the tests the agent may have broken as well
+    as for the source it wrote.
+
+    .venv and __pycache__ are skipped: they are not the agent's work, and a vendored package with
+    a deliberate syntax error for a version guard would otherwise fail a run that is fine.
+    """
+    skip = {".venv", "__pycache__", ".git", ".pytest_cache"}
+    worst = ""
+    seen = 0
+    for path in sorted(Path(workspace).rglob("*.py")):
+        if any(part in skip for part in path.parts):
+            continue
+        seen += 1
+        try:
+            ast.parse(path.read_text(encoding="utf-8", errors="replace"))
+        except SyntaxError as exc:
+            if not worst:
+                worst = "%s:%s %s" % (path.name, exc.lineno, (exc.msg or "")[:60])
+        except (OSError, ValueError) as exc:
+            if not worst:
+                worst = "%s: %s" % (path.name, str(exc)[:60])
+    if not seen:
+        return "", ""
+    return str(not worst).lower(), worst
+
+
+def collection_errors(run_dir):
+    """How many test files pytest could not even collect, from its own junit.xml.
+
+    Distinct from a failing test: a collection error means the file never ran. Counted rather
+    than flagged, because one unimportable module among ten is a different state from all ten.
+    """
+    path = Path(run_dir) / "junit.xml"
+    if not path.is_file():
+        return ""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    return len(re.findall(r"<error\b", text))
 
 
 def step9_parse_and_write(cfg, run_dir, row):

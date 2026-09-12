@@ -34,21 +34,39 @@ import run_master as R
 
 NEW = ["res_stop_reason", "res_error_name", "res_error_status", "res_tool_calls",
        "res_subagents_failed", "res_subagents_refused", "res_web_searches",
-       "res_context_window", "res_service_tier", "prf_api_s", "prf_ttft_s"]
+       "res_context_window", "res_service_tier", "prf_api_s", "prf_ttft_s",
+       "res_syntax_ok", "res_syntax_error", "res_collection_errors"]
 
 
 def derive(run_dir, engine):
-    """The new columns for one run, from its own result.json, or {} if it cannot say."""
+    """The new columns for one run, from the artefacts that run left behind.
+
+    Two independent sources, and either can answer alone: result.json for what the engine
+    reported, and the workspace plus junit.xml for what the code turned out to be. A run whose
+    result.json is unparsable can still say whether its Python parses.
+    """
+    out = {}
+
+    # Workspace-derived first, because it does not depend on the engine's stdout at all.
+    ws = os.path.join(run_dir, "project_workspace")
+    if os.path.isdir(ws):
+        ok, err = R.workspace_syntax(ws)
+        if ok:
+            out["res_syntax_ok"] = ok
+        if err:
+            out["res_syntax_error"] = err
+    ce = R.collection_errors(run_dir)
+    if ce != "":
+        out["res_collection_errors"] = ce
+
     rj = os.path.join(run_dir, "result.json")
     if not os.path.isfile(rj):
-        return {}
+        return out
     raw = open(rj, encoding="utf-8", errors="replace").read()
     code = R.read_exit_code(R.Path(rj))
     rec = R.stream_result_record(raw, code) if engine == "opencode" else R.result_record(raw)
     if not isinstance(rec, dict):
-        return {}
-
-    out = {}
+        return out
     stop = rec.get("stop_reason") or rec.get("terminal_reason")
     if isinstance(stop, str) and stop.strip():
         out["res_stop_reason"] = stop.strip()[:40]
