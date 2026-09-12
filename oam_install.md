@@ -37,6 +37,60 @@ This cost an afternoon on 2026-09-11. Do not skip it.
 
 ---
 
+## 0.5 Prerequisites and the repository
+
+Assumed present, and used without being installed anywhere below. Check each
+before starting; a missing one surfaces three sections later as something that
+looks unrelated.
+
+```powershell
+git --version          # the repository, and the harness records the CLI version
+node --version         # opencode ships as an npm package
+npm.cmd --version      # note .cmd - see 4.1
+uv --version           # LiteLLM is installed as a uv tool
+```
+
+| Missing | Install |
+|---|---|
+| git | `winget install --id Git.Git --silent` |
+| node + npm | `winget install --id OpenJS.NodeJS.LTS --silent` |
+| uv | `winget install --id astral-sh.uv --silent` |
+
+Open a **new** terminal afterwards: winget updates PATH for future processes,
+not the one you are typing in. That alone explains most "it says it is not
+installed but I just installed it" reports.
+
+### The repository
+
+```powershell
+git clone https://github.com/FrankPSch/OpenAgentsGym.git
+cd OpenAgentsGym
+```
+
+**Do not put it under a folder that syncs to the cloud.** `local/` is
+git-ignored but not sync-ignored, and every run builds its own virtual
+environment inside it — a campaign then uploads tens of thousands of small
+files. If it must live in a synced folder, exclude `local/` in the sync client.
+
+**No `CLAUDE.md` or `AGENTS.md` may exist in any parent directory** of the
+clone. Both CLIs walk upwards and would load it into every run; the pre-flight
+aborts rather than measure it (chapter 15).
+
+### Disk
+
+| | |
+|---|---|
+| three local models | ~35 GB in `%USERPROFILE%\.ollama` |
+| opencode binary | ~180 MB |
+| Python 3.10 + uv tools | ~1 GB |
+| each run's venv | ~50 MB, under `local/runs/`, kept until deleted |
+
+A 43-arm campaign leaves a couple of GB of run directories behind. They are the
+evidence for the rows, so do not delete them casually — but they are also why
+`local/` must not sync.
+
+---
+
 ## 1. Python 3.10 — required, not optional
 
 Projects pin their interpreter (`.environment` → `python=3.10`) and
@@ -390,12 +444,100 @@ launchable `.exe`; `claude` present; `py -3.10` present; Ollama and LiteLLM
 answering; all three model names served by the gateway; the opencode provider
 config present; every `.llm_config.*` readable.
 
-`RESULT: READY` means a run will reach a model. Then:
+`RESULT: READY` means a run will reach a model — not that a run will produce a
+usable row. Fix every FAIL before going further; a leg that starts without its
+model reaching memory still writes a row, and that row scores 0.0000.
+
+---
+
+## 7.5 The first campaign
+
+Do this in order. Each step answers a question the next one assumes.
+
+### Step 1 — the pre-flight (free, runs nothing)
 
 ```cmd
-run_engine_matrix.bat           local engines only, free
-run_engine_matrix.bat /billed   adds claude-sonnet-5 (~$0.08)
+check_engine_matrix.bat
 ```
+
+Expect `RESULT: READY`. What it proves: opencode resolves to a launchable
+`.exe`, `py -3.10` is registered, Ollama and LiteLLM answer, the gateway serves
+every model the configs name, and every `.llm_config.*` is readable.
+
+What it does **not** prove is in §7 above — for `gpt` it only checks that
+`codex` is on PATH.
+
+### Step 2 — the smallest matrix
+
+```cmd
+run_engine_matrix.bat
+```
+
+`01_python_small` × `00_empty` — the smallest project with the no-methodology
+anchor — across the local models, plus the `gpt` leg. The claude leg is opt-in
+behind `/billed`, because it costs money and the question here is whether the
+apparatus works.
+
+Budget roughly an hour: a 20B model on an integrated GPU takes minutes per leg,
+and an unproven one is bounded only by `CLI_TIMEOUT_S`.
+
+Read the summary, not the exit codes. Each leg prints `PASS` or `FAIL` derived
+from its row — score, subtype, diff lines, verification flag — because
+`run_master` exits 0 for any run that reached a row, **including one that says
+APIError and scores 0.0000**.
+
+Expected on a correctly set-up machine:
+
+```
+opencode_01  exit=0  PASS   gpt-oss-20b
+opencode_02  exit=0  PASS   qwen3-4b
+opencode_03  exit=0  ?      qwen3-coder-30b   - see below
+model_02     skipped        (billed, not requested)
+gpt_02       exit=6  ABORT  codex not installed - expected
+```
+
+`opencode_03` fails with `APIError` on a machine whose integrated GPU cannot
+hold 18 GB of weights: `llama-server reported out-of-memory during startup`.
+It fails identically at every context from 32768 down to 4096, so it is the
+weights, not the KV cache, and no smaller quantisation of that model exists.
+Raise the Intel Shared GPU Memory Override (§2.1 territory, needs a reboot) or
+accept two local models.
+
+### Step 3 — publish the rows
+
+**Rows are not in the results table until this runs.** The matrix writes one
+`results_run.csv` per run directory; the published table is separate.
+
+```cmd
+rebuild_results_table.bat
+```
+
+or equivalently `py -3 run_master.py --consolidate`. It merges every
+`local/runs/*/results_run.csv` into `results_repository.csv`, rewrites
+`results_pareto.svg`, and prints the chapter 16 validity gate.
+
+Two things about it that surprise people:
+
+- **The published table is an input, not only an output.** A row whose run
+  directory no longer exists is kept as it stands — otherwise a fresh clone,
+  which has no run directories, would empty the table on its first
+  consolidation. Consequence: **moving or deleting a run directory does not
+  remove its row.** To drop a row, remove it from `results_repository.csv`.
+- A repeat that aborted has no `results_run.csv` and contributes no row, which
+  is correct but invisible — so the count is printed. A campaign that expected
+  42 rows and got 40 should notice from that line.
+
+### Step 4 — know what you have
+
+One repeat, one project, the no-methodology anchor. That is a bring-up, not a
+measurement: it answers "does this machine produce rows", not "which methodology
+is better". Chapter 17 wants **≥3 repeats** before any arm is compared with
+another, and the validity gate — sabotage below every real methodology — is a
+property of an engine and model pair, not of the repository, so it must be
+re-established for each.
+
+Rows from different engines are not poolable. `cfg_engine` is a campaign
+constant for that reason.
 
 ---
 
