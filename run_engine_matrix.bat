@@ -125,9 +125,11 @@ echo        read from the row itself and not from this code.
 echo     3  python interpreter missing (run_master needs 3.10)
 echo     4  config rejected (a mandatory key blank or unknown in .llm_config)
 echo     6  engine binary missing or unlaunchable (an npm .cmd shim counts)
+echo.
 echo   this batch:
 echo     0  every leg was attempted and reported
 echo     9  preflight refused to start: see the FATAL block, nothing was spent
+echo.
 echo   verdict, from engine_leg.py against the written row:
 echo     PASS   scored above zero and verification passed
 echo     FAIL   a row exists but it does not clear the bar
