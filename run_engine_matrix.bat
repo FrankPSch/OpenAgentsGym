@@ -30,7 +30,7 @@ cd /d "%~dp0"
 REM --- parameters ------------------------------------------------------------
 set "PROJECT=p01_python_small"
 set "METHODOLOGY=m00_empty"
-set "BILLED=0"
+set "BILLED=1"
 
 set "POS=0"
 :parseargs
@@ -172,10 +172,21 @@ REM after use, so leg N+1 would otherwise start while leg N's weights are still
 REM in memory. On 2026-09-11 that made gpt-oss-20b run 2.6x slower and produce
 REM zero edits, then killed the 30B with APIError.
 set "LEGMODEL="
+set "LEGENGINE="
 for /f "usebackq tokens=2 delims==" %%M in (`findstr /b "MODEL=" ".llm_config.%CFG%"`) do set "LEGMODEL=%%M"
+for /f "usebackq tokens=2 delims==" %%E in (`findstr /b "ENGINE=" ".llm_config.%CFG%"`) do set "LEGENGINE=%%E"
 if defined LEGMODEL (
+  REM The unload runs for every leg: a local model left resident by the previous
+  REM leg holds its weights whether or not THIS leg wants them back.
   py -3 "%~dp0engine_leg.py" unload "!LEGMODEL!"
-  echo   load:   !LEGMODEL!  ^(pulled into RAM on its first request^)
+  REM Only a local model is pulled into RAM. Saying "pulled into RAM" before a
+  REM claude or gpt leg claimed memory for a model that runs on someone else's
+  REM hardware, and read as though two models were about to be loaded at once.
+  if /i "!LEGENGINE!"=="opencode" (
+    echo   load:   !LEGMODEL!  ^(local, pulled into RAM on its first request^)
+  ) else (
+    echo   model:  !LEGMODEL!  ^(cloud, nothing is loaded on this machine^)
+  )
 )
 
 echo   start %TIME%

@@ -1,4 +1,4 @@
-GSD-B/L. 39_gsd_surface_full cut to what a single run can obey: the same phase cycle, the same gate
+GSD-B/L. m39_gsd_surface_full_outdated cut to what a single run can obey: the same phase cycle, the same gate
 taxonomy and the same producer-never-certifies rule, with 33 roles collapsed to 8 and the phase
 artefact set cut to four (CONTEXT, PLAN, SUMMARY, VERIFY). Composed 2026-09 from 39.
 
@@ -16,7 +16,7 @@ enforcement do not.
 
 Read against 39, the question is whether 25 dropped roles and 59 dropped verbs cost anything
 measurable on one task, or whether the breadth was only ever reachable across a milestone. Read
-against 42_gsd_core_lean, the question is whether four artefacts under `.planning/` behave differently
+against m42_gsd_core_lean_outdated, the question is whether four artefacts under `.planning/` behave differently
 from three under `.work/`.
 
 Adherence: `res_artifacts` contains CONTEXT, PLAN, SUMMARY and VERIFY, no more;

@@ -135,6 +135,7 @@ Everything is a directory listing: a new methodology or project joins the matrix
 | [`oam_targetpicture.md`](oam_targetpicture.md) | the specification — defines behaviour; the source of truth |
 | [`oam_manual.md`](oam_manual.md) | how to use it, extend a project, extend a methodology, read the columns |
 | [`oam_install.md`](oam_install.md) | bringing a machine up — every dependency, its verification command, and the trap it hides |
+| [`NAMING.md`](NAMING.md) | how projects, methodologies and engines are named and numbered, and the engine register |
 
 ---
 

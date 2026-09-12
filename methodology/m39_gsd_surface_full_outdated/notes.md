@@ -1,4 +1,4 @@
-GSD-S. The same framework as 41_gsd_core_full, transcribed at its full published surface: all 33
+GSD-S. The same framework as m41_gsd_core_full_outdated, transcribed at its full published surface: all 33
 agent roles and all 67 commands kept as roles and verbs, against 41's fifteen. The surface area is
 the variable; nothing else is.
 

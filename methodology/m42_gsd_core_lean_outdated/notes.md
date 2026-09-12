@@ -1,4 +1,4 @@
-GSD-L. 41_gsd_core_full cut to a single run: the same cycle and the same producer-never-
+GSD-L. m41_gsd_core_full_outdated cut to a single run: the same cycle and the same producer-never-
 certifies rule, with fifteen roles collapsed to six and eight artefacts to three (`.work/SPEC.md`,
 `PLAN.md`, `REPORT.md`). Composed 2026-09 from 41 plus the ladder's own rungs — the finding schema
 and the four-things-block ceiling from m30_delivery_kernel, the never-violate list from
