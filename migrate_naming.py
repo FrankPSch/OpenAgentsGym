@@ -1,25 +1,29 @@
 """One-time migration to the p##/m##/e## naming standard. See NAMING.md.
 
-Run once:  py -3 migrate_naming.py --dry-run     # report, change nothing
-           py -3 migrate_naming.py --apply       # rename and rewrite
+    py -3 migrate_naming.py --dry-run     # report, change nothing
+    py -3 migrate_naming.py --apply       # rename and rewrite
 
-It is kept in the repository after the fact as the evidence for a commit that
-rewrites recorded history: the 112 rows in results_repository.csv and the run
+Kept in the repository after the fact as the evidence for a commit that
+rewrites recorded history: the rows in results_repository.csv and the run
 directories they point at were renamed by this script and by nothing else.
+It is idempotent - a second run reports nothing and changes nothing.
 
 Method, and why it is one pass:
 
-  Every old name is put into ONE alternation, longest first, and applied with a
+  Every old name goes into ONE alternation, longest first, applied with a
   single re.sub per file. A left-to-right single pass cannot rescan its own
   output, which is what makes the tricky cases fall out for free:
 
     "00_empty_01_python_small"  -> "m00_empty_p01_python_small"
-        (run directory names are just concatenations; each part matches once)
-    "m00_empty"                 stays "m00_empty"
-        (a second pass would have made it "mm00_empty")
+        (run directory names are concatenations; each half matches once)
     "run_all_model_03.bat"      -> "run_all_e03.bat"
         (the whole filename is in the alternation and is longer than
          "model_03", so longest-first wins and the engine token never fires)
+
+Three things had to be learned the hard way, each of them a re-run hazard.
+They are described at the function that fixes them: build_maps reads BARE
+names, replacer refuses a match preceded by a letter, and SELF_EXCLUDE keeps
+the script from rewriting its own map.
 """
 import argparse
 import os
@@ -45,7 +49,7 @@ PROJECTS = {
 }
 
 # 00_empty and 00_sabotage both claimed 00. A number that identifies two things
-# defeats the purpose, so sabotage takes the next free number.
+# identifies neither, so sabotage takes the next free number.
 METHODS = {"00_sabotage": "m47_sabotage"}
 
 # The family token is the ENGINE as the registry knows it: claude, gpt, and
@@ -79,36 +83,67 @@ for _old, _new in PROJECTS.items():
     BATCHES["run_engine_matrix.project_%s.bat" % _old.split("_")[0]] = (
         "run_engine_matrix.%s.bat" % _new.split("_")[0])
 
+# These two files are ABOUT the old names and must keep them. This script holds
+# every old name as a map key, and the first run duly rewrote its own keys to
+# the new names - after which a second run believed projects/p00_fail still
+# needed renaming to projects/p00_fail and git refused to move a directory into
+# itself. NAMING.md documents the same mapping and would rot the same way.
+SELF_EXCLUDE = {"migrate_naming.py", "NAMING.md"}
+
 
 def build_maps():
-    """Complete the methodology map from what is on disk, idempotently.
+    """Complete the methodology map from disk, reading BARE names.
 
-    The first version read the directory and mapped every entry to "m" + entry.
-    Re-run after a partial migration that had already renamed the directories,
-    it happily produced m00_empty -> mm00_empty and renamed 18 run directories
-    to run_mm00_empty_pp01_python_small_... Anything already carrying its kind
-    letter is therefore skipped, so a second run is a no-op.
+    An entry already carrying its kind letter is stripped back before being
+    mapped, so m00_empty yields 00_empty -> m00_empty and never
+    m00_empty -> mm00_empty.
+
+    The first version mapped whatever it found to "m" + itself; re-run over an
+    already-migrated tree it renamed 18 run directories to
+    run_mm00_empty_pp01_python_small_... Skipping already-prefixed entries was
+    the second wrong answer: it dropped 00_empty from the map entirely, so a
+    directory still called run_00_empty_01_python_small_... had its project
+    half renamed and its methodology half left alone. Stripping to the bare
+    name keeps the entry AND makes the map idempotent.
     """
     for name in sorted(os.listdir(os.path.join(ROOT, "methodology"))):
-        if re.match(r"^m\d\d_", name):
-            continue
-        if name not in METHODS:
-            METHODS[name] = "m" + name
+        bare = re.sub(r"^m+(?=\d\d_)", "", name)
+        if bare not in METHODS:
+            METHODS[bare] = "m" + bare
     renamed = dict(PROJECTS)
     renamed.update(METHODS)
     renamed.update(ENGINES)
-    dupes = [v for v in set(renamed.values()) if list(renamed.values()).count(v) > 1]
+
+    # Two keys may share a target legitimately when one is the target's own
+    # bare form - the entry that makes a re-run a no-op. 00_sabotage and
+    # 47_sabotage both point at m47_sabotage for that reason: the first is the
+    # renumber, the second the identity. A real collision is two DIFFERENT
+    # things claiming one name, so identities are excluded before checking.
+    claims = {}
+    for k, v in renamed.items():
+        if v == v[0] + k:
+            continue
+        claims.setdefault(v, []).append(k)
+    dupes = {v: ks for v, ks in claims.items() if len(ks) > 1}
     if dupes:
         sys.exit("collision in the map: %s" % dupes)
     return renamed
 
 
 def replacer(renamed):
-    """One alternation, longest first, so a longer name always wins."""
+    """One alternation, longest first, so a longer name always wins.
+
+    The lookbehind is what makes the rewrite idempotent: a bare old name
+    preceded by a letter is already the NEW name, since p01_python_small
+    contains 01_python_small and m00_empty contains 00_empty. Without it a
+    second pass produced pp01_python_small. An old name in a real reference is
+    never preceded by a letter - it follows a separator, a quote, or the start
+    of a line - so nothing legitimate is missed.
+    """
     keys = sorted(list(BATCHES) + list(renamed), key=len, reverse=True)
     table = dict(BATCHES)
     table.update(renamed)
-    pat = re.compile("|".join(re.escape(k) for k in keys))
+    pat = re.compile("(?<![A-Za-z])(?:%s)" % "|".join(re.escape(k) for k in keys))
     return lambda text: pat.sub(lambda m: table[m.group(0)], text)
 
 
@@ -125,6 +160,8 @@ TEXT_SUFFIXES = (".py", ".bat", ".md", ".csv", ".yaml", ".yml", ".json",
 
 
 def is_text(path):
+    if os.path.basename(path) in SELF_EXCLUDE:
+        return False
     return path.endswith(TEXT_SUFFIXES) or os.path.basename(path).startswith(".llm_config.")
 
 
@@ -140,19 +177,22 @@ def main():
     renamed = build_maps()
     sub = replacer(renamed)
 
-    # 1. directories and config files, through git so history follows the file
-    moves = []
+    # 1. directories and config files, through git so history follows the file.
+    #    Every move is guarded on its source still existing. Directories were
+    #    not guarded at first, so a second run asked git to move
+    #    projects/00_fail when only projects/p00_fail was left, and git read
+    #    the surviving destination as a directory to move INTO.
+    candidates = []
     for old, new in sorted(PROJECTS.items()):
-        moves.append(("projects/%s" % old, "projects/%s" % new))
+        candidates.append(("projects/%s" % old, "projects/%s" % new))
     for old, new in sorted(METHODS.items()):
-        moves.append(("methodology/%s" % old, "methodology/%s" % new))
+        candidates.append(("methodology/%s" % old, "methodology/%s" % new))
     for old, new in sorted(ENGINES.items()):
-        src = ".llm_config.%s" % old
-        if os.path.exists(os.path.join(ROOT, src)):
-            moves.append((src, ".llm_config.%s" % new))
+        candidates.append((".llm_config.%s" % old, ".llm_config.%s" % new))
     for old, new in sorted(BATCHES.items()):
-        if os.path.exists(os.path.join(ROOT, old)):
-            moves.append((old, new))
+        candidates.append((old, new))
+    moves = [(o, n) for o, n in candidates
+             if o != n and os.path.exists(os.path.join(ROOT, o))]
 
     print("== %d tracked renames ==" % len(moves))
     for old, new in moves:
@@ -160,48 +200,41 @@ def main():
         if apply:
             git("mv", old, new)
 
-    # 2. file contents: every tracked text file, plus the untracked results
-    #    under local/ that the published table is consolidated from
+    # 2. file contents: every tracked text file, plus the untracked per-run
+    #    results under local/ that the published table is consolidated from
     targets = [p for p in git("ls-files").split("\n") if p and is_text(p)]
     runs_dir = os.path.join(ROOT, "local", "runs")
-    run_rows = []
     if os.path.isdir(runs_dir):
         for d in sorted(os.listdir(runs_dir)):
             f = os.path.join(runs_dir, d, "results_run.csv")
             if os.path.isfile(f):
-                run_rows.append(os.path.relpath(f, ROOT).replace("\\", "/"))
-    targets += run_rows
+                targets.append(os.path.relpath(f, ROOT).replace("\\", "/"))
 
-    changed = 0
-    hits = 0
+    changed = []
     for rel in targets:
         path = os.path.join(ROOT, rel)
         if not os.path.isfile(path):
             continue
         raw = open(path, "rb").read()
         try:
-            text = raw.decode("utf-8")
-            enc = "utf-8"
+            text, enc = raw.decode("utf-8"), "utf-8"
         except UnicodeDecodeError:
-            text = raw.decode("cp1252")
-            enc = "cp1252"
+            text, enc = raw.decode("cp1252"), "cp1252"
         new = sub(text)
         if new != text:
-            changed += 1
-            hits += sum(1 for _ in re.finditer("|".join(
-                re.escape(v) for v in sorted(set(list(BATCHES.values()) +
-                list(renamed.values())), key=len, reverse=True)), new))
+            changed.append(rel)
             if apply:
                 open(path, "wb").write(new.encode(enc))
-    print("\n== %d files rewritten ==" % changed)
+    print("\n== %d files rewritten ==" % len(changed))
+    for rel in changed[:8]:
+        print("   " + rel)
+    if len(changed) > 8:
+        print("   ... and %d more" % (len(changed) - 8))
 
-    # 3. run directories, named <methodology>_<project>_<stamp>_r01
+    # 3. run directories, named <methodology>_<project>_<stamp>_r<nn>
     if os.path.isdir(runs_dir):
-        dir_moves = []
-        for d in sorted(os.listdir(runs_dir)):
-            nd = sub(d)
-            if nd != d:
-                dir_moves.append((d, nd))
+        dir_moves = [(d, sub(d)) for d in sorted(os.listdir(runs_dir))
+                     if sub(d) != d]
         print("== %d run directories renamed ==" % len(dir_moves))
         for old, new in dir_moves[:3]:
             print("   %s -> %s" % (old, new))
