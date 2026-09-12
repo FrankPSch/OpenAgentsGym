@@ -308,13 +308,68 @@ stdout shape are all unverified. A run aborts in pre-flight with **exit 6**
 (`'codex' not found on PATH`) — which is the expected result today, and is itself
 worth recording, since it proves engine dispatch reaches the binary check.
 
-To bring it up: install the Codex CLI, authenticate (ChatGPT login **or** API
-key — same two-column fork as claude in §5), then correct the registry row
-against observed behaviour before trusting any number it produces.
+### 6.1 Install and authenticate
+
+```cmd
+npm.cmd install -g @openai/codex
+```
+
+`npm.cmd`, not `npm`, for the execution-policy reason in §4.1. Check the package
+name against OpenAI's current docs before running it — this line is documented,
+not observed, like everything else in this section.
+
+```powershell
+(Get-Command codex).Source
+codex --version
+```
+
+Then authenticate — `codex login` for a ChatGPT plan, or an API key in the
+environment. **The choice changes two columns**, exactly as it does for claude
+in §5: a subscription login reports no per-run cost, so `tk_cost_usd` is blank
+and `cfg_bound` degrades to `walltime`; an API key populates both. Pick one per
+campaign and do not mix.
+
+### 6.2 What to verify before trusting a single number
+
+Installing it is not bringing it up. The registry row asserts things nobody has
+watched happen, and for `opencode` every one of these answers turned out to
+matter — the documented shape was wrong about where the accounting lives, and
+reading it wrong would have totalled every run at $0.00.
+
+Run one trivial prompt and capture raw stdout:
+
+```cmd
+codex exec --json "reply with the single word OK" > codex_probe.txt 2>&1
+```
+
+Then answer, from the file rather than from documentation:
+
+1. **Is stdout newline-delimited JSON, or one document?** `--json` means one
+   object in many CLIs and a stream in others. The parser branches on this.
+2. **What are the real event `type` values?** The registry assumes a shape; the
+   names decide whether the turn count is right or zero.
+3. **Do the usage fields sit at the top level or nested?** opencode nests them
+   under `part`. A parser reading the wrong level finds nothing and reports a
+   free run.
+4. **Are cost and tokens per-step increments or cumulative running totals?**
+   This needs a *multi-step* run to answer. Summing cumulative values inflates an
+   N-step run by roughly N²/2.
+5. **Which field carries the model actually served?** If none does,
+   `res_model_served` is blank and the guard against silent model substitution
+   does not exist on this engine — which is the case for opencode.
+6. **What is the exit code on success, and on a failure** such as a bad model
+   name? It is the only reliable signal that a stream was truncated.
+
+Correct `ENGINES["gpt"]` against the answers, then flip its `tested` flag. Until
+that flag is true the pre-flight prints a bring-up NOTE on every run, and rows
+from this engine should not be published.
+
+### 6.3 Known gap
 
 Its `model_rule` is `free`: no alias check is applied, so a bare alias that
-silently re-points between campaigns would **not** be caught. That is a gap, not
-a decision.
+silently re-points between campaigns would **not** be caught — unlike
+`anthropic_canonical`, which rejects `opus` in favour of `claude-opus-5`. That is
+a gap, not a decision. Give it a real rule once the id format is observed.
 
 ---
 
@@ -323,6 +378,12 @@ a decision.
 ```cmd
 check_engine_matrix.bat
 ```
+
+**What it does not cover:** for `gpt` it only asks whether `codex` is on PATH.
+Once it is, the check says OK and `RESULT: READY` — while the registry row is
+still unverified. A green pre-flight is therefore *not* permission to trust a
+gpt row; §6.2 is. The pre-flight checks that a binary can be launched, not that
+the harness understands what comes back from it.
 
 It verifies, and prints FAIL with a reason for each: opencode resolves to a
 launchable `.exe`; `claude` present; `py -3.10` present; Ollama and LiteLLM
