@@ -1,0 +1,50 @@
+# Third engine (ENGINE=gpt, the `codex` CLI), capability level 2 -- the counterpart to
+# .llm_config.model_02, which is claude at level 2. Same project, same methodology, same level:
+# the pair exists so the two first-party vendor engines can be compared against each other and
+# against opencode.
+#
+# STATUS: UNEXECUTED. `codex` is not installed on this machine (`where.exe codex` finds nothing),
+# so a run under this file aborts in the pre-flight with exit 6 before any tokens are spent. That
+# abort IS the expected result today and is worth recording -- it proves the engine dispatch
+# reaches the binary check rather than failing earlier. Everything below the ENGINE line is
+# documentation-derived and unverified: the subcommand, the flag names, the prompt position and
+# the stdout shape were read from docs, never observed. Expect corrections on first bring-up.
+#
+# To make this file live: install the Codex CLI, authenticate it (ChatGPT login or an API key),
+# then re-run. Note the auth choice changes the columns -- see MAX_BUDGET_USD below.
+
+ENGINE=gpt
+MODEL=gpt-5-codex
+# MODEL: the registry's model_rule for this engine is `free` -- no alias check is applied, which
+# is a gap rather than a decision. There is no canonical-id rule for OpenAI ids equivalent to the
+# claude one, so a bare alias that silently re-points between campaigns would NOT be caught here.
+# Verify the id against the installed CLI before trusting a row from this file.
+PROVIDER=
+BASE_URL=
+# Blank: this engine talks to its vendor natively, exactly as ENGINE=claude does. A gateway would
+# be a different experiment (that is what ENGINE=opencode is for).
+EFFORT=medium
+# Unverified whether codex exposes an equivalent knob, and if so under which name. Until observed,
+# treat cfg_effort on these rows as declared-not-delivered, like opencode.
+MAX_TURNS=60
+MAX_BUDGET_USD=4.00
+# Whether this binds depends on the AUTH MODE, not on the engine:
+#   ChatGPT login -> no per-run cost is reported -> cfg_bound degrades to walltime, tk_cost_usd blank
+#   API key       -> cost reported per run       -> cfg_bound=usd, comparable with claude API rows
+# This is the same fork claude has, for the same reason. Pick one per campaign and do not mix.
+REPEATS=1
+CLAUDE_CONFIG_DIR=
+# MUST stay blank. This engine's config-dir variable is CODEX_HOME, not CLAUDE_CONFIG_DIR; a value
+# here aborts rather than silently repointing codex's account directory.
+
+REVIEW_PASS=none
+# none, and it must be: the review pass builds a claude launch line and is not routed through the
+# registry, so it aborts (exit 6) on any non-claude engine.
+REVIEW_MAX_BUDGET_USD=1.00
+REVIEW_MODEL=
+REVIEW_CMD=
+REVIEW_PROMPT=
+REVIEW_WEIGHT=1
+REVIEW_FEEDBACK=0
+FIX_MODEL=
+BEST_OF_N=1
