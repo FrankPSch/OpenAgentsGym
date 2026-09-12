@@ -68,11 +68,16 @@ def unload(_model=None):
             break
         time.sleep(2)
     after = _resident()
-    print("   resident before=%s after=%s"
-          % (", ".join(before) or "none", ", ".join(after) or "none"))
-    if after:
-        print("   WARNING: models still resident - the next leg starts with"
-              " less memory than it needs")
+    # One sentence, not two raw states. "before=none after=none" was printed
+    # next to the load line and read as a riddle: both halves say none because
+    # nothing was held and nothing is held, which is the good case.
+    if not before:
+        print("  unload: nothing was resident, memory was already free")
+    elif not after:
+        print("  unload: evicted %s, memory now free" % ", ".join(before))
+    else:
+        print("  unload: evicted %s but %s is STILL resident - this leg starts"
+              " short of memory" % (", ".join(before), ", ".join(after)))
     return 0
 
 

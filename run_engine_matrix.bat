@@ -174,9 +174,8 @@ REM zero edits, then killed the 30B with APIError.
 set "LEGMODEL="
 for /f "usebackq tokens=2 delims==" %%M in (`findstr /b "MODEL=" ".llm_config.%CFG%"`) do set "LEGMODEL=%%M"
 if defined LEGMODEL (
-  echo   unloading previous model...
   py -3 "%~dp0engine_leg.py" unload "!LEGMODEL!"
-  echo   loading this leg's model: !LEGMODEL!  ^(pulled into RAM on its first request^)
+  echo   load:   !LEGMODEL!  ^(pulled into RAM on its first request^)
 )
 
 echo   start %TIME%
