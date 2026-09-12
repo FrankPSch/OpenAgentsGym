@@ -171,10 +171,26 @@ REM Evict whatever is resident before starting. Ollama holds a model for ~5 min
 REM after use, so leg N+1 would otherwise start while leg N's weights are still
 REM in memory. On 2026-09-11 that made gpt-oss-20b run 2.6x slower and produce
 REM zero edits, then killed the 30B with APIError.
+REM /offline, because findstr REFUSES a file carrying the offline attribute and
+REM says so on stderr instead of reading it:
+REM   FINDSTR: Dateien mit Offlineattribut wurden uebersprungen.
+REM A OneDrive-synced tree sets that attribute, and it survived the move out of
+REM OneDrive until the files were rehydrated. On 2026-09-12 that emptied
+REM LEGMODEL, so the whole block below was skipped in silence: no eviction
+REM before a leg, and no line saying so.
 set "LEGMODEL="
 set "LEGENGINE="
-for /f "usebackq tokens=2 delims==" %%M in (`findstr /b "MODEL=" ".llm_config.%CFG%"`) do set "LEGMODEL=%%M"
-for /f "usebackq tokens=2 delims==" %%E in (`findstr /b "ENGINE=" ".llm_config.%CFG%"`) do set "LEGENGINE=%%E"
+for /f "usebackq tokens=2 delims==" %%M in (`findstr /offline /b "MODEL=" ".llm_config.%CFG%"`) do set "LEGMODEL=%%M"
+for /f "usebackq tokens=2 delims==" %%E in (`findstr /offline /b "ENGINE=" ".llm_config.%CFG%"`) do set "LEGENGINE=%%E"
+REM Say it rather than skip it. An unread config is not a reason to abort - the
+REM run itself reads the file through python and is unaffected - but it IS the
+REM reason the previous leg's weights are still resident, and that shows up
+REM later as a leg running 2.6x slow for no visible cause.
+if not defined LEGMODEL (
+  echo   WARNING: could not read MODEL= from .llm_config.%CFG% - no eviction ran.
+  echo            The run itself is unaffected; a previous leg's model may still
+  echo            be holding memory.
+)
 if defined LEGMODEL (
   REM The unload runs for every leg: a local model left resident by the previous
   REM leg holds its weights whether or not THIS leg wants them back.
