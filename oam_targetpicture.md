@@ -1818,7 +1818,30 @@ If any of these does not hold, the finding is about the apparatus, not about met
 
 ## 18. Open
 
-- **GPT branch.** Only the *runtime* half of this is open: `PROVIDER`/`BASE_URL` and the four
+- **Second engine — DONE for `opencode`, open for `gpt`.** The engine coupling now sits behind an
+  `ENGINES` registry in `run_master.py` with three rows. Every point the old text listed is
+  parameterised: the `ENGINE` check, the binary name, the entry file (`CLAUDE.md` vs `AGENTS.md`),
+  the launch line, flag validation, the config-dir and base-url variables, the native-provider
+  sentinel, the model-id rule and the result parser. `cfg_entry_file` was appended to the column
+  list; nothing was renamed, so `cfg_user_claude_md` keeps its name and prior rows stay valid.
+
+  `ENGINE=opencode` is **measured**: it produces scored rows against local models through a
+  LiteLLM gateway. Its stdout is newline-delimited JSON whose accounting is nested under `part`
+  (`part.cost`, `part.tokens.*`) and is **per-step, not cumulative** — verified against a stub with
+  known usage, because reading it wrong totals every run at $0.00. No event carries a model id, so
+  `res_model_served` is blank there. `REVIEW_PASS=same_model` aborts (exit 6) on non-claude
+  engines: the review pass builds a claude launch line and is not routed through the registry.
+
+  `ENGINE=gpt` is **structural only and has never been executed** — subcommand, flags, prompt
+  position and stdout shape are documentation-derived, and its `model_rule` is `free`, so an alias
+  that silently re-points between campaigns would not be caught. That is a gap, not a decision.
+
+  Still open, and unchanged by the above: a foreign CLI's token counters are not comparable across
+  vendors, so cost and wall-clock remain the only cross-engine axes; and `MAX_BUDGET_USD` has no
+  portable equivalent, so `cfg_bound` degrades to `walltime` wherever the endpoint reports no cost
+  — which is true of a subscription login on *any* engine, not only of foreign ones.
+
+- **(superseded — kept for the reasoning) GPT branch.** Only the *runtime* half of this is open: `PROVIDER`/`BASE_URL` and the four
   columns they feed (chapter 13) already carry a foreign model served under this runtime, and
   `res_model_served` no longer depends on `modelUsage` alone. What follows needs a second engine.
   A second engine needs its own launch command, flags and usage field names, and

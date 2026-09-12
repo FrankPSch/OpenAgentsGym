@@ -1,0 +1,66 @@
+# Bring-up config for the second engine (chapter 18). NOT a capability level and NOT a campaign:
+# the .llm_config.model_0* files are the four levels a published campaign is run on, and this one
+# exists to find out whether ENGINE=opencode reaches a row at all. Its rows must not be published
+# beside claude rows -- the registry row itself says tested=False, and every run under it is
+# evidence about the harness, not about a methodology.
+# Read once per run by run_master.py (KEY=VALUE, text after # is a comment). Project and
+# methodology come from the command line, not from here.
+
+ENGINE=opencode
+# ENGINE: the registry row (run_master.py, ENGINES) that supplies the binary, the entry file
+# (AGENTS.md, not CLAUDE.md), the launch line and the stdout parser. opencode 1.18.30.
+MODEL=litellm/gpt-oss-20b
+# MODEL: opencode addresses a model as provider/model and the provider half IS the routing, so
+# reject_alias (model_rule=provider_slash_model) demands both halves. `litellm` is the provider
+# defined in the user-level ~/.config/opencode/opencode.json, pointed at the local LiteLLM gateway
+# on 127.0.0.1:4000; `gpt-oss-20b` is the name that gateway serves (Ollama gpt-oss:20b behind it).
+# Chosen over qwen3-4b because the 4b did not return within ~10 min under opencode's system
+# prompt, and over qwen3-coder-30b because that one OOM'd on Vulkan.
+PROVIDER=
+# PROVIDER: blank. opencode has no endpoint of its own (native_provider is ""), so engine_columns
+# fills cfg_provider from the provider half of MODEL -- `litellm`. Declaring it here would only
+# be a second place for the same fact to be written, and a second place for it to disagree.
+BASE_URL=
+# BASE_URL: MUST stay blank. The registry row has base_url_env=None: there is no environment
+# variable to apply it to, so a value here is a hard abort (exit 4) rather than a silently
+# ignored key. The endpoint is addressed through MODEL and configured in opencode.json; that is
+# why cfg_endpoint on these rows reads `native` even though the run is served over HTTP by a
+# local gateway. That cell is a known weakness of this engine's row, not a mistake in this file.
+EFFORT=medium
+# EFFORT: must be one of low|medium|high|xhigh|max or the pre-flight aborts, so it is set -- but
+# opencode's run line carries no effort flag, so nothing is passed and cfg_effort_enforced comes
+# out `false`. The value is declared and NOT delivered; read cfg_effort on these rows as an
+# intention, never as a treatment.
+MAX_TURNS=60
+# MAX_TURNS: not passed to any CLI here either. Used only after the run for
+# res_hit_turn_cap = (num_turns >= MAX_TURNS), where num_turns is the count of step_start events.
+MAX_BUDGET_USD=4.00
+# MAX_BUDGET_USD: must parse as a positive number or the pre-flight aborts, so it is set -- but
+# opencode has no --max-budget-usd, so nothing binds on it. cfg_bound therefore says `walltime`:
+# the only thing that can stop a runaway run is CLI_TIMEOUT_S (3600 s). Kept at the campaign
+# value so the column is comparable, not because it caps anything.
+REPEATS=1
+# REPEATS: one. This is a bring-up, and one observation is enough to answer "does the chain run
+# end to end"; it is nowhere near enough to compare arms (chapter 17 wants >=3).
+CLAUDE_CONFIG_DIR=
+# CLAUDE_CONFIG_DIR: MUST stay blank. opencode has no config-dir knob, so a value here is an
+# abort -- the run would use opencode's own account data while this file claimed otherwise.
+
+REVIEW_PASS=none
+# REVIEW_PASS: none. The review pass builds a claude launch line (-p, --disallowedTools,
+# --mcp-config) and is not routed through the engine registry, so anything but none on this
+# engine would either fail or measure the wrong CLI. Off for the bring-up, by necessity.
+REVIEW_MAX_BUDGET_USD=1.00
+REVIEW_MODEL=
+REVIEW_CMD=
+REVIEW_PROMPT=
+REVIEW_WEIGHT=1
+# The four review keys above are inert while REVIEW_PASS=none; they are kept so this file has the
+# same shape as the level files and a later reviewer experiment is a one-line edit.
+REVIEW_FEEDBACK=0
+# REVIEW_FEEDBACK: 0, and it must be -- 1 with REVIEW_PASS=none is an abort (there is no review
+# to feed back).
+FIX_MODEL=
+BEST_OF_N=1
+# BEST_OF_N: one implementer invocation makes one row. N>1 would multiply an already unmeasured
+# engine's runtime by N on hardware that runs a 20B model at roughly 8 tok/s.

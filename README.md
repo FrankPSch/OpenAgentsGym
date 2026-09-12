@@ -95,7 +95,13 @@ run_all_model_03.bat                   every pair on level 3 (frontier model, lo
 run_all_model_04.bat                   every pair on level 4
 run_selected_model_04.bat              the validity gate on level 4 (edit the list in the file)
 rebuild_results_table.bat              re-merge the results table and print the validity gate
+
+check_engine_matrix.bat                verify a machine can run the second engine; spends nothing
+run_engine_matrix.bat [/billed]        one project x one methodology across engines and local models
 ```
+
+Setting a machine up — Python 3.10, Ollama, LiteLLM, opencode, the CLIs and the traps each of
+them hides — is [`oam_install.md`](oam_install.md).
 
 All campaign constants live in the four `.llm_config.model_01` … `model_04` files — one per
 capability level: 1 the cheapest model (`run_turbo_model_01.bat`), 2 the workhorse (`run.bat`,
@@ -128,6 +134,7 @@ Everything is a directory listing: a new methodology or project joins the matrix
 |---|---|
 | [`oam_targetpicture.md`](oam_targetpicture.md) | the specification — defines behaviour; the source of truth |
 | [`oam_manual.md`](oam_manual.md) | how to use it, extend a project, extend a methodology, read the columns |
+| [`oam_install.md`](oam_install.md) | bringing a machine up — every dependency, its verification command, and the trap it hides |
 
 ---
 
@@ -137,10 +144,25 @@ Working apparatus, early results. Read before quoting a number:
 
 - **Windows only.** The harness runs elsewhere, but the interpreter pin behaves differently and a
   non-Windows run is a smoke test of the plumbing, not a measurement.
-- **Claude only.** `ENGINE` accepts one value today; cross-vendor token counts would not be
-  comparable in any case. The coupling is confined to `run_master.py` — the methodologies, the
-  projects, the oracle and the batch files name no vendor — and chapter 18 of the specification
-  lists every point a second engine would have to touch.
+- **Three engines, one of them measured.** `ENGINE` accepts `claude`, `opencode` and `gpt`.
+  `claude` is the reference engine and every published row comes from it. `opencode` (a
+  model-agnostic CLI, pointed at any OpenAI-compatible endpoint) is implemented and has produced
+  scored rows against local models. `gpt` (the `codex` CLI) is **structural only** — its
+  subcommand, flags, stdout shape and model rule are documentation-derived and have never been
+  executed; a run aborts with exit 6 until the CLI is installed and the registry row corrected
+  against observed behaviour. The coupling stays confined to `run_master.py`: the methodologies,
+  the projects, the oracle and the batch files still name no vendor.
+- **Engine is a treatment, not a constant.** A different engine means a different system prompt,
+  different tool schemas and a different edit mechanism, so rows from two engines are not poolable
+  — `cfg_engine` is in the campaign-constant tuple for that reason. Cross-engine claims are
+  directional ("29 beats 08 under both"), never absolute. Token counters are not comparable across
+  vendors either; cost and wall-clock are the only cross-engine axes.
+- **Non-claude engines lose columns.** `opencode` has no effort flag and no per-run budget flag, so
+  `cfg_effort_enforced=false` and `cfg_bound=walltime`; no event in its stream carries a model id,
+  so `res_model_served` is blank — the guard against silent model substitution does not exist
+  there. Its `cfg_endpoint` reads `native` even when a gateway served the run, because the endpoint
+  is addressed through the model id rather than an environment variable. `cfg_tools` is recorded
+  with an `unenforced:` prefix, since that engine has no tool-allowlist flag.
 - **Python projects only.** A project type that filters which methodologies apply is not built.
 - **One repeat so far.** The level-3 screen above orders the arms at pass@1; the repeats that make
   the ordering a result are the next campaign. With more than one run per pair, report pass^k as
