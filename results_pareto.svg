@@ -491,11 +491,13 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <line class="axis" x1="58" y1="3342" x2="58" y2="3702"/>
 <text class="ax" x="418" y="3735" text-anchor="middle">cost (USD)</text>
 <text class="ax" x="20" y="3522" text-anchor="middle" transform="rotate(-90 20 3522)">score</text>
-<polyline class="front" points="58,3702 58,3702 58,3414"/>
+<polyline class="front" points="58,3702 58,3702 58,3425.99 58,3414"/>
 <circle class="pt" cx="58" cy="3702" r="3.2"/>
 <text class="lb" x="63" y="3698">00</text>
 <circle class="pt" cx="58" cy="3702" r="3.2"/>
 <text class="lb" x="42.2" y="3698">00</text>
+<circle class="pt" cx="58" cy="3425.99" r="3.2"/>
+<text class="lb" x="63" y="3421.99">00</text>
 <circle class="pt" cx="58" cy="3414" r="3.2"/>
 <text class="lb" x="63" y="3410">00</text>
 <text class="ttl" x="58" y="3794">p01_python_small  &#8212;  .llm_config.e07_local_qwen3_4b</text>
@@ -569,9 +571,11 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <line class="axis" x1="58" y1="4274" x2="58" y2="4634"/>
 <text class="ax" x="418" y="4667" text-anchor="middle">cost (USD)</text>
 <text class="ax" x="20" y="4454" text-anchor="middle" transform="rotate(-90 20 4454)">score</text>
-<polyline class="front" points="58,4634 58,4634"/>
+<polyline class="front" points="58,4634 58,4634 58,4634"/>
 <circle class="pt" cx="58" cy="4634" r="3.2"/>
 <text class="lb" x="63" y="4630">00</text>
 <circle class="pt" cx="58" cy="4634" r="3.2"/>
 <text class="lb" x="42.2" y="4630">00</text>
+<circle class="pt" cx="58" cy="4634" r="3.2"/>
+<text class="lb" x="76.8" y="4630">00</text>
 </svg>
