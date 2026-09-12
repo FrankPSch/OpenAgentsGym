@@ -109,9 +109,17 @@ if "!BILLED!"=="1" (
 )
 
 REM --- local legs ------------------------------------------------------------
+REM e08 and e11 are the SAME 18 GB of weights. They differ only in num_ctx and
+REM num_gpu, baked into the Ollama tag qwen3-coder:30b-tuned, so the pair is a
+REM controlled comparison rather than two models: e08 is the parameters under
+REM which the 30B failed five times out of five with a Vulkan APIError, and e11
+REM is 8192 context and 10 offloaded blocks instead of 32768 and auto. Keeping
+REM e08 costs about seven minutes of known failure per matrix and is what makes
+REM any e11 result mean something; drop it only once e11 has a track record.
 call :leg e06_local_gptoss_20b "gpt-oss-20b     local  free"
 call :leg e07_local_qwen3_4b "qwen3-4b        local  free"
-call :leg e08_local_qwen3coder_30b "qwen3-coder-30b local  free"
+call :leg e08_local_qwen3coder_30b "qwen3-coder-30b local  free (ctx32k, gpu auto)"
+call :leg e11_local_qwen3coder_30b_tuned "qwen3-coder-30b local  free (ctx8k, gpu 10)"
 
 echo.
 echo ============ SUMMARY ============

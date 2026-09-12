@@ -1,0 +1,50 @@
+# The 30B MoE with the two parameters that decide whether it loads at all.
+# Identical to .llm_config.e08_local_qwen3coder_30b in every line but MODEL.
+#
+# WHY A SEPARATE ENGINE AND NOT AN EDIT TO e08. The weights are the same file;
+# what differs is num_ctx and num_gpu, baked into the Ollama tag
+# qwen3-coder:30b-tuned. If those had been set as OLLAMA_* environment instead,
+# every future row would have been taken under different conditions while
+# cfg_model still read qwen3-coder-30b, and nothing in the table would say so.
+# e08's five rows are all APIError; they are the ceiling measurement on the old
+# parameters and must stay separable from whatever this one produces.
+#
+# THE ARITHMETIC, from the model's own /api/show geometry:
+#   48 blocks x 4 KV heads x (128 key + 128 value) x 2 bytes = 96 KB per token
+#   at OLLAMA_CONTEXT_LENGTH=32768 -> 3.0 GB of KV on top of 18 GB of weights
+# ~21 GB against a shared-GPU budget of about 15.5 GB is why the Vulkan
+# allocator refused a 1 GB buffer and every e08 leg died. num_ctx 8192 costs
+# 0.75 GB. num_gpu 10 places ten of the 48 blocks (~384 MB each) on the iGPU
+# rather than letting auto overreach.
+#
+# WHAT IT DOES NOT FIX: free RAM. On an integrated GPU the VRAM is system RAM,
+# so offload moves compute, not bytes. A CPU-only load of this model with 8 GB
+# free measured 113 s to load and 0.76 tok/s -- that figure is disk paging, not
+# inference. Check free memory before trusting any number from this config.
+#
+# PRIOR EVIDENCE on the model itself: 30B total, 3.3B active. An MoE reads only
+# its active experts per token, so if it loads at all it should not be slower
+# than the 20B. That is the proposition this config exists to test.
+
+ENGINE=opencode
+MODEL=litellm/qwen3-coder-30b-tuned
+# MODEL: provider/model. `qwen3-coder-30b-tuned` is the gateway name for the
+# Ollama tag qwen3-coder:30b-tuned, built from
+# litellm/Modelfile.qwen3-coder-30b-tuned.
+PROVIDER=
+BASE_URL=
+EFFORT=medium
+MAX_TURNS=60
+MAX_BUDGET_USD=4.00
+REPEATS=1
+CLAUDE_CONFIG_DIR=
+
+REVIEW_PASS=none
+REVIEW_MAX_BUDGET_USD=1.00
+REVIEW_MODEL=
+REVIEW_CMD=
+REVIEW_PROMPT=
+REVIEW_WEIGHT=1
+REVIEW_FEEDBACK=0
+FIX_MODEL=
+BEST_OF_N=1
