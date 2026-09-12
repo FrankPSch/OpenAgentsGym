@@ -85,6 +85,165 @@ CHANGES_FIELD = re.compile(r"\bchanges\s*=\s*(.*?)(?=\s+[a-z_]+\s*=|$)", re.I)
 REVIEW_DISALLOWED = "Read,Edit,Write,Glob,Grep,Bash,PowerShell,Agent,WebFetch,WebSearch"
 # Between the three parts of the reviewer's stdin. A rule the reviewer prompt itself states.
 REVIEW_SEP = "\n\n" + "-" * 70 + "\n\n"
+
+# --------------------------------------------------------------------------------------------
+# The engine registry (chapter 18, "GPT branch"). One table, read by every site that used to
+# name a vendor.
+#
+# Until now `claude` was not a choice, it was the harness: the binary name, the entry file the
+# methodology is deployed as, the flags on the launch line, the environment variables that move
+# the endpoint, the shape of the JSON that comes back and even the rule for what counts as a
+# canonical model id were all written out in place. Each of those was a separate reason the file
+# could only run one CLI, and a second engine added by editing them one at a time would leave
+# thirteen places that must agree and no way to see whether they do. They are gathered here
+# instead: an engine is a row in this table, and a site that differs between engines reads the
+# row rather than testing the name. The dispatch that is left -- `engine_implementer_argv` and
+# `engine_result_record` -- is two functions, because an argv list and a stdout format are not
+# data and pretending otherwise would only move the branch somewhere harder to find.
+#
+# The `claude` row is a transcription, not a redesign: every value in it is the literal that
+# stood at the site it replaces. 95 published rows were produced by that path and must stay
+# comparable with the rows produced after this change, so the row is the one part of this table
+# that is not free to be improved.
+#
+# Fields:
+#   binary        the executable resolve_cli() looks for on PATH.
+#   entry_file    what methodology/copy_to_root/agents_or_claude.md is deployed as. The source
+#                 file is named for both because the text was always portable; only the
+#                 destination waited.
+#   prompt_via    "stdin" or "argv" -- where the project prompt is handed to the CLI.
+#   help_argv     the argv that prints the help text check_cli_flags validates against. Not
+#                 every CLI puts its run flags in the top-level help; opencode puts them under
+#                 the subcommand, so the probe follows the CLI rather than the probe deciding
+#                 the CLI is unvalidatable.
+#   required_flags / review_flags  the options that must appear in that help text.
+#   config_dir_env / base_url_env  the two environment variables a campaign may move. None
+#                 means this engine offers no such knob, and the config key is then rejected
+#                 rather than set and silently ignored.
+#   fallback_keys the env/config keys that would substitute a model silently (check_model).
+#   model_rule    which id shape reject_alias enforces (see that function).
+#   native_provider  the value of PROVIDER that means "this engine's own endpoint".
+#   effort_enforced  whether `--effort` (or an equivalent) actually reaches the model.
+#   native_bound  what cfg_bound reads when the run is served natively -- the cap that really
+#                 binds the run, not the cost figure that merely gets reported.
+#   allowed_tools whether the engine takes an --allowedTools list at all; see tools_note.
+#   tested        False marks an engine whose row has never been run end to end.
+# --------------------------------------------------------------------------------------------
+ENGINES = {
+    "claude": {
+        "binary": "claude",
+        "entry_file": "CLAUDE.md",
+        "prompt_via": "stdin",
+        "help_argv": ("--help",),
+        "version_argv": ("--version",),
+        "required_flags": REQUIRED_FLAGS,
+        "review_flags": REVIEW_FLAGS,
+        "config_dir_env": "CLAUDE_CONFIG_DIR",
+        "base_url_env": "ANTHROPIC_BASE_URL",
+        "fallback_keys": ("CLAUDE_FALLBACK_MODEL",),
+        "model_rule": "anthropic_canonical",
+        "native_provider": "anthropic",
+        "effort_enforced": True,
+        "native_bound": "usd",
+        "allowed_tools": True,
+        "launch_style": "claude",
+        "result_style": "claude",
+        "tested": True,
+        # The grammar of methodology/<M>/tools.txt and projects/<P>/tools.txt is this CLI's
+        # `Name` / `Name(pattern)` form, and those files live outside this harness: they are the
+        # arms' own material and are not rewritten for a second engine.
+        "tools_note": "--allowedTools, Name(pattern) grammar as written in tools.txt",
+    },
+    "opencode": {
+        "binary": "opencode",
+        # opencode reads AGENTS.md, the cross-vendor name. Nothing in the entry file's text is
+        # vendor-specific, so the same methodology deploys unchanged under a different name.
+        "entry_file": "AGENTS.md",
+        # `opencode run "<prompt>"` takes the task as a positional argument. Handing it on stdin
+        # instead would start an interactive session with an empty task, which is not the same
+        # run with a different pipe -- it is no run at all.
+        "prompt_via": "argv",
+        # The top-level help lists subcommands; the flags the launch line uses belong to `run`.
+        # Probing the top-level help would report every flag missing and probing nothing would
+        # drop the check, so the probe is the subcommand's own help.
+        "help_argv": ("run", "--help"),
+        "version_argv": ("--version",),
+        # Only what the launch line actually passes. There is no budget flag, no effort flag,
+        # no permission mode and no tool allowlist to require: an engine is checked against the
+        # line it is launched with, never against another engine's line.
+        "required_flags": ("--format", "-m"),
+        "review_flags": (),
+        "config_dir_env": None,
+        "base_url_env": None,
+        "fallback_keys": (),
+        "model_rule": "provider_slash_model",
+        # A run is addressed to `provider/model` and the provider is part of the id, so there is
+        # no endpoint that is "opencode's own" the way there is one for a first-party CLI.
+        # PROVIDER is therefore declared, as it is for any gateway, and never assumed.
+        "native_provider": "",
+        # No effort knob on the launch line. cfg_effort would otherwise read as a treatment that
+        # never happened (see engine_columns).
+        "effort_enforced": False,
+        # Cost IS reported per step (LiteLLM prices it upstream), but a figure that is reported
+        # is not a cap that binds: there is no per-run budget flag to stop a run at it. The only
+        # thing that actually ends a runaway run here is CLI_TIMEOUT_S. See engine_columns.
+        "native_bound": "walltime",
+        "allowed_tools": False,
+        "launch_style": "opencode",
+        "result_style": "opencode_stream",
+        # Still False, but for a narrower reason than before. opencode 1.18.30 is now installed,
+        # and the launch line and the stdout contract HAVE been observed against it: `run
+        # --format json -m provider/model` with the prompt positional runs, writes
+        # newline-delimited JSON, and exits 0 clean / 1 failed. stream_result_record was rewritten
+        # against that capture and two of its assumptions turned out to be wrong (accounting is
+        # nested under `part`, and no event carries a model id at all).
+        #
+        # What has NOT happened is an end-to-end run of this harness under ENGINE=opencode: no
+        # project, no methodology, no oracle, no row. The observation was of the CLI, not of the
+        # campaign around it, and the parts this row cannot yet vouch for are the ones only a real
+        # run exercises -- whether AGENTS.md is picked up from the workspace, whether the agent's
+        # own test run works without --add-dir, what a long multi-turn stream costs to accumulate.
+        # Treat the first campaign as a bring-up and do not publish its rows beside claude rows.
+        "tested": False,
+        # tools.txt is not translated. Its grammar is the other CLI's, opencode has no equivalent
+        # allowlist on the run line, and a silent partial translation would make cfg_tools claim
+        # a restriction the run did not have. An arm that ships tools.txt still records it in
+        # cfg_tools -- the column says what was asked for -- but nothing is passed to the CLI.
+        "tools_note": "tools.txt recorded in cfg_tools, not enforced: no allowlist flag",
+    },
+    "gpt": {
+        # STRUCTURAL ONLY -- NEVER EXECUTED. The codex CLI is not installed on the machine this
+        # was written on, so every value below is read from its documentation and none of it has
+        # been observed. It is here so the third engine is a row to correct rather than a branch
+        # to invent, and a first run of it should be treated as a bring-up, not as a campaign.
+        "binary": "codex",
+        "entry_file": "AGENTS.md",
+        "prompt_via": "argv",
+        "help_argv": ("exec", "--help"),
+        "version_argv": ("--version",),
+        "required_flags": ("--json", "--model"),
+        "review_flags": (),
+        "config_dir_env": "CODEX_HOME",
+        "base_url_env": None,
+        "fallback_keys": (),
+        "model_rule": "free",
+        "native_provider": "openai",
+        "effort_enforced": False,
+        "native_bound": "walltime",
+        "allowed_tools": False,
+        "launch_style": "codex",
+        "result_style": "codex_stream",
+        "tested": False,
+        "tools_note": "UNVERIFIED: tools.txt recorded only, no allowlist flag on the run line",
+    },
+}
+
+
+def engine_spec(cfg):
+    """The registry row for this config's ENGINE. Every engine-dependent site starts here."""
+    return ENGINES[cfg.get("ENGINE")]
+
+
 _CLI_CACHE = {}
 
 
@@ -179,6 +338,18 @@ COLUMNS = [
     "tk_review_cost_usd",
     "tk_fix_input", "tk_fix_output", "tk_fix_cache_write", "tk_fix_cache_read", "tk_fix_cost_usd",
     "prf_turns", "prf_duration_s", "prf_review_s", "prf_fix_s",
+    # Appended, never inserted, and nothing above it renamed: 95 published rows carry the header
+    # as it stands and a reader that matches by position must keep working. `cfg_user_claude_md`
+    # in particular keeps its vendor-shaped name and its exact meaning -- whether a user-level
+    # ~/.claude/CLAUDE.md exists -- because renaming it would silently change what those 95 rows
+    # are claimed to have measured.
+    #
+    # cfg_entry_file is the generic companion to it: which name the methodology was actually
+    # deployed under for THIS run (CLAUDE.md or AGENTS.md). It is the engine's choice made
+    # visible, so a mixed-engine table can be read without inferring the entry file from
+    # cfg_engine. Rows written before this column existed leave it blank, which is correct --
+    # they were all CLAUDE.md, but the row itself did not record that.
+    "cfg_entry_file",
 ]
 
 METRIC_COLUMNS = {
@@ -254,11 +425,20 @@ def step1_read_config(config=DEFAULT_CONFIG):
         if not k.strip():
             die("ABORT: malformed line in %s: %r" % (path, raw), 4)
         cfg[k.strip()] = v.strip()
-    # The single gate on the engine. Every other coupling to this CLI is in this file and is
-    # listed in chapter 18 under "GPT branch": nothing under methodology/, projects/, lib/ or the
-    # batch files names a vendor, so a second engine is a change here and nowhere else.
-    if cfg.get("ENGINE") != "claude":
-        die("ABORT: ENGINE=claude is the only valid value (got %r)" % cfg.get("ENGINE"), 4)
+    # The single gate on the engine, now a membership test against the registry rather than an
+    # equality test against one name. It stays a gate: an ENGINE the table does not know is a
+    # config error and not a default, because every row below -- the entry file, the launch line,
+    # the parser, cfg_bound -- is looked up from this value, and a lookup that silently fell back
+    # to `claude` would produce a row that names an engine that never ran.
+    if cfg.get("ENGINE") not in ENGINES:
+        die("ABORT: ENGINE=%s (got %r)" % ("|".join(sorted(ENGINES)), cfg.get("ENGINE")), 4)
+    spec = ENGINES[cfg["ENGINE"]]
+    # An untested row is not a reason to refuse the run -- it is a reason the operator must know
+    # they are the one testing it. Printed, not raised: the abort would make the branch
+    # unreachable and a branch nobody can reach never gets corrected.
+    if not spec["tested"]:
+        print("NOTE: ENGINE=%s is structural only -- never executed end to end, and no value in\n"
+              "its registry row has been observed. Treat this run as a bring-up." % cfg["ENGINE"])
     # An unset or blank REVIEW_PASS is `none`, so a config file written before the review pass
     # existed keeps working unchanged. A misspelt one is a config error, not a silent no-op.
     cfg["REVIEW_PASS"] = cfg.get("REVIEW_PASS", "").strip() or "none"
@@ -311,14 +491,39 @@ def fix_model(cfg):
     return cfg.get("FIX_MODEL", "").strip() or cfg["MODEL"]
 
 
-def reject_alias(model, key):
-    """Abort unless `model` is a canonical id (chapter 9). The test is the version part.
+def reject_alias(model, key, rule="anthropic_canonical"):
+    """Abort unless `model` is a canonical id (chapter 9). What canonical means is the engine's.
 
-    A canonical id carries a digit in a dash-separated part after the first
-    (`claude-sonnet-5`); a bare `opus`, `sonnet` or `sonnet-latest` does not. An alias silently
-    re-points to a different model between campaigns while every column still reads as intended,
-    which is why it is caught here rather than noticed in `res_model_served` afterwards.
+    The defect being caught is the same under every engine: an alias silently re-points to a
+    different model between campaigns while every column still reads as intended, which is why it
+    is caught here rather than noticed in `res_model_served` afterwards. What differs is the shape
+    a canonical id has, and applying one vendor's shape to another's ids would reject correct
+    configurations -- which teaches the operator to stop trusting the check.
+
+      anthropic_canonical  a digit in a dash-separated part after the first (`claude-sonnet-5`);
+                           a bare `opus`, `sonnet` or `sonnet-latest` does not qualify. The rule
+                           as it stood, unchanged, and the only rule ENGINE=claude ever sees.
+      provider_slash_model opencode addresses a model as `provider/model`, and the provider half
+                           is what says where it was served (`litellm/qwen3-coder-30b`). A bare
+                           model name is the alias case here: it leaves the routing to whatever
+                           the CLI's config happens to default to. The version part is NOT
+                           required -- a self-hosted id legitimately carries none, and demanding
+                           a digit would reject `litellm/my-local-coder` for being honest.
+      free                 no rule. Used only where nobody has yet observed what the engine's ids
+                           look like, and it is a gap to close, not a decision.
     """
+    if rule == "provider_slash_model":
+        provider, _, name = model.partition("/")
+        if not provider or not name or "/" in name:
+            die("ABORT: %s=%r is not a canonical opencode id -- it must be provider/model,\n"
+                "e.g. litellm/qwen3-coder-30b. A bare model name leaves the routing to the CLI's\n"
+                "own configuration, which re-points between campaigns exactly as an alias does."
+                % (key, model), 4)
+        return
+    if rule == "free":
+        if not model:
+            die("ABORT: %s is not set" % key, 4)
+        return
     parts = model.split("-")
     if not model or len(parts) < 2 or not any(c.isdigit() for p in parts[1:] for c in p):
         die("ABORT: %s=%r is an alias, not a canonical id -- an alias silently re-points to\n"
@@ -336,14 +541,17 @@ def check_model(cfg):
     the same silent re-pointing as in MODEL, while on other_model it is a foreign vendor's id
     (`gpt-5`, `o3`) whose canonical form the digit-in-a-dashed-part rule would reject.
     """
-    reject_alias(cfg.get("MODEL", "").strip(), "MODEL")
+    rule = engine_spec(cfg)["model_rule"]
+    reject_alias(cfg.get("MODEL", "").strip(), "MODEL", rule)
     named_fix = cfg.get("FIX_MODEL", "").strip()
     if named_fix:
-        reject_alias(named_fix, "FIX_MODEL")
+        reject_alias(named_fix, "FIX_MODEL", rule)
     named_review = cfg.get("REVIEW_MODEL", "").strip()
     if named_review and cfg.get("REVIEW_PASS", "") == "same_model":
-        reject_alias(named_review, "REVIEW_MODEL")
-    for key in ("CLAUDE_FALLBACK_MODEL",):
+        reject_alias(named_review, "REVIEW_MODEL", rule)
+    # Per engine, because the key is the vendor's: a CLI that has no fallback knob has no key to
+    # forbid, and forbidding another engine's key here would only read as diligence.
+    for key in engine_spec(cfg)["fallback_keys"]:
         if os.environ.get(key, "").strip() or cfg.get(key, "").strip():
             die("ABORT: %s is set -- a fallback model is substituted silently on overload and\n"
                 "would corrupt the campaign with no visible error (chapter 14)." % key, 4)
@@ -396,14 +604,51 @@ def check_config_keys(cfg):
     path = review_prompt_path(cfg)
     if not path.is_file():
         die("ABORT: REVIEW_PROMPT file not found at %s" % path, 4)
-    # A provider other than this vendor is reached over a base URL and nowhere else: named without
-    # one, the run would go to the vendor's own endpoint while cfg_provider claimed otherwise --
-    # a row that misreports what served it, which is worse than a run that does not start.
-    if cfg.get("PROVIDER", "").strip() not in ("", "anthropic") \
-            and not cfg.get("BASE_URL", "").strip():
-        die("ABORT: PROVIDER=%s needs BASE_URL -- without one the run reaches this vendor's own\n"
-            "endpoint and cfg_provider would misreport what served it."
-            % cfg["PROVIDER"].strip(), 4)
+    spec = engine_spec(cfg)
+    # A provider other than the engine's own is reached over a base URL and nowhere else: named
+    # without one, the run would go to the engine's own endpoint while cfg_provider claimed
+    # otherwise -- a row that misreports what served it, which is worse than a run that does not
+    # start. The rule only exists where the engine HAS a base-URL knob.
+    if spec["base_url_env"]:
+        if cfg.get("PROVIDER", "").strip() not in ("", spec["native_provider"]) \
+                and not cfg.get("BASE_URL", "").strip():
+            die("ABORT: PROVIDER=%s needs BASE_URL -- without one the run reaches this vendor's own\n"
+                "endpoint and cfg_provider would misreport what served it."
+                % cfg["PROVIDER"].strip(), 4)
+    elif cfg.get("BASE_URL", "").strip():
+        # The mirror image, and the reason this is an abort rather than a shrug: cli_env() has
+        # nowhere to put the value, so the run would go wherever the engine's own configuration
+        # sends it while cfg_endpoint printed the URL the operator wrote down. A column that
+        # confidently names the wrong endpoint is worse than no run.
+        die("ABORT: BASE_URL is set but ENGINE=%s has no base-URL environment variable, so it\n"
+            "cannot be applied -- cfg_endpoint would name an endpoint that never served the run.\n"
+            "Address the endpoint through MODEL (provider/model) instead." % cfg["ENGINE"], 4)
+    # CLAUDE_CONFIG_DIR is accepted only by the engine whose own variable it IS. Two different
+    # ways of being wrong are refused here, and the second one used to pass.
+    #
+    # No config-dir knob at all (opencode): the value could not be applied, so the run would use
+    # the engine's default account data while the config file claimed otherwise.
+    #
+    # A config-dir knob under a DIFFERENT name (codex's CODEX_HOME): the value could be applied,
+    # and that is precisely the problem. A key named CLAUDE_CONFIG_DIR pointing codex's account
+    # directory somewhere is not a knob the operator asked for -- it is this harness quietly
+    # deciding that two vendors' account stores are the same thing because one config key
+    # happened to be free. CODEX_HOME holds credentials and session state; repointing it on the
+    # strength of a Claude-named key is how a campaign runs against an account nobody chose. The
+    # config key keeps its name for the engine it belongs to (renaming it would silently unset
+    # the knob in every existing .llm_config.* file); for any other engine it is an abort, and
+    # the fix is an engine-appropriate key that does not exist yet rather than a reused one.
+    cdir_env = spec["config_dir_env"]
+    if cdir_env != "CLAUDE_CONFIG_DIR" and cfg.get("CLAUDE_CONFIG_DIR", "").strip():
+        if not cdir_env:
+            die("ABORT: CLAUDE_CONFIG_DIR is set but ENGINE=%s does not read it -- the run would use\n"
+                "the engine's default account data while the config file claimed otherwise."
+                % cfg["ENGINE"], 4)
+        die("ABORT: CLAUDE_CONFIG_DIR is set but ENGINE=%s keeps its account data in %s, not in\n"
+            "CLAUDE_CONFIG_DIR. Applying the value would repoint %s from a key named for another\n"
+            "vendor -- an account switch nobody asked for. Leave CLAUDE_CONFIG_DIR unset for this\n"
+            "engine and configure %s in the environment the campaign is launched from."
+            % (cfg["ENGINE"], cdir_env, cdir_env, cdir_env), 4)
 
 
 def allowed_tools(methodology, project):
@@ -433,6 +678,30 @@ def allowed_tools(methodology, project):
             base = base + "," + ",".join(add)
             cfg = cfg + "+project:" + ",".join(add)
     return base, cfg
+
+
+def record_tool_enforcement(cfg, cfg_tools):
+    """What cfg_tools may claim once the engine is taken into account.
+
+    allowed_tools() answers "what tool set does this arm ask for", which is the same question on
+    every engine. Whether the answer was IMPOSED is a different question, and only one engine
+    currently answers yes: `--allowedTools` is on the claude launch line, and there is no
+    equivalent flag on opencode's or codex's (registry: allowed_tools, tools_note).
+
+    Left alone, the cell would say the same thing either way -- `default`, or the arm's list --
+    and chapter 17 would read a row whose agent had the CLI's own unrestricted tool surface as a
+    row that ran under the named restriction. That is a treatment the run did not receive,
+    recorded as though it had, and the pivot that separates tool sets would put the two in one
+    group. So on an engine with no allowlist flag the cell carries `unenforced:` in front of the
+    value: the arm still declared a tool set and the row still says which, but it no longer
+    asserts that anything applied it.
+
+    ENGINE=claude passes through untouched, which is what keeps the cell comparable with the rows
+    already published.
+    """
+    if engine_spec(cfg)["allowed_tools"]:
+        return cfg_tools
+    return "unenforced:" + cfg_tools
 
 
 def read_tool_file(path, label):
@@ -466,13 +735,32 @@ def engine_columns(cfg):
     Blank PROVIDER is this vendor, which is what every row before these columns existed was;
     the backfill of those rows writes exactly these four values.
     """
-    provider = cfg.get("PROVIDER", "").strip() or "anthropic"
+    spec = engine_spec(cfg)
+    provider = cfg.get("PROVIDER", "").strip() or spec["native_provider"]
+    if not provider and spec["model_rule"] == "provider_slash_model":
+        # An engine with no endpoint of its own still has to fill cfg_provider, and a blank cell
+        # would say "unknown" where the answer is in fact written on the launch line: the model id
+        # IS `provider/model` there. Declared PROVIDER still wins, so an operator who knows the
+        # gateway behind `litellm/` can name it.
+        provider = cfg.get("MODEL", "").strip().partition("/")[0]
     endpoint = cfg.get("BASE_URL", "").strip() or "native"
-    native = provider == "anthropic"
+    native = bool(spec["native_provider"]) and provider == spec["native_provider"]
+    # Two conditions, not one. The effort knob is the engine's -- an engine whose launch line
+    # carries no effort flag never enforces one, whatever the provider is -- and being served
+    # from somewhere else drops it even where the engine has it. So both must hold.
+    effort_enforced = spec["effort_enforced"] and native
+    # cfg_bound names the cap that actually stops a runaway run, which is not the same question
+    # as "is a cost figure available". Under ENGINE=opencode it is deliberately `walltime` even
+    # though tk_cost_usd is populated: opencode reports `cost` in every step_finish and LiteLLM
+    # prices it upstream, so the number is real -- but there is no per-run budget flag to hand
+    # it to, so nothing acts on it. The run ends when the agent stops or when CLI_TIMEOUT_S kills
+    # it, and that is the censoring a reader of the row has to know about. Writing `usd` here
+    # because the dollars are visible would say a cap existed that would never have fired.
+    bound = spec["native_bound"] if native else "walltime"
     return {"cfg_provider": provider,
             "cfg_endpoint": endpoint,
-            "cfg_effort_enforced": "true" if native else "false",
-            "cfg_bound": "usd" if native else "walltime"}
+            "cfg_effort_enforced": "true" if effort_enforced else "false",
+            "cfg_bound": bound}
 
 
 def step2_make_run_dir(methodology, project, repeat, stamp):
@@ -527,12 +815,14 @@ def render(text, source):
     return PLACEHOLDER.sub(lambda m: m.group(2), text), seen
 
 
-def step5_deploy_entry_file(run_dir, workspace):
-    """Render the placeholders and deploy the entry file as CLAUDE.md. Empty copy_to_root is fine.
+def step5_deploy_entry_file(cfg, run_dir, workspace):
+    """Render the placeholders and deploy the entry file under the engine's name. Empty is fine.
 
-    The target name is unconditional: `AGENTS.md` is the name the same source file takes under the
-    GPT branch, and that branch is open (chapter 18). The source is named `agents_or_claude.md`
-    because the text is already portable between the two -- only the destination waits.
+    The target name is the registry's `entry_file` -- `CLAUDE.md` under ENGINE=claude, `AGENTS.md`
+    under the other two. The source is named `agents_or_claude.md` because the text was always
+    portable between them; only the destination waited, and this is where it stops waiting. The
+    rendered bytes are identical either way, so mth_chars and mth_version are comparable across
+    engines: what differs is which name the CLI happens to look for, not what the arm said.
 
     The source is the run's own snapshot (step 3), never `methodology/<M>/`: deploying from the
     source directory meant an edit between the two steps gave the agent a file the snapshot does
@@ -545,7 +835,7 @@ def step5_deploy_entry_file(run_dir, workspace):
         return blanks
     raw = src.read_text(encoding="utf-8")
     rendered, params = render(raw, str(src))
-    target = workspace / "CLAUDE.md"
+    target = workspace / engine_spec(cfg)["entry_file"]
     target.write_text(rendered, encoding="utf-8")
     out = {"mth_chars": len(rendered.encode("utf-8"))}
     first = rendered.splitlines()[0] if rendered.splitlines() else ""
@@ -654,19 +944,32 @@ def run_oracle(project, run_dir, workspace, baseline=False, holdout=None, out_di
         return 1
 
 
-def cli_help_and_version():
-    """Query the installed CLI once per invocation and cache the answer."""
-    if "help" not in _CLI_CACHE:
-        claude = resolve_cli()
+def cli_help_and_version(spec):
+    """Query the installed CLI once per invocation and cache the answer.
+
+    Cached per engine, not globally: a matrix invocation runs one engine, but the cache outliving
+    a change of engine within one process would validate the second engine's launch line against
+    the first engine's help text and pass it without looking.
+
+    `spec` is required. It defaulted to the claude row while the engine registry was being
+    introduced, and nothing ever called it that way -- the one call site has a spec in hand. A
+    default that silently substitutes a DIFFERENT engine's registry row is not a convenience
+    here: it would probe the wrong binary and cache the wrong help text under the wrong key, and
+    the check that exists to catch a launch line the CLI does not accept would pass by looking at
+    another CLI's help.
+    """
+    key = spec["binary"]
+    if key not in _CLI_CACHE:
+        cli = resolve_cli(spec["binary"])
         env = child_env()
-        h = subprocess.run([claude, "--help"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                           env=env)
-        v = subprocess.run([claude, "--version"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                           env=env)
-        _CLI_CACHE["help"] = (h.stdout or b"").decode("utf-8", "replace")
+        h = subprocess.run([cli] + list(spec["help_argv"]), stdout=subprocess.PIPE,
+                           stderr=subprocess.STDOUT, env=env)
+        v = subprocess.run([cli] + list(spec["version_argv"]), stdout=subprocess.PIPE,
+                           stderr=subprocess.STDOUT, env=env)
+        help_text = (h.stdout or b"").decode("utf-8", "replace")
         text = (v.stdout or b"").decode("utf-8", "replace").strip().splitlines()
-        _CLI_CACHE["version"] = text[0].strip() if text else ""
-    return _CLI_CACHE["help"], _CLI_CACHE["version"]
+        _CLI_CACHE[key] = (help_text, text[0].strip() if text else "")
+    return _CLI_CACHE[key]
 
 
 def review_argv(template):
@@ -691,6 +994,20 @@ def check_review_config(cfg):
     exit 6, and it is checked before the implementer runs so nothing is spent on a run whose review
     cannot happen. same_model needs no check here: its flags go through check_cli_flags.
     """
+    # same_model builds its own launch line (step 7b) and that line is the claude CLI's: -p,
+    # --effort, --max-budget-usd, --disallowedTools, --mcp-config. It is not routed through the
+    # registry because a blind, tool-less, stdin-only reviewer is not the same thing as an
+    # implementer and inventing its equivalent for an engine nobody has run it on would produce a
+    # reviewer whose blindness is assumed rather than known -- and res_review_findings would then
+    # be a number with no defensible meaning. So it is refused here, loudly, and REVIEW_PASS=
+    # other_model remains open to every engine: that path is an external command the config names
+    # in full, so it needs nothing from the registry.
+    if cfg["REVIEW_PASS"] == "same_model" and engine_spec(cfg)["launch_style"] != "claude":
+        die("ABORT: REVIEW_PASS=same_model is not implemented for ENGINE=%s -- the reviewer's\n"
+            "launch line (no tools, no MCP, stdin only) exists for the claude CLI alone, and a\n"
+            "reviewer whose blindness has not been verified would make res_review_findings\n"
+            "uninterpretable. Use REVIEW_PASS=other_model with an explicit REVIEW_CMD, or none."
+            % cfg["ENGINE"], 6)
     if cfg["REVIEW_PASS"] != "other_model":
         return
     template = cfg.get("REVIEW_CMD", "").strip()
@@ -703,17 +1020,28 @@ def check_review_config(cfg):
 
 
 def check_cli_flags(cfg, record):
-    """Abort unless every option the launch line uses is present in `claude --help`.
+    """Abort unless every option this engine's launch line uses is present in its own help text.
 
     The CLI ignores unknown options without complaint, so this is the only place a removed or
     renamed flag can be caught before tokens are spent. The help text is kept per run so a row
     stays diagnosable after a CLI upgrade. The review pass adds its own option to the set, and
     only when it is configured -- a CLI that cannot review is not a reason to fail a run that
     does not review.
+
+    Two things are per-engine here, and neither of them is "skip the check". The first is WHICH
+    help text: `claude --help` prints the run flags, `opencode --help` prints a list of
+    subcommands and nothing this harness passes, so the registry names the probe (`run --help`)
+    rather than the harness concluding the CLI cannot be validated. The second is WHICH flags:
+    each engine is checked against the line it is actually launched with -- opencode's has no
+    budget, effort, permission-mode or allowlist option to require, and demanding them would
+    fail a correct configuration, which is the fastest way to get a check disabled. ENGINE=claude
+    is validated against exactly the set it always was.
     """
-    help_text, version = cli_help_and_version()
+    spec = engine_spec(cfg)
+    help_text, version = cli_help_and_version(spec)
     write_record(record, help_text)
-    required = REQUIRED_FLAGS + (REVIEW_FLAGS if cfg["REVIEW_PASS"] == "same_model" else ())
+    required = tuple(spec["required_flags"]) + (tuple(spec["review_flags"])
+                                                if cfg["REVIEW_PASS"] == "same_model" else ())
     missing = [f for f in required if f not in help_text]
     if missing:
         die("ABORT: flag(s) not offered by this CLI (%s): %s\n"
@@ -809,8 +1137,11 @@ def check_ancestor_entry_files(workspace, record):
     return found
 
 
-def resolve_cli():
-    """Resolve the CLI to something CreateProcess can launch.
+def resolve_cli(binary="claude"):
+    """Resolve the named CLI to something CreateProcess can launch.
+
+    The default is the historical one, so a call site that has no config in hand behaves exactly
+    as it did; every site that knows the engine passes the registry's `binary` instead.
 
     shutil.which() may hand back a .cmd/.bat shim, which subprocess cannot exec directly on
     Windows; prefer a sibling .exe when one exists, and abort when there is none rather than
@@ -821,18 +1152,18 @@ def resolve_cli():
     A CLI that is not there, a CLI that cannot be launched and a CLI missing a flag are the same
     class of failure -- the launch line cannot be trusted -- so all three exit 6.
     """
-    claude = shutil.which("claude")
-    if claude is None:
-        die("ABORT: 'claude' not found on PATH (shutil.which)", 6)
-    p = Path(claude)
+    found = shutil.which(binary)
+    if found is None:
+        die("ABORT: %r not found on PATH (shutil.which)" % binary, 6)
+    p = Path(found)
     if IS_WIN and p.suffix.lower() in (".cmd", ".bat", ""):
         exe = p.with_suffix(".exe")
         if exe.is_file():
             return str(exe)
-        die("ABORT: 'claude' on PATH is %s, which CreateProcess cannot launch directly, and no\n"
+        die("ABORT: %r on PATH is %s, which CreateProcess cannot launch directly, and no\n"
             "sibling %s exists. Install the native Windows executable (or put its directory\n"
             "ahead of the shim on PATH) so the harness can start the CLI as a subprocess."
-            % (p, exe.name), 6)
+            % (binary, p, exe.name), 6)
     return str(p)
 
 
@@ -848,20 +1179,37 @@ def cli_env(cfg, run_dir):
     env["VIRTUAL_ENV"] = str(vroot)
     env["PATH"] = str(vbin) + os.pathsep + env.get("PATH", "")
     env.pop("PYTHONHOME", None)
-    ccd = cfg.get("CLAUDE_CONFIG_DIR", "").strip()
-    if ccd:
-        env["CLAUDE_CONFIG_DIR"] = str((ROOT / ccd) if not os.path.isabs(ccd) else Path(ccd))
-    else:
-        env.pop("CLAUDE_CONFIG_DIR", None)
+    # Both variables are the engine's own names, from the registry. The config KEYS keep the names
+    # they always had (CLAUDE_CONFIG_DIR, BASE_URL) -- renaming a config key would silently turn
+    # every existing .llm_config.* file into one with an unset knob, which is the exact failure
+    # mode this file spends its aborts guarding against. An engine that offers no such variable
+    # gets neither set nor cleared here; check_config_keys has already refused the config that
+    # tries to use one, so there is nothing to apply and nothing to misreport.
+    spec = engine_spec(cfg)
+    # Only the engine whose own variable is literally CLAUDE_CONFIG_DIR reads the config key of
+    # that name. An engine with a differently-named config dir (codex's CODEX_HOME) is left
+    # alone: check_config_keys has already refused a config that sets the key for such an engine,
+    # and the value is not carried across to another vendor's account store here either. An
+    # inherited CODEX_HOME is likewise neither set nor cleared -- the harness has no opinion it
+    # is entitled to about a variable no config key of its own controls.
+    cdir_env = spec["config_dir_env"]
+    if cdir_env == "CLAUDE_CONFIG_DIR":
+        ccd = cfg.get("CLAUDE_CONFIG_DIR", "").strip()
+        if ccd:
+            env[cdir_env] = str((ROOT / ccd) if not os.path.isabs(ccd) else Path(ccd))
+        else:
+            env.pop(cdir_env, None)
     # BASE_URL is the endpoint cfg_endpoint claims served the run, so it must reach the CLI here and
     # nowhere else: recorded without being applied, the column would misreport what served the row.
     # Blank means this vendor's own endpoint, and any inherited override is dropped for the same
     # reason -- the config file, not the user's shell, decides where a campaign is served from.
-    base_url = cfg.get("BASE_URL", "").strip()
-    if base_url:
-        env["ANTHROPIC_BASE_URL"] = base_url
-    else:
-        env.pop("ANTHROPIC_BASE_URL", None)
+    url_env = spec["base_url_env"]
+    if url_env:
+        base_url = cfg.get("BASE_URL", "").strip()
+        if base_url:
+            env[url_env] = base_url
+        else:
+            env.pop(url_env, None)
     return env
 
 
@@ -893,7 +1241,57 @@ def write_mcp_config(project, run_dir):
     return mcp
 
 
-def implementer_argv(cfg, project, run_dir, tools, model=None):
+def implementer_argv(cfg, project, run_dir, tools, model=None, prompt=""):
+    """The step-7 launch line for whichever engine is configured -- one of the two dispatch points.
+
+    An argv list is not data, so this is a function rather than another registry field; what makes
+    it one dispatch point and not thirteen is that no other site in the file builds a launch line.
+    `prompt` is ignored by every engine that takes the task on stdin and is the task itself for
+    those that take it as a positional argument (registry: prompt_via).
+
+    ENGINE=claude returns exactly the list it always returned, in the same order, with the same
+    literals -- see claude_implementer_argv, which is the old body moved and otherwise untouched.
+    """
+    style = engine_spec(cfg)["launch_style"]
+    if style == "claude":
+        return claude_implementer_argv(cfg, project, run_dir, tools, model)
+    if style == "opencode":
+        return opencode_implementer_argv(cfg, run_dir, model, prompt)
+    return codex_implementer_argv(cfg, run_dir, model, prompt)
+
+
+def opencode_implementer_argv(cfg, run_dir, model, prompt):
+    """`opencode run "<prompt>" --format json -m <provider/model>`, and nothing else.
+
+    Deliberately short, and every absence is a measurement that this engine cannot make rather
+    than a flag someone forgot. There is no budget flag, so MAX_BUDGET_USD does not bind and
+    cfg_bound says `walltime`. There is no effort flag, so EFFORT does not reach the model and
+    cfg_effort_enforced says false. There is no tool allowlist on the run line, so tools.txt is
+    recorded in cfg_tools and not enforced (registry: tools_note) -- the honest reading of such a
+    row is that its tool surface was the CLI's default, not the arm's list. And there is no
+    --add-dir: the methodology snapshot beside the workspace is not reachable, so an arm whose
+    entry file points at files under methodology/ is not comparable here.
+
+    The model id goes through unaltered: it is `provider/model` and the provider half is the
+    routing, which is why reject_alias insists on both halves.
+    """
+    return [resolve_cli(engine_spec(cfg)["binary"]), "run", prompt,
+            "--format", "json", "-m", (model or cfg["MODEL"])]
+
+
+def codex_implementer_argv(cfg, run_dir, model, prompt):
+    """STRUCTURAL ONLY -- never executed, never observed. `codex exec --json --model <m> <prompt>`.
+
+    Written from documentation on a machine where the codex CLI is not installed, so the flag
+    names, the subcommand and the position of the prompt are all unverified. It exists so the
+    third engine is one function to correct against a real CLI rather than a shape to invent
+    later, and it must not be read as support for OpenAI's runtime.
+    """
+    return [resolve_cli(engine_spec(cfg)["binary"]), "exec", "--json",
+            "--model", (model or cfg["MODEL"]), prompt]
+
+
+def claude_implementer_argv(cfg, project, run_dir, tools, model=None):
     """The step-7 launch line. Every implementer invocation uses it, the fix call included.
 
     No --max-turns: Claude Code 2.1.251 has no such flag (it is an SDK option) and the CLI
@@ -922,6 +1320,39 @@ def implementer_argv(cfg, project, run_dir, tools, model=None):
             "--add-dir", str(run_dir / "methodology")]
 
 
+def exit_code_path(out_path):
+    """Where the exit code of the process that wrote `out_path` is kept: `<out_path>.exit`.
+
+    Derived from the stdout path rather than named separately so the two cannot be paired up
+    wrongly under BEST_OF_N, where result_1.json .. result_N.json all live in one run directory
+    and the fix call adds fix.json beside them.
+    """
+    return Path(str(out_path) + ".exit")
+
+
+def write_exit_code(out_path, rc):
+    """Record a launched CLI's exit status beside its stdout. `timeout` when the harness killed it."""
+    exit_code_path(out_path).write_text("" if rc is None else str(rc), encoding="utf-8")
+
+
+def read_exit_code(out_path):
+    """The recorded exit code as an int, or None when there is no usable answer.
+
+    None is returned for a missing file (an engine that writes none, or stdout kept from an older
+    run), for an empty one, and for `timeout` -- and None is not the same claim as a non-zero
+    code. A non-zero code is the process saying it failed; None is the harness saying it does not
+    know, and stream_result_record has to treat "unknown" as "cannot certify this run finished"
+    rather than as either verdict.
+    """
+    p = exit_code_path(out_path)
+    if not p.is_file():
+        return None
+    try:
+        return int(p.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return None
+
+
 def launch_implementer(cfg, project, run_dir, workspace, stdin, tools, out_path, err_path,
                        model=None, argv_name="cli_argv.txt"):
     """One implementer invocation with cwd = workspace and stdin piped in.
@@ -931,15 +1362,41 @@ def launch_implementer(cfg, project, run_dir, workspace, stdin, tools, out_path,
     passes its own `model` and its own `argv_name`: under FIX_MODEL the two launch lines really
     differ, and one file overwriting the other would leave the run directory unable to say which.
     """
-    args = implementer_argv(cfg, project, run_dir, tools, model)
-    (run_dir / argv_name).write_text("\n".join(args), encoding="utf-8")
+    # `stdin` is the task text. Under an engine that takes the task as a positional argument it
+    # goes onto the launch line instead and the pipe is closed empty -- leaving the same text on
+    # both would hand the agent its instructions twice, and leaving the pipe open would hold the
+    # CLI waiting on a stream nobody is going to write to.
+    args = implementer_argv(cfg, project, run_dir, tools, model, prompt=stdin)
+    argv_on_line = engine_spec(cfg)["prompt_via"] == "argv"
+    if argv_on_line:
+        stdin = ""
+    # The file exists so a run can be reproduced from its own directory, which means it has to
+    # round-trip. Newline-joined argv does that only while no argument contains a newline -- true
+    # of every launch line whose prompt arrives on stdin, and false the moment the task itself is
+    # an argv element, because prompt.md is many lines long and the join then produces a file
+    # that cannot be split back into the arguments that were run. So the engines that put the
+    # prompt on the line get a JSON array, which survives embedded newlines, quotes and empty
+    # strings and is read back with one json.loads.
+    #
+    # The stdin engines keep the newline-joined form they have always had. Two formats is the
+    # smaller cost: 95 published runs have a cli_argv.txt in the old shape, the run directory is
+    # the record those rows are audited against, and reformatting it would make every one of them
+    # differ from a re-run for a reason that has nothing to do with the run. Which shape a file is
+    # in is decided by its first byte -- `[` is the JSON form.
+    if argv_on_line:
+        (run_dir / argv_name).write_text(json.dumps(args, indent=2, ensure_ascii=False),
+                                         encoding="utf-8")
+    else:
+        (run_dir / argv_name).write_text("\n".join(args), encoding="utf-8")
     started = time.time()
     timed_out = False
+    rc = None
     try:
         p = subprocess.run(args, cwd=str(workspace), input=stdin, text=True, encoding="utf-8",
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                            env=cli_env(cfg, run_dir), timeout=CLI_TIMEOUT_S)
         out, err = p.stdout or "", p.stderr or ""
+        rc = p.returncode
     except subprocess.TimeoutExpired as e:
         timed_out = True
         out = e.stdout if isinstance(e.stdout, str) else (e.stdout or b"").decode("utf-8", "replace")
@@ -947,6 +1404,22 @@ def launch_implementer(cfg, project, run_dir, workspace, stdin, tools, out_path,
     wall = time.time() - started
     out_path.write_text(out, encoding="utf-8")
     err_path.write_text(err, encoding="utf-8")
+    # The process's own verdict on itself, kept beside its stdout -- for the stream engines only.
+    #
+    # A stream engine has no other end-of-run marker. opencode writes no terminal event: a run
+    # that stopped after three of ten steps is byte-for-byte a PREFIX of a run that finished, and
+    # nothing inside the stream distinguishes them. The exit code is the one remaining signal, and
+    # on opencode 1.18.30 it was observed to carry the answer -- 0 on a clean finish, 1 on a
+    # failure, both when the failure came before any step (unknown model) and when it came after
+    # steps that had already been billed. Written as a file rather than returned because three
+    # call sites and three readers would otherwise have to thread a fourth value between them.
+    #
+    # ENGINE=claude gets no such file, and not merely because it would be redundant: its `result`
+    # object is self-describing, a truncated stdout fails to parse and is recorded `unparsable`
+    # already, and its run directory is the audit record behind 95 published rows. An extra file
+    # appearing in it would be a change to that record for no measurement gained.
+    if engine_spec(cfg)["result_style"] != "claude":
+        write_exit_code(out_path, "timeout" if timed_out else rc)
     return wall, timed_out
 
 
@@ -983,7 +1456,7 @@ def step7a_best_of_n(cfg, project, run_dir, template, workspace, tools, n):
     for i in range(1, n + 1):
         ws = run_dir / ("project_workspace_%d" % i)
         shutil.copytree(template, ws)
-        step5_deploy_entry_file(run_dir, ws)
+        step5_deploy_entry_file(cfg, run_dir, ws)
         wall, timed_out = launch_implementer(cfg, project, run_dir, ws, prompt, tools,
                                              run_dir / ("result_%d.json" % i),
                                              run_dir / ("stderr_%d.txt" % i))
@@ -1001,7 +1474,9 @@ def step7a_best_of_n(cfg, project, run_dir, template, workspace, tools, n):
             shutil.copy2(base, out_dir / "metrics_baseline.txt")
         run_oracle(project, run_dir, scored, baseline=False, holdout=None, out_dir=out_dir)
         triple = read_triple(out_dir / "verification.txt")
-        data = result_record((run_dir / ("result_%d.json" % i)).read_text(encoding="utf-8"))
+        cand_out = run_dir / ("result_%d.json" % i)
+        data = engine_result_record(cfg, cand_out.read_text(encoding="utf-8"),
+                                    read_exit_code(cand_out))
         try:
             cost = float((data or {}).get("total_cost_usd") or 0)
         except (TypeError, ValueError):
@@ -1015,6 +1490,14 @@ def step7a_best_of_n(cfg, project, run_dir, template, workspace, tools, n):
     shutil.copytree(best["ws"], workspace)
     shutil.copy2(run_dir / ("result_%d.json" % best["i"]), run_dir / "result.json")
     shutil.copy2(run_dir / ("stderr_%d.txt" % best["i"]), run_dir / "stderr.txt")
+    # The exit code travels with the stdout it belongs to. Under a stream engine it is the only
+    # thing that says whether the winning candidate finished, and step 9 reads it beside
+    # result.json: left behind, every best-of-N row would fall back to "no exit code recorded"
+    # and report incomplete_stream on a candidate that ran cleanly. Engines that write no sidecar
+    # (claude) leave nothing to copy and nothing changes.
+    won = exit_code_path(run_dir / ("result_%d.json" % best["i"]))
+    if won.is_file():
+        shutil.copy2(won, exit_code_path(run_dir / "result.json"))
     scored = [c["score"] for c in cands if c["score"] >= 0]
     row = {"res_bestof_n": n,
            "res_bestof_min": ("%.4f" % min(scored)) if scored else "",
@@ -1087,7 +1570,8 @@ def step7c_feedback(cfg, project, run_dir, workspace, tools, review_error=False)
                                  model=fix_model(cfg), argv_name="fix_argv.txt")
     row["prf_fix_s"] = round(wall, 1)
     row["res_review_fixed"] = 1
-    data = result_record((run_dir / "fix.json").read_text(encoding="utf-8"))
+    data = engine_result_record(cfg, (run_dir / "fix.json").read_text(encoding="utf-8"),
+                                read_exit_code(run_dir / "fix.json"))
     if data is not None:
         usage = data.get("usage") or {}
         row["tk_fix_input"] = usage.get("input_tokens", "")
@@ -1097,6 +1581,253 @@ def step7c_feedback(cfg, project, run_dir, workspace, tools, review_error=False)
         row["tk_fix_cost_usd"] = data.get("total_cost_usd", "")
     print("feedback: issues=%d fixed=1 dur=%ss" % (len(issues), row["prf_fix_s"]))
     return row
+
+
+def engine_result_record(cfg, raw, exit_code=None):
+    """The run's outcome record, from whatever this engine writes on stdout -- dispatch point two.
+
+    Every engine produces the same SHAPE here, and the shape is the one ENGINE=claude already
+    emits: `usage`, `total_cost_usd`, `num_turns`, `subtype`, `model`, `duration_ms`,
+    `permission_denials`, `modelUsage`, `subagent_stats`. Normalising at the boundary is what
+    keeps step9_parse_and_write, step7a's cost tie-break and the fix call's token columns free of
+    engine tests: they read a record, not a CLI. The alternative -- teaching each of those three
+    every format -- is how a harness ends up with a column that means one thing per engine.
+
+    A field an engine does not report stays ABSENT rather than being filled with a zero. A blank
+    cell says the engine could not answer; a zero says it answered nothing, and a campaign that
+    averages the second is quietly wrong.
+
+    ENGINE=claude goes to result_record unchanged -- same input, same output, same None on
+    unparsable stdout.
+    """
+    style = engine_spec(cfg)["result_style"]
+    if style == "claude":
+        return result_record(raw)
+    return stream_result_record(raw, exit_code)
+
+
+def stream_events(raw):
+    """Every JSON object in a stream engine's stdout, whatever shape the stdout turned out to be.
+
+    opencode 1.18.30 writes newline-delimited JSON -- one complete object per line, no wrapping
+    array, no terminal event. That was observed, not assumed, and it is the shape this reads
+    first: each line on its own, a line that will not parse skipped rather than failing the whole
+    stdout, because a half-written last line is the normal shape of a killed process and the
+    steps before it are real spend that has to reach the row.
+
+    But "one object per line" is a property of a CLI, not a law, and the harness has already been
+    wrong once about what a CLI emits. A stdout that parses whole -- one JSON document, either an
+    array of events or a single object -- is therefore also accepted, and only if the per-line
+    pass found nothing. Trying it in that order matters: NDJSON with more than one line never
+    parses whole, so the fallback cannot misread a stream it should have read line by line, while
+    a pretty-printed array (which has no parsable individual lines) is picked up correctly. A
+    codex stream nobody has run yet is the case this is really holding open.
+    """
+    events = []
+    for line in (raw or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            ev = json.loads(line)
+        except (ValueError, TypeError):
+            continue
+        if isinstance(ev, dict):
+            events.append(ev)
+    if events:
+        return events
+    try:
+        whole = json.loads(raw)
+    except (ValueError, TypeError):
+        return []
+    if isinstance(whole, dict):
+        return [whole]
+    if isinstance(whole, list):
+        return [e for e in whole if isinstance(e, dict)]
+    return []
+
+
+def _num(value):
+    """A JSON number as a number, or None when the field was absent or not one.
+
+    None rather than 0 on purpose, all the way up: it is what lets the caller tell a field the
+    engine reported as zero from a field the engine did not report, which is the difference
+    between a true zero and a fabricated one in the row.
+    """
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return value
+    return None
+
+
+def _tidy(value):
+    """A summed token count as the integer it is, without truncating one that is not.
+
+    Token counts arrive as JSON integers, so the sum is normally integral and is written as an
+    int. A provider that reports a fractional count is not silently floored to a smaller number
+    -- int() on a float is truncation, and a count that quietly rounds down is the kind of error
+    that only shows up as a campaign whose totals do not add.
+    """
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    return value
+
+
+def stream_result_record(raw, exit_code=None):
+    """Fold a line-per-event JSON stream (opencode, and codex as written) into a result record.
+
+    WHAT WAS OBSERVED. opencode 1.18.30, `run --format json`, driven against a controlled
+    OpenAI-compatible endpoint so that the token counts and the step boundaries were known in
+    advance. Every claim below is from that capture; the notes it replaces were written from
+    documentation and were wrong in two places that mattered.
+
+    Shape: newline-delimited JSON. Event `type` values seen: `step_start`, `tool_use`, `text`,
+    `step_finish`, `error`. There is no terminal or summary event of any kind.
+
+    Where the accounting lives: inside `part`, NOT at the top level of the event. A step_finish
+    reads
+
+        {"type":"step_finish", ..., "part":{"type":"step-finish","reason":"stop",
+         "tokens":{"total":330,"input":300,"output":30,"reasoning":0,
+                   "cache":{"write":0,"read":0}}, "cost":0.00036}}
+
+    so a parser reading ev["cost"] and ev["tokens"] -- as this one did -- finds nothing and
+    silently totals a run at $0.00 with no tokens. That is the defect this rewrite exists for.
+
+    Per-step or cumulative: PER-STEP. This was the question worth an experiment, because summing
+    a running total inflates an N-step run by roughly N**2/2. The endpoint was made to report
+    usage of (200 in, 20 out) on the first model call and (300 in, 30 out) on the second. The two
+    step_finish events carried exactly those numbers -- input 200 then input 300, not 200 then
+    500 -- and cost 0.00024 then 0.00036 at a configured $1/$2 per million, which is each step's
+    own tokens priced alone and not a running total. Summing across step_finish is therefore
+    correct. (What the sum means is a separate thing a reader should know: each step's `input` is
+    that call's whole prompt, so the total counts re-sent context once per step. That is what the
+    provider bills and what tk_input has always meant on the claude path too, so the columns
+    remain comparable.)
+
+    Turns: the number of step_start events. Two in the captured multi-step run, matching the two
+    model calls the endpoint saw from the main agent. The session-title call opencode makes on
+    its small model produced no step events at all, so it does not inflate the count.
+
+    Model served: NOT REPORTED. No event in the capture -- of any type -- carries a model id. The
+    old loop scanned every event for any key called `modelID`, `model` or `model_id` and kept the
+    LAST match, which is exactly the failure step 9 spends a paragraph guarding against on the
+    claude path: an auxiliary model winning a field that is supposed to name the model that did
+    the work. There is no authoritative field to read instead, so `model` is left ABSENT and
+    res_model_served goes blank. Blank is the honest cell: it says this row cannot tell you what
+    served it. (The id is in the CLI's own stderr log, `modelID=`, but that is a log line whose
+    format is not a contract, and it names what was requested rather than what answered.)
+
+    HOW A RUN IS KNOWN TO HAVE FINISHED, which nothing in the stream can tell you. Because there
+    is no terminal event, a run cut off after three of ten steps is byte-for-byte a prefix of a
+    run that finished: same event types, same well-formed last line, just fewer of them. Treating
+    any step_finish as proof of success -- as this did -- turns a killed run into a `success` row
+    carrying a fraction of the real cost, and --gate, which only asks whether res_subtype is
+    `success`, passes it. The signal is the process exit code, captured beside the stdout by
+    launch_implementer. Observed: 0 on a clean finish; 1 on a failure before any step (unknown
+    model) and 1 on a provider error that arrived after a step had already been billed.
+
+    So the verdict is:
+      - an `error` event names the subtype, whatever the exit code says. It is the most specific
+        thing anyone knows about how the run ended, and the steps already paid for stay in the row.
+      - exit 0 with no error event is `success`.
+      - anything else -- non-zero, or no exit code recorded at all -- is `incomplete_stream`.
+        Unknown is not success. A missing exit code means the harness killed the process or the
+        stdout came from somewhere that recorded none, and neither is evidence the run completed.
+
+    ABSENT, NOT ZERO. Only fields the stream actually reported are put in the record. A stream
+    with recognisable events but no step_finish yields no token counts, no cost and -- if it had
+    no step_start either -- no turn count, so those cells are blank rather than a $0.00 0-turn
+    run that a campaign would average as real. The record's shape is otherwise the claude one, so
+    step9_parse_and_write, step7a's cost tie-break and the fix call's token columns are unchanged.
+
+    Returns None only when the stdout contained no recognisable event at all, which is the same
+    thing `unparsable` has always meant in res_subtype.
+    """
+    steps = 0
+    finishes = 0
+    cost = None
+    # None until an event reports the field, so a count that stays None is one the engine never
+    # gave rather than one it gave as zero.
+    tk = {"input_tokens": None, "output_tokens": None, "thinking": None,
+          "cache_write": None, "cache_read": None}
+    error = ""
+    events = stream_events(raw)
+    if not events:
+        return None
+    for ev in events:
+        kind = ev.get("type") or ev.get("event") or ""
+        if kind == "step_start":
+            steps += 1
+        elif kind == "step_finish":
+            finishes += 1
+            # `part` is where opencode puts it; the event itself is the fallback so a stream that
+            # is flatter -- codex, or a later opencode -- still accounts rather than silently
+            # totalling nothing, which is the exact way this failed before.
+            part = ev.get("part")
+            part = part if isinstance(part, dict) else ev
+            c = _num(part.get("cost"))
+            if c is None:
+                c = _num(ev.get("cost"))
+            if c is not None:
+                cost = c if cost is None else cost + c
+            tokens = part.get("tokens")
+            if not isinstance(tokens, dict):
+                tokens = ev.get("tokens")
+            if isinstance(tokens, dict):
+                cache = tokens.get("cache")
+                cache = cache if isinstance(cache, dict) else {}
+                for key, src in (("input_tokens", tokens.get("input")),
+                                 ("output_tokens", tokens.get("output")),
+                                 ("thinking", tokens.get("reasoning")),
+                                 ("cache_write", cache.get("write")),
+                                 ("cache_read", cache.get("read"))):
+                    n = _num(src)
+                    if n is None:
+                        continue
+                    tk[key] = n if tk[key] is None else tk[key] + n
+        elif kind == "error":
+            # Kept as the subtype rather than raised: an error event is how the run ended, and a
+            # row that records it is worth more than an exception that discards the tokens spent.
+            # The detail is nested -- {"error":{"name":"APIError","data":{"message":...}}} was
+            # what the CLI actually wrote -- so the top-level lookup this used to do found neither
+            # and recorded every failure as the bare word "error".
+            err = ev.get("error")
+            err = err if isinstance(err, dict) else {}
+            data = err.get("data")
+            data = data if isinstance(data, dict) else {}
+            name = (err.get("name") or ev.get("name") or data.get("message")
+                    or err.get("message") or ev.get("message") or "error")
+            error = str(name)[:80]
+
+    if error:
+        subtype = error
+    elif exit_code == 0:
+        subtype = "success"
+    else:
+        subtype = "incomplete_stream"
+
+    usage = {}
+    if tk["input_tokens"] is not None:
+        usage["input_tokens"] = _tidy(tk["input_tokens"])
+    if tk["output_tokens"] is not None:
+        usage["output_tokens"] = _tidy(tk["output_tokens"])
+    if tk["thinking"] is not None:
+        usage["output_tokens_details"] = {"thinking_tokens": _tidy(tk["thinking"])}
+    if tk["cache_write"] is not None:
+        usage["cache_creation_input_tokens"] = _tidy(tk["cache_write"])
+    if tk["cache_read"] is not None:
+        usage["cache_read_input_tokens"] = _tidy(tk["cache_read"])
+
+    rec = {"usage": usage, "subtype": subtype}
+    if cost is not None:
+        rec["total_cost_usd"] = round(cost, 6)
+    if steps or finishes:
+        # A stream that produced step events can answer how many; one that produced none cannot,
+        # and 0 turns would read as a run that did nothing rather than a run that did not say.
+        rec["num_turns"] = steps
+    return rec
 
 
 def result_record(raw):
@@ -1477,7 +2208,7 @@ def step9_parse_and_write(cfg, run_dir, row):
     blank.update(row)
     row = blank
     raw = (run_dir / "result.json").read_text(encoding="utf-8") if (run_dir / "result.json").is_file() else ""
-    data = result_record(raw)
+    data = engine_result_record(cfg, raw, read_exit_code(run_dir / "result.json"))
 
     if data is None:
         if not row.get("res_subtype"):
@@ -1637,11 +2368,12 @@ def _one_run_body(cfg, project, methodology, repeat, stamp, run_id, run_dir):
     print("=== %s" % run_id)
     step3_snapshot_methodology(methodology, run_dir)
     template, workspace = step4_copy_workspace(project, run_dir)
-    mth = step5_deploy_entry_file(run_dir, workspace)
+    mth = step5_deploy_entry_file(cfg, run_dir, workspace)
     _, user_md, cli_version = step6_environment_and_preflight(cfg, project, template, workspace,
                                                               run_dir)
     baseline = read_triple(run_dir / "verification_baseline.txt")
     tools, cfg_tools = allowed_tools(methodology, project)
+    cfg_tools = record_tool_enforcement(cfg, cfg_tools)
     n = best_of_n(cfg)
     bestof = {}
     if n > 1:
@@ -1663,6 +2395,7 @@ def _one_run_body(cfg, project, methodology, repeat, stamp, run_id, run_dir):
            "cfg_engine": cfg["ENGINE"], "cfg_cli_version": cli_version,
            "cfg_model": cfg["MODEL"], "cfg_effort": cfg["EFFORT"],
            "cfg_user_claude_md": user_md,
+           "cfg_entry_file": engine_spec(cfg)["entry_file"],
            "cfg_review_pass": cfg["REVIEW_PASS"], "cfg_review_model": review_model(cfg),
            "cfg_fix_model": fix_model(cfg),
            "cfg_review_prompt": ("" if cfg["REVIEW_PASS"] == "none"
