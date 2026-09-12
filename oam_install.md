@@ -13,7 +13,39 @@ it, and the abort code is named.
 
 ---
 
-## 0. Read this first: where you are installing to
+## 0. Read this first: do not clone into a synced folder
+
+**The repository must not live inside OneDrive, Dropbox, or any other syncing
+folder.** Clone it somewhere plain — `C:\Users\<you>\GitHub\OpenAgentsGym` is
+what this machine uses. `local/` alone reaches six figures of files (one
+virtualenv per run), and a sync client will both fight you for them and change
+what paths resolve to.
+
+Measured on 2026-09-12, with the repository under
+`C:\Users\frank\OneDrive\Dokumente\GitHub\OpenAgentsGym`:
+
+- **opencode refused to edit its own workspace.** `stderr.txt` recorded
+  `permission requested: external_directory (C:\Users\frank\OneDrive\GitHub\
+  OpenAgentsGym\local\runs\...\project_workspace\*); auto-rejecting` — note the
+  missing `Dokumente`. OneDrive redirects the localized Documents known folder,
+  the workspace canonicalised to a path that does not exist, opencode compared
+  it against the session root, decided its own working directory was foreign,
+  and denied every write. The agent then ran its turns, edited nothing, and
+  scored 0.0000 with `diff_lines=0` — a run that looks like a model failure and
+  is not. It hit 4 of 20 opencode runs; the other 16 had empty stderr.
+- **A batch file being edited was truncated to zero bytes**, then disappeared,
+  while OneDrive held it open.
+- **A run directory could not be renamed** for as long as the sync client had
+  it.
+
+If `git status` is clean and the remote is up to date, moving is one command —
+`robocopy <old> <new> /E /MOVE /XJ`. A plain rename out of the sync root is
+refused by the OneDrive filter; robocopy copies and deletes instead. Nothing in
+the harness stores an absolute path, so nothing needs repointing afterwards.
+
+---
+
+## 0.1 Read this too: where you are installing to
 
 **If you are an agent running inside a packaged/sandboxed host application, your
 `%APPDATA%` writes may be virtualized.** A global npm or uv install then lands in
