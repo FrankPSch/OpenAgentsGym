@@ -5,7 +5,7 @@ type: software
 authors:
   - family-names: Schikarski
     given-names: Frank
-repository-code: https://github.com/OpenAgentsGym/OpenAgentsGym
+repository-code: https://github.com/FrankPSch/OpenAgentsGym
 abstract: >-
   A harness that treats the methodology an agent works under as the variable and
   everything else as constant. The same task is run under different sets of agent

@@ -22,10 +22,10 @@ virtualenv per run), and a sync client will both fight you for them and change
 what paths resolve to.
 
 Measured on 2026-09-12, with the repository under
-`C:\Users\frank\OneDrive\Dokumente\GitHub\OpenAgentsGym`:
+`C:\Users\<you>\OneDrive\Dokumente\GitHub\OpenAgentsGym`:
 
 - **opencode refused to edit its own workspace.** `stderr.txt` recorded
-  `permission requested: external_directory (C:\Users\frank\OneDrive\GitHub\
+  `permission requested: external_directory (C:\Users\<you>\OneDrive\GitHub\
   OpenAgentsGym\local\runs\...\project_workspace\*); auto-rejecting` — note the
   missing `Dokumente`. OneDrive redirects the localized Documents known folder,
   the workspace canonicalised to a path that does not exist, opencode compared
@@ -278,7 +278,7 @@ inside `click.echo`, and the proxy exits before serving anything. Force UTF-8 in
 the same window first:
 
 ```
-cd /d C:\Users\frank\GitHub\OpenAgentsGym
+cd /d C:\Users\<you>\GitHub\OpenAgentsGym
 set PYTHONUTF8=1
 set PYTHONIOENCODING=utf-8
 ```
@@ -316,7 +316,7 @@ Four names must come back. Three means you are talking to the stale instance.
 ### 3.4 The whole start sequence, copy-paste
 
 ```
-cd /d C:\Users\frank\GitHub\OpenAgentsGym
+cd /d C:\Users\<you>\GitHub\OpenAgentsGym
 set PYTHONUTF8=1
 set PYTHONIOENCODING=utf-8
 py -3 -P -c "from litellm.proxy.proxy_cli import run_server; run_server()" --config .\gateway\config.yaml --port 4000
