@@ -79,7 +79,7 @@ looks unrelated.
 git --version          # the repository, and the harness records the CLI version
 node --version         # opencode ships as an npm package
 npm.cmd --version      # note .cmd - see 4.1
-uv --version           # LiteLLM is installed as a uv tool
+uv --version           # optional; LiteLLM can be a uv tool or a pip install
 ```
 
 | Missing | Install |
@@ -206,44 +206,146 @@ different wire formats: the Claude CLI wants Anthropic `/v1/messages`, opencode
 and everything else want OpenAI `/v1/chat/completions`, and Ollama serves only
 the latter. LiteLLM translates, and prices every provider so `tk_cost_usd` works.
 
-```powershell
+The config and the Modelfile live in `gateway/` in this repository. **That
+folder is deliberately not called `litellm/`** — see 3.2.
+
+### 3.1 Install
+
+Either of these works; pick one and remember which interpreter you used, because
+3.3 needs it.
+
+```
+py -3 -m pip install "litellm[proxy]"
+```
+
+```
 uv tool install "litellm[proxy]"
 ```
 
-### 3.1 It crashes on startup without UTF-8
+The `uv` form is tidier but installs a generated `litellm.exe` shim into
+`%USERPROFILE%\.local\bin`, and that shim is what corporate Device Guard /
+WDAC policy blocks (3.3, trap A). The `pip` form into the system Python 3.12 has
+no such shim in the path you will actually use.
 
-LiteLLM prints an ASCII-art banner that cannot be encoded in Windows cp1252:
-`UnicodeEncodeError: 'charmap' codec can't encode characters` inside
-`click.echo`, and the proxy exits before serving anything. **Always start it
-with UTF-8 forced:**
+Confirm the package is real and not a shadow (3.2):
 
-```powershell
-$env:PYTHONUTF8 = "1"
-$env:PYTHONIOENCODING = "utf-8"
-litellm --config .\litellm\config.yaml --port 4000
+```
+py -3 -P -c "import litellm; print(litellm.__file__)"
+```
+
+A path ending in `site-packages\litellm\__init__.py` is correct. `None` means
+you imported a directory, not the package.
+
+### 3.2 Never name a directory `litellm` in the repository root
+
+Python puts the current directory on `sys.path`, and a directory with no
+`__init__.py` is still importable as a namespace package. A folder named
+`litellm\` next to the batch files therefore *shadows the installed package*:
+`import litellm` succeeds, `litellm.__file__` is `None`, and
+`litellm.proxy` does not exist, so the proxy cannot start. The symptom looks
+like a broken install and is not one.
+
+This is why the config lives in `gateway/`. The same applies to any future
+directory: do not name one after a package the harness imports.
+
+### 3.3 Starting it — three traps
+
+**Trap A — the `.exe` shim may be blocked.** On a managed machine
+`litellm --config ...` can die with *"wurde durch die Device Guard-Richtlinie
+Ihrer Organisation blockiert"* / "blocked by your organization's Device Guard
+policy". The policy blocks the generated launcher `.exe`, not Python and not the
+package. Call the entry point directly instead — no shim is involved:
+
+```
+py -3 -P -c "from litellm.proxy.proxy_cli import run_server; run_server()" --config .\gateway\config.yaml --port 4000
+```
+
+Notes on that line, each earned:
+
+- `-P` keeps the current directory off `sys.path`, so 3.2 cannot recur.
+- The callable is `run_server`, **not** `cli`. It was `cli` in older releases;
+  on 1.100 `from litellm.proxy.proxy_cli import cli` raises `ImportError`. If a
+  future release renames it again, list what is there:
+  `py -3 -P -c "import litellm.proxy.proxy_cli as m; print(dir(m))"`.
+- `py -3 -m litellm` does **not** work: `litellm` is a package with no
+  `__main__`.
+- Everything after `-c "..."` is passed through to click unchanged, so the flags
+  are identical to the blocked command's.
+
+**Trap B — UTF-8.** LiteLLM prints an ASCII-art banner that cannot be encoded in
+Windows cp1252: `UnicodeEncodeError: 'charmap' codec can't encode characters`
+inside `click.echo`, and the proxy exits before serving anything. Force UTF-8 in
+the same window first:
+
+```
+cd /d C:\Users\frank\GitHub\OpenAgentsGym
+set PYTHONUTF8=1
+set PYTHONIOENCODING=utf-8
+```
+
+**Trap C — a stale proxy silently keeps port 4000, and the new one moves.**
+LiteLLM does not fail when the port is taken. It binds a random free port and
+says so only in the last line:
+
+```
+Uvicorn running on http://0.0.0.0:47675 (Press CTRL+C to quit)
+```
+
+Read that line every time. A proxy on 47675 serves nobody: the engines address
+4000, and the *old* instance — still running with the *old* config — answers
+them. That is a whole campaign measured against the wrong model list, with no
+error anywhere. Clear it:
+
+```
+netstat -ano | findstr :4000
+taskkill /PID <pid> /F
 ```
 
 **LiteLLM reads its config once, at startup.** Adding a model to the file does
-nothing to a running proxy: the leg then fails at the gateway, which reads like
-a model failure and is not one. After any change to `litellm/config.yaml`,
-restart it and check what is actually served:
+nothing to a running proxy; the leg then fails at the gateway, which reads like
+a model failure and is not one. After any change to `gateway/config.yaml`,
+restart it and check what is actually served — not that it is up, but *which
+names* it has:
 
-```powershell
-curl.exe http://127.0.0.1:4000/v1/models -H "Authorization: Bearer sk-oag-local"
+```
+curl http://127.0.0.1:4000/v1/models -H "Authorization: Bearer sk-oag-local"
 ```
 
-### 3.2 Config
+Four names must come back. Three means you are talking to the stale instance.
 
-`litellm/config.yaml` in this repository is the live file, not an example of
-one — it is versioned here because it decides what `cfg_model` means in a
-published row. `litellm/Modelfile.qwen3-coder-30b-tuned` sits beside it for the
-same reason: it defines the `qwen3-coder:30b-tuned` tag that `e11` runs on, and
-a row naming a model built from a file nobody kept is a row nobody can
-reproduce. Build it with:
+### 3.4 The whole start sequence, copy-paste
 
-```powershell
-ollama create qwen3-coder:30b-tuned -f .\litellm\Modelfile.qwen3-coder-30b-tuned
 ```
+cd /d C:\Users\frank\GitHub\OpenAgentsGym
+set PYTHONUTF8=1
+set PYTHONIOENCODING=utf-8
+py -3 -P -c "from litellm.proxy.proxy_cli import run_server; run_server()" --config .\gateway\config.yaml --port 4000
+```
+
+Success looks like the four model names listed under
+`LiteLLM: Proxy initialized with Config, Set models:` and a final
+`Uvicorn running on http://0.0.0.0:4000`. Leave the window open; it is the
+gateway. The `register_model: ... has custom pricing but not in built-in cost
+map` warnings are expected for every Ollama model and are harmless — the costs
+are zero on purpose.
+
+### 3.5 Config
+
+`gateway/config.yaml` is the live file, not an example of one — it is versioned
+here because it decides what `cfg_model` means in a published row.
+`gateway/Modelfile.qwen3-coder-30b-tuned` sits beside it for the same reason: it
+defines the `qwen3-coder:30b-tuned` tag that `e11` runs on, and a row naming a
+model built from a file nobody kept is a row nobody can reproduce. Build it
+with:
+
+```
+ollama create qwen3-coder:30b-tuned -f .\gateway\Modelfile.qwen3-coder-30b-tuned
+```
+
+`master_key: sk-oag-local` is in this file and therefore in git history. Treat it
+as public: it is a local-only shared secret for a proxy bound to this machine.
+Never put a real vendor key in `config.yaml` — use environment variables for
+those.
 
 Minimal, honest, no fallbacks. A fallback would silently substitute one model
 for another — precisely what `check_model()` forbids for `--fallback-model`,
@@ -272,6 +374,13 @@ model_list:
       timeout: 3600
     model_info: {mode: chat, input_cost_per_token: 0.0, output_cost_per_token: 0.0, supports_function_calling: true}
 
+  - model_name: qwen3-coder-30b-tuned
+    litellm_params:
+      model: ollama_chat/qwen3-coder:30b-tuned
+      api_base: http://127.0.0.1:11434
+      timeout: 3600
+    model_info: {mode: chat, input_cost_per_token: 0.0, output_cost_per_token: 0.0, supports_function_calling: true}
+
 router_settings:
   num_retries: 0          # a retry that succeeds hides an instability the campaign should record
 
@@ -291,9 +400,9 @@ vendor answered.
 
 Verify both the health endpoint and that every model name resolves:
 
-```powershell
-Invoke-RestMethod "http://127.0.0.1:4000/health/liveliness"
-(Invoke-RestMethod "http://127.0.0.1:4000/v1/models" -Headers @{Authorization="Bearer sk-oag-local"}).data.id
+```
+curl http://127.0.0.1:4000/health/liveliness
+curl http://127.0.0.1:4000/v1/models -H "Authorization: Bearer sk-oag-local"
 ```
 
 ---

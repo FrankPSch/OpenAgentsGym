@@ -21,10 +21,15 @@ REM TIME. Four local legs per project, three projects. Local legs have run
 REM between 16 and 45 minutes each, and the two 30B legs are the slowest, so
 REM budget SIX TO TEN HOURS unattended. The cloud legs add about a minute each.
 REM
-REM BEFORE STARTING, two things that have each cost a run today:
-REM   - restart LiteLLM if you have not since e11 was added, or its leg fails at
-REM     the gateway and reads like a model failure:
-REM       litellm --config <repo>\litellm\config.yaml --port 4000
+REM BEFORE STARTING, three things that have each cost a run:
+REM   - start the gateway with start_gateway.bat and read the model list it
+REM     prints. A gateway that is merely up is not enough: a stale instance
+REM     keeps port 4000 with the config it booted from, and the leg then fails
+REM     at the gateway and reads like a model failure.
+REM   - build the tuned tag once, or e11 fails in about a second with
+REM     UnknownError -- LiteLLM serves the NAME, Ollama must hold the TAG:
+REM       ollama create qwen3-coder:30b-tuned -f .\gateway\Modelfile.qwen3-coder-30b-tuned
+REM     Check with: ollama list
 REM   - close anything large. Free RAM decides whether the 30B pages from disk;
 REM     18 GB of weights against 8 GB free measured 0.76 tok/s, which is the
 REM     SSD, not the model.
@@ -37,17 +42,27 @@ setlocal
 cd /d "%~dp0"
 
 set "M=m48_syntax_gate"
-set "BILLED=%~1"
+
+REM Forward /billed only when it was actually asked for. Passing an empty
+REM argument through is not harmless: it arrives as a positional and the
+REM matrix reads it as one.
+set "EXTRA="
+if /i "%~1"=="/billed" set "EXTRA=/billed"
+
+REM The matrix pauses at the end of every project so a double-clicked window
+REM keeps its summary. Across three projects and six to ten hours that is a
+REM stall, not a safety net, so tell it this is a campaign.
+set "OAG_CAMPAIGN=1"
 
 echo ============================================================
 echo  campaign: %M% on p02, p03, p04
-echo  billed legs: %BILLED%    (empty = local only)
+echo  billed legs: %EXTRA%    (empty = local only)
 echo  started %DATE% %TIME%
 echo ============================================================
 
-call "%~dp0run_engine_matrix.p02.bat" %M% %BILLED%
-call "%~dp0run_engine_matrix.p03.bat" %M% %BILLED%
-call "%~dp0run_engine_matrix.p04.bat" %M% %BILLED%
+call "%~dp0run_engine_matrix.p02.bat" %M% %EXTRA%
+call "%~dp0run_engine_matrix.p03.bat" %M% %EXTRA%
+call "%~dp0run_engine_matrix.p04.bat" %M% %EXTRA%
 
 echo.
 echo ============================================================
@@ -55,5 +70,6 @@ echo  campaign finished %DATE% %TIME%
 echo  Rows are consolidated: each project batch merged its own.
 echo  Read them against the m00_empty rows for the same cells.
 echo ============================================================
+set "OAG_CAMPAIGN="
 pause
 exit /b 0

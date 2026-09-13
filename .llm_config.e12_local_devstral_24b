@@ -1,0 +1,47 @@
+# Devstral 24B dense -- the first arm chosen for what it was TRAINED to do
+# rather than for what fits.
+#
+# WHY THIS MODEL. Of the local models under the memory ceiling, it is the only
+# one that both lists `tools` in its Ollama capabilities and publishes an
+# agentic benchmark (46.8% SWE-Bench Verified). The two obvious smaller
+# candidates -- deepseek-coder-v2:16b (8.9 GB, MoE) and qwen2.5-coder:14b
+# (9.0 GB) -- were rejected on 2026-09-13 for the same reason: no `tools`
+# capability. opencode drives every edit through a function call, so such a
+# model produces a fast row with zero diff lines, which in the published table
+# is indistinguishable from a model that tried and failed. Checked before
+# pulling, not after a wasted leg.
+#
+# MEMORY. 14 GB of weights, dense. gpt-oss-20b runs here at 13 GB; every e08
+# leg dies at 18 GB. This sits between them, so it is also a measurement of
+# where the wall actually is on this machine.
+#
+# NOT COMPARABLE TO EXISTING ROWS. cfg_model is a campaign constant (chapter
+# 17): devstral rows pool with no other engine's. Every project to be compared
+# has to be re-run under this config.
+#
+# WHAT IT IS FOR. gpt-oss-20b scores 0.9020 on p02 under m48_syntax_gate. The
+# proposition is that a model trained for multi-file tool-driven editing beats
+# a general model of similar size on the larger projects, where the 20B's
+# advantage should decay. p02 first; p03 only if p02 justifies the night.
+
+ENGINE=opencode
+MODEL=litellm/devstral-24b
+# MODEL: provider/model. `devstral-24b` is the gateway name for the Ollama tag
+# devstral:24b, pulled as published -- no Modelfile, so nothing to build.
+PROVIDER=
+BASE_URL=
+EFFORT=medium
+MAX_TURNS=60
+MAX_BUDGET_USD=4.00
+REPEATS=1
+CLAUDE_CONFIG_DIR=
+
+REVIEW_PASS=none
+REVIEW_MAX_BUDGET_USD=1.00
+REVIEW_MODEL=
+REVIEW_CMD=
+REVIEW_PROMPT=
+REVIEW_WEIGHT=1
+REVIEW_FEEDBACK=0
+FIX_MODEL=
+BEST_OF_N=1

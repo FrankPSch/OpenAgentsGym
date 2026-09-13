@@ -30,7 +30,10 @@ cd /d "%~dp0"
 REM --- parameters ------------------------------------------------------------
 set "PROJECT=p01_python_small"
 set "METHODOLOGY=m00_empty"
-set "BILLED=1"
+REM Default OFF. This defaulted to 1 until 2026-09-12, so every campaign that
+REM did not pass /billed still spent a cloud call per project without saying so
+REM in its banner -- /billed then changed nothing and the opt-in was decorative.
+set "BILLED=0"
 
 set "POS=0"
 :parseargs
@@ -148,7 +151,11 @@ echo Logs: %LOGDIR%\
 echo.
 call "%~dp0rebuild_results_table.bat"
 echo.
-pause
+REM A campaign batch sets OAG_CAMPAIGN and runs unattended for hours; a pause
+REM between projects there is not a safety net, it is a stall nobody is
+REM watching. Interactive runs still pause so a double-clicked window does not
+REM vanish with its summary.
+if not defined OAG_CAMPAIGN pause
 exit /b 0
 
 :fatal
@@ -167,7 +174,7 @@ echo     - opencode missing: npm install -g --allow-scripts=opencode-ai opencode
 echo.
 echo   PATH begins: !PATH:~0,200!
 echo.
-pause
+if not defined OAG_CAMPAIGN pause
 exit /b 9
 
 :leg
@@ -199,6 +206,20 @@ if not defined LEGMODEL (
   echo            The run itself is unaffected; a previous leg's model may still
   echo            be holding memory.
 )
+REM --- preflight: can this leg resolve its model at all? ----------------------
+REM Asked BEFORE the leg runs. A gateway that is down, stale, or serving a name
+REM whose Ollama tag was never built does not stop the leg - it lets it write a
+REM row saying UnknownError at score 0.0000, which in the published table is
+REM indistinguishable from a model that tried and failed. Skipping is honest;
+REM a row like that is not.
+if defined LEGMODEL (
+  py -3 "%~dp0gateway\_check_model.py" "!LEGMODEL!"
+  if errorlevel 4 (
+    echo %CFG%  exit=-  SKIP  ^(model unresolvable: !LEGMODEL!^) >> "%SUMMARY%"
+    exit /b 0
+  )
+)
+
 if defined LEGMODEL (
   REM The unload runs for every leg: a local model left resident by the previous
   REM leg holds its weights whether or not THIS leg wants them back.

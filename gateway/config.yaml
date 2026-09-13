@@ -55,6 +55,25 @@ model_list:
       timeout: 3600
     model_info: {mode: chat, input_cost_per_token: 0.0, output_cost_per_token: 0.0, supports_function_calling: true}
 
+  # Devstral 24B dense, added 2026-09-13 as e12. The reason it is here and
+  # deepseek-coder-v2:16b and qwen2.5-coder:14b are not: those two omit `tools`
+  # from their Ollama capabilities. They are completion-era coders, and opencode
+  # drives everything through function calls, so a leg on either would die
+  # exactly the way an unresolvable model does -- fast, zero diff lines, and
+  # indistinguishable in the table from a model that tried. Devstral lists
+  # tools, was trained for multi-file agentic editing, and is the only local
+  # model publishing an agentic benchmark (46.8% SWE-Bench Verified).
+  #
+  # 14 GB against the ~15.5 GB shared-GPU budget: one GB above gpt-oss-20b,
+  # which runs here, and four below the 18 GB that makes every e08 leg an
+  # APIError. Near the wall, not over it.
+  - model_name: devstral-24b
+    litellm_params:
+      model: ollama_chat/devstral:24b
+      api_base: http://127.0.0.1:11434
+      timeout: 3600
+    model_info: {mode: chat, input_cost_per_token: 0.0, output_cost_per_token: 0.0, supports_function_calling: true}
+
 router_settings:
   num_retries: 0
 

@@ -6,4 +6,8 @@ py -3 "%~dp0run_master.py" --consolidate
 echo.
 py -3 "%~dp0run_master.py" --gate
 echo.
-pause
+REM Guarded, because every matrix calls this batch at the end of a project. A
+REM campaign spanning three projects would otherwise stop here, after the gate
+REM output, with nobody watching - which is exactly what happened on
+REM 2026-09-12: p03 sat waiting two and a half hours for a keypress.
+if not defined OAG_CAMPAIGN pause
