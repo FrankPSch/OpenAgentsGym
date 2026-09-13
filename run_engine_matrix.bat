@@ -123,6 +123,13 @@ call :leg e06_local_gptoss_20b "gpt-oss-20b     local  free"
 call :leg e07_local_qwen3_4b "qwen3-4b        local  free"
 call :leg e08_local_qwen3coder_30b "qwen3-coder-30b local  free (ctx32k, gpu auto)"
 call :leg e11_local_qwen3coder_30b_tuned "qwen3-coder-30b local  free (ctx8k, gpu 10)"
+REM Devstral, added 2026-09-13. 14 GB dense, trained for tool-driven multi-file
+REM editing, and the only local model publishing an agentic benchmark (46.8%%
+REM SWE-Bench Verified). It sits between gpt-oss-20b (13 GB, runs here) and the
+REM 30B at 32k context (18 GB + 3 GB KV, refused by the Vulkan allocator), so
+REM this leg also measures where the wall on this machine actually is. If the
+REM tag is not built the preflight skips it -- 01_build_models.bat pulls it.
+call :leg e12_local_devstral_24b "devstral-24b    local  free (24B dense, agentic)"
 
 echo.
 echo ============ SUMMARY ============

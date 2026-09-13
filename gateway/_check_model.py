@@ -63,7 +63,7 @@ try:
 except (urllib.error.URLError, OSError, ValueError, KeyError):
     fail(
         "no gateway answering on port %d." % PORT,
-        "Start it with start_gateway.bat and wait for its model list.",
+        "Start it with 02_start_gateway.bat and wait for its model list.",
     )
 
 if NAME not in served:
@@ -71,7 +71,7 @@ if NAME not in served:
         "the gateway does not serve %r." % NAME,
         "It serves: " + (", ".join(served) if served else "(nothing)"),
         "A gateway started before this model was added keeps port 4000 and",
-        "answers with its old list. Restart it: start_gateway.bat",
+        "answers with its old list. Restart it: 02_start_gateway.bat",
     )
 
 
@@ -104,7 +104,7 @@ if tag:
     if tags and tag not in tags:
         fail(
             "the gateway serves %r but Ollama has no tag %r." % (NAME, tag),
-            "Build it:  build_models.bat",
+            "Build it:  01_build_models.bat",
         )
 
 sys.exit(0)

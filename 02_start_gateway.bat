@@ -1,6 +1,6 @@
 @echo off
 REM ---------------------------------------------------------------------------
-REM start_gateway.bat - bring up the LiteLLM protocol gateway on port 4000.
+REM 02_start_gateway.bat - bring up the LiteLLM protocol gateway on port 4000.
 REM
 REM Double-click this after a reboot, wait for the model list, then run a
 REM campaign batch. The gateway keeps running in its own minimised window;
@@ -62,14 +62,31 @@ start "OAG LiteLLM gateway" /min cmd /c "py -3 -P "%~dp0gateway\_serve.py" --con
 
 REM --- wait, and say what is actually served ---------------------------------
 py -3 "%~dp0gateway\_wait.py" %PORT% %MASTERKEY% 60
-if errorlevel 1 (
+set "WRC=%ERRORLEVEL%"
+
+REM Checked from the top down, because `if errorlevel N` means "N or higher".
+REM Exit 3 is NOT a failed start: the gateway is up and every other model is
+REM usable. Only one served name has no Ollama tag behind it, so the right
+REM response is to warn and let the operator decide - a campaign that does not
+REM touch that arm is unaffected, and the per-leg preflight will skip the one
+REM that does.
+if "%WRC%"=="3" (
   echo.
-  echo   The gateway did not come up. Leave it stopped and read %LOG%.
+  echo   The gateway IS running and every other model is usable.
+  echo   Run 01_build_models.bat when you want the missing tag, then restart this.
+  echo   Legs on that model will be skipped by the preflight until then.
+  goto :ready
+)
+if %WRC% GEQ 1 (
+  echo.
+  echo   The gateway did not come up. Read %LOG%.
+  echo   Its window may still be open - close it before trying again.
   goto :end
 )
 
+:ready
 echo.
-echo   Ready. Leave the minimised "OAG LiteLLM gateway" window open,
+echo   Leave the minimised "OAG LiteLLM gateway" window open,
 echo   then start a campaign, e.g. run_m48_syntax_gate.bat
 echo.
 

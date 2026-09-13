@@ -41,7 +41,16 @@ PARAM_KEYS = ("definition_of_done", "constraint_order", "doc_types",
 FIXED_TAMPER = ("conftest.py", "pytest.ini", "pyproject.toml", ".requirements", ".environment")
 PLACEHOLDER = re.compile(r"\{\{([a-z_]+)=([^}]*)\}\}")
 VERSION_RE = re.compile(r"<!--\s*mth_version:\s*(.*?)\s*-->")
-CLI_TIMEOUT_S = 3600
+# Raised from 3600 to 4h on 2026-09-13. gpt-oss-20b reached this bound on
+# p03_python_large while still working (52 turns, 135 diff lines, score 0.8000
+# partial), so the old value was measuring the harness rather than the model.
+#
+# THIS IS A CAMPAIGN CONSTANT. Every local row taken before this date ran under
+# 3600 s, and a row censored at 3600 s is not comparable with one censored at
+# 14400 s -- a `harness_timeout` row says "we stopped it", not "it failed".
+# Rows on either side of this change must not be pooled, and no column yet
+# records which side a row is on.
+CLI_TIMEOUT_S = 4 * 3600
 # The second layer under lib/oracle.py's own VERIFY_TIMEOUT_S (300 s, chapter 11): wide enough that
 # a normal oracle run -- pytest plus the metrics -- never reaches it, so it fires only when the
 # oracle process hangs somewhere pytest's own bound cannot see. Without either, an infinite loop in

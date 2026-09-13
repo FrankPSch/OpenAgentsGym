@@ -313,7 +313,41 @@ curl http://127.0.0.1:4000/v1/models -H "Authorization: Bearer sk-oag-local"
 
 Four names must come back. Three means you are talking to the stale instance.
 
-### 3.4 The whole start sequence, copy-paste
+### 3.4 The whole start sequence — use the batches
+
+The repository root carries the three steps in order:
+
+```
+01_build_models.bat     builds/pulls every model tag (once, or after a change)
+02_start_gateway.bat    starts the gateway and verifies what it serves
+run_m48_syntax_gate.bat (or any campaign batch)
+```
+
+`02_start_gateway.bat` frees port 4000 if something stale holds it, forces
+UTF-8, launches the proxy in its own minimised window via `gateway\_serve.py`
+(logging to `gateway\gateway.log`), then waits and **reconciles what is served
+against what Ollama holds** (`gateway\_wait.py`):
+
+```
+  gateway: up on port 4000, serving 5 model(s):
+             qwen3-4b               -> qwen3:4b                ok
+             gpt-oss-20b            -> gpt-oss:20b             ok
+             qwen3-coder-30b        -> qwen3-coder:30b         ok
+             qwen3-coder-30b-tuned  -> qwen3-coder:30b-tuned   ok
+             devstral-24b           -> devstral:24b            ok
+```
+
+That second column is the point. LiteLLM serves the **name** from
+`config.yaml` whether or not Ollama holds the **tag**; when it does not, the leg
+dies in about a second and reads like a model failure. A `MISSING` line exits 3
+and names `01_build_models.bat` — the gateway is still up and every other model
+is usable, so that is a warning, not a failed start.
+
+`_wait.py` exit codes: `0` served and reconciled, `1` no answer within the
+timeout, `2` up but serving nothing, `3` a served name has no Ollama tag.
+
+### 3.4.1 By hand, if you need the proxy's own output
+
 
 ```
 cd /d C:\Users\<you>\GitHub\OpenAgentsGym
@@ -404,6 +438,46 @@ Verify both the health endpoint and that every model name resolves:
 curl http://127.0.0.1:4000/health/liveliness
 curl http://127.0.0.1:4000/v1/models -H "Authorization: Bearer sk-oag-local"
 ```
+
+### 3.6 Building the tags — `01_build_models.bat`
+
+A tuned tag is a measurement constant, not a convenience: `e11` differs from
+`e08` only by `num_ctx` and `num_gpu`, so `gateway/Modelfile.*` is what its
+published rows *mean*. The batch builds those from the versioned Modelfiles and
+pulls the published models (`devstral:24b`), then checks each tag for a `tools`
+capability.
+
+That check matters: `deepseek-coder-v2:16b` and `qwen2.5-coder:14b` both fit the
+memory budget and both omit `tools`. opencode drives every edit through a
+function call, so either would have produced fast rows with no edits. Rejecting
+them cost one lookup instead of a leg.
+
+It is deliberately separate from starting the gateway: starting happens every
+session, defining a model happens when a definition changes.
+
+### 3.7 The per-leg check inside the matrix
+
+`run_engine_matrix.bat` calls `gateway\_check_model.py` before each leg. For a
+leg whose `MODEL=litellm/<name>` it confirms **four** things, in the order they
+fail:
+
+1. opencode lists `<name>` in its own provider map
+   (`%USERPROFILE%\.config\opencode\opencode.jsonc`);
+2. the gateway answers on 4000;
+3. it serves that exact name;
+4. Ollama holds the tag behind it.
+
+Link 1 is the one that cost the most: between 2026-09-12 and 2026-09-13, `e11`
+wrote five rows at score 0.0000 in ~1.5 s each because the name was in the
+gateway and in Ollama but not in opencode's map. opencode refuses an unknown
+name with a generic "Unexpected server error" and never calls the gateway — the
+string never appears in `gateway.log` as a request, which is how it was finally
+identified.
+
+On failure the leg is **skipped**, with `SKIP (model unresolvable: ...)` in the
+summary. A leg that starts against a missing model still writes a row —
+`UnknownError`, `0.0000`, zero diff — and in the published table that is
+indistinguishable from a model that tried and failed.
 
 ---
 

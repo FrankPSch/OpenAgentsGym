@@ -22,7 +22,7 @@ REM between 16 and 45 minutes each, and the two 30B legs are the slowest, so
 REM budget SIX TO TEN HOURS unattended. The cloud legs add about a minute each.
 REM
 REM BEFORE STARTING, three things that have each cost a run:
-REM   - start the gateway with start_gateway.bat and read the model list it
+REM   - start the gateway with 02_start_gateway.bat and read the model list it
 REM     prints. A gateway that is merely up is not enough: a stale instance
 REM     keeps port 4000 with the config it booted from, and the leg then fails
 REM     at the gateway and reads like a model failure.

@@ -17,3 +17,4 @@ __pycache__/
 # checkout is not. The blobless clone it caches sits under local/, already ignored above.
 projects/p10_xarray_7233/project_reset_template/
 gateway/gateway.log
+gateway/COMMITMSG.txt

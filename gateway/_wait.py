@@ -16,7 +16,7 @@ Exit codes:
   0  gateway answered, and every served name maps to a tag Ollama holds
   1  gateway did not answer within the timeout
   2  gateway answered but serves no models (bad or empty config)
-  3  a served name has no matching Ollama tag -- run build_models.bat
+  3  a served name has no matching Ollama tag -- run 01_build_models.bat
 """
 
 import json
@@ -129,7 +129,7 @@ if missing:
     print("  The leg would fail in about a second with UnknownError and look")
     print("  like a model failure. Build the tag(s) first:")
     print()
-    print("      build_models.bat")
+    print("      01_build_models.bat")
     print()
     sys.exit(3)
 
