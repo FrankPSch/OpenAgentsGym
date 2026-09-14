@@ -1446,10 +1446,10 @@ therefore silent about aborted runs, which chapter 12 already reports by id.
 
 ### 13.1b The score columns
 
-Ten derived columns, written by `--consolidate` over the whole table and never by a run:
+Eleven derived columns, written by `--consolidate` over the whole table and never by a run:
 `sc_duration`, `sc_turns`, `sc_output`, `sc_cost_usd`, `sc_mi`, `sc_max_nesting`, `sc_max_func_sloc`,
-and the composites `sc_effort`, `sc_quality`, `sc_overall`. Larger is better in every one of them,
-and five decimals are written.
+and the composites `sc_effort`, `sc_quality`, `sc_overall_mean`, `sc_overall_ratio`. Larger is better
+in every one of them, and five decimals are written. All but the last are on 0.0–1.0.
 
 **The construction.** Per column, each run is placed by how far it is behind the leader of its own
 project:
@@ -1479,7 +1479,7 @@ earlier `idx_*` columns and their base file are gone.
 
 **A tie stays a tie.** A project whose arms are indistinguishable stays bunched just below 1.0
 rather than being stretched across the whole range, which is what a per-project min-max would have
-done to it. On `p07_qc_bugfix_refactor`, where every arm scores 1.0000, `sc_overall` spans 0.914 to
+done to it. On `p07_qc_bugfix_refactor`, where every arm scores 1.0000, `sc_overall_mean` spans 0.914 to
 0.973; on `p04_python_xlarge`, where the arms really differ, it spans 0.709 to 0.968. Saturation
 keeps looking like saturation (chapter 16).
 
@@ -1496,9 +1496,27 @@ longest function** — deliberately not cyclomatic complexity and not SLOC, beca
 contains both, and averaging a composite with its own ingredients weights size three times over.
 
 The composites are **arithmetic** means. After the log transform these are distances on one scale
-rather than ratios, so they add; a factor a row is missing drops out of its own mean. `sc_overall`
+rather than ratios, so they add; a factor a row is missing drops out of its own mean. `sc_overall_mean`
 is the mean of `sc_effort` and `sc_quality`, so effort and quality count equally. Its per-project
 maximum usually sits just below 1.0, because one arm rarely leads every column at once.
+
+**`sc_overall_ratio` is the same two halves divided rather than averaged**, for reading whether the
+effort a run spent was repaid:
+
+```
+sc_overall_ratio = sc_quality / (1.25 - 0.5 * sc_effort)
+```
+
+The divisor maps `sc_effort` onto **0.75 … 1.25**, a short band centred on 1.0 — 1.25 for the most
+expensive run in the table, 1.00 at median effort, 0.75 for the cheapest run of a project. The minus
+sign is the point: `sc_effort` is an effort *score*, 1.0 meaning little was spent, so a rising score
+must *lower* the divisor. Dividing by `sc_effort` itself would reward waste.
+
+Read it against `sc_quality`: above it, the effort paid for itself; below it, it did not; at median
+effort the ratio **is** `sc_quality`. The divisor never approaches zero, so there is no clamp and no
+special case, and the half-width of 0.25 keeps quality the dominant term — effort can move a run by
+at most a third either way. The range is **0.0 … 1.333**, so this column alone is not a normalised
+0–1 score and must not be read as one. Measured over the current table it spans 0.11056–1.29611.
 
 **What these columns do not say.** Whether one project's leader is better than another's: every
 project's best is 1.0 by construction. That comparison lives in the measured columns, and the

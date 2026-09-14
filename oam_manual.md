@@ -320,7 +320,18 @@ what it cost and what the code is worth, and they are read together:
 | larger means | less spent | better code |
 | money | not included — `sc_cost_usd` stands alone, and is blank wherever the engine reports no price | — |
 
-`sc_overall` is the mean of the two, so effort and quality count equally.
+There are two ways to combine them, and they answer different questions:
+
+| | `sc_overall_mean` | `sc_overall_ratio` |
+|---|---|---|
+| formula | mean of `sc_effort` and `sc_quality` | `sc_quality / (1.25 − 0.5 × sc_effort)` |
+| answers | how good was this run overall | did the effort pay for itself |
+| range | 0.0–1.0 | 0.0–1.333 |
+| neutral point | none | **1.0** — and at median effort it equals `sc_quality` |
+
+Read `sc_overall_ratio` against `sc_quality`: above it, the effort was repaid; below it, it was not.
+Effort can move a run by at most a third either way, so quality stays the dominant term. It is the
+only `sc_` column that is not on 0.0–1.0 — do not read it as a normalised score.
 
 Every score column places a run by how far it is behind **the leader of its own project**, measured
 in logarithms and divided by the largest such distance anywhere in the table. So the best run of

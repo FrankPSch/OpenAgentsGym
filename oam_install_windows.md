@@ -356,4 +356,4 @@ matrix; the second consolidates the run directories into `results.csv` and
 recomputes the `sc_*` score columns across all runs held in the repository.
 
 Open `results.csv` and confirm the new rows carry a `res_verification_passed`
-value and non-empty `sc_overall`.
+value and non-empty `sc_overall_mean`.

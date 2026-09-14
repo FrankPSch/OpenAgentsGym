@@ -49,8 +49,10 @@ VERSION_RE = re.compile(r"<!--\s*mth_version:\s*(.*?)\s*-->")
 # THIS IS A CAMPAIGN CONSTANT. Every local row taken before this date ran under
 # 3600 s, and a row censored at 3600 s is not comparable with one censored at
 # 14400 s -- a `harness_timeout` row says "we stopped it", not "it failed".
-# Rows on either side of this change must not be pooled, and no column yet
-# records which side a row is on.
+# Rows on either side of this change must not be pooled. Since 2026-09-14 the
+# value is written to cfg_walltime_s on every row and is a CAMPAIGN_CONSTANT, so
+# the gate names such a mix instead of the reader having to know the date. Rows
+# written before that column exists are blank, which the gate also names.
 CLI_TIMEOUT_S = 4 * 3600
 # The second layer under lib/oracle.py's own VERIFY_TIMEOUT_S (300 s, chapter 11): wide enough that
 # a normal oracle run -- pytest plus the metrics -- never reaches it, so it fires only when the
@@ -440,7 +442,26 @@ COLUMNS = [
     # crowns the run that gave up after two turns.
     "sc_duration", "sc_turns", "sc_output", "sc_cost_usd",
     "sc_mi", "sc_max_nesting", "sc_max_func_sloc",
-    "sc_effort", "sc_quality", "sc_overall",
+    "sc_effort", "sc_quality", "sc_overall_mean", "sc_overall_ratio",
+    # --- the two constants nothing recorded ---------------------------------------------------
+    # Appended under the same rule as everything above: never inserted, nothing renamed, rows
+    # written before them blank.
+    #
+    # cfg_walltime_s is CLI_TIMEOUT_S as it stood for THIS run. It is named a campaign constant
+    # at its definition -- a row censored at 3600 s is not comparable with one censored at
+    # 14400 s, because `harness_timeout` says "we stopped it", not "it failed" -- and until now
+    # no column said which side of the 2026-09-13 change a row was on. It is therefore also in
+    # CAMPAIGN_CONSTANTS, which means a campaign holding rows from both sides is reported as
+    # mixed. That report is the point: those rows were never poolable, the table simply could
+    # not say so. Every row written before this column exists stays blank, and blank against a
+    # number is itself a difference the gate will name.
+    #
+    # cfg_free_ram_gb is not a constant and is not in CAMPAIGN_CONSTANTS -- it is an observation,
+    # read once before the implementer is launched, of memory as the model finds it. On an
+    # integrated GPU it is the number that decides whether the next model loads, pages from
+    # disk, or dies in the allocator: 18 GB of weights against ~8 GB free measured 0.76 tok/s,
+    # which is paging and not inference, and no row said so. Blank where it cannot be read.
+    "cfg_walltime_s", "cfg_free_ram_gb",
 ]
 
 METRIC_COLUMNS = {
@@ -805,6 +826,26 @@ def read_tool_file(path, label):
         if not TOOL_LINE.match(line):
             die("ABORT: %s: %r is not a tool entry (Name or Name(pattern))" % (label, line), 4)
     return tools
+
+
+def read_free_ram_gb():
+    """Free physical memory in GB for cfg_free_ram_gb, or "" where it cannot be read.
+
+    One decimal, which is all the figure is worth: it is a reading of a machine-wide quantity
+    that moves while the run starts, not a controlled constant. The measurement itself lives in
+    engine_freeram.py, which already prints it between the unload and the load of every leg, so
+    the column and the console line can never report different numbers.
+
+    Imported here rather than at module scope, and every failure swallowed: the harness runs on
+    machines where that module, or GlobalMemoryStatusEx, is not there, and a diagnostic column
+    must never be able to abort a run. A blank cell reads "not measured", which is true.
+    """
+    try:
+        from engine_freeram import free_gb
+        reading = free_gb()
+    except Exception:
+        return ""
+    return "" if reading is None else round(reading[0], 1)
 
 
 def engine_columns(cfg):
@@ -2600,6 +2641,10 @@ def _one_run_body(cfg, project, methodology, repeat, stamp, run_id, run_dir):
     baseline = read_triple(run_dir / "verification_baseline.txt")
     tools, cfg_tools = allowed_tools(methodology, project)
     cfg_tools = record_tool_enforcement(cfg, cfg_tools)
+    # Read here and nowhere else: after the workspace is built and the preflight has run, before
+    # a single token is spent, so the figure is memory as the model finds it. Reading it after
+    # the run would record what the run left behind, which answers a different question.
+    free_ram = read_free_ram_gb()
     n = best_of_n(cfg)
     bestof = {}
     if n > 1:
@@ -2628,6 +2673,8 @@ def _one_run_body(cfg, project, methodology, repeat, stamp, run_id, run_dir):
                                  else review_prompt_path(cfg).name),
            "cfg_review_weight": ("" if cfg["REVIEW_PASS"] == "none" else review_weight(cfg)),
            "cfg_tools": cfg_tools,
+           "cfg_walltime_s": CLI_TIMEOUT_S,
+           "cfg_free_ram_gb": free_ram,
            "res_score_baseline": baseline["score"],
            "prf_duration_s": round(wall, 1)}
     row.update(engine_columns(cfg))
@@ -2666,6 +2713,31 @@ SCORE_COLUMNS = [
 ]
 SCORE_COMPOSITES = [("sc_effort", "effort"), ("sc_quality", "quality")]
 
+# sc_overall_ratio = sc_quality / (RATIO_MID - RATIO_HALF * sc_effort).
+#
+# The divisor maps sc_effort's 0..1 onto a short band centred on 1.0: 1.25 for the most expensive
+# run in the table, 1.00 at median effort, 0.75 for the cheapest run of a project. Note the minus
+# sign -- sc_effort is an effort SCORE, 1.0 meaning little was spent, so a rising score must lower
+# the divisor. Dividing by sc_effort itself would reward waste.
+#
+# Read as: above sc_quality means effort paid for itself, below means it did not; at median effort
+# the ratio IS sc_quality. Bounded away from zero by construction, so no clamp and no special case,
+# and the half-width keeps quality the dominant term -- effort can move a run by at most a third.
+# Range is 0..1.333, not 0..1: this is a ratio, not another normalised column.
+RATIO_MID = 1.25
+RATIO_HALF = 0.5
+
+# Columns retired from the schema, dropped from every row on consolidation. `sc_cost` is the
+# pre-rename spelling of `sc_cost_usd` and `sc_overall` of `sc_overall_mean`; the `idx_*` block is
+# the index generation the `sc_*`
+# columns replaced. Both are recomputed from the raw metrics, so nothing is lost by dropping them.
+RETIRED_COLUMNS = frozenset([
+    "sc_cost", "sc_overall",
+    "idx_duration", "idx_turns", "idx_output", "idx_cost", "idx_mi",
+    "idx_max_nesting", "idx_max_func_sloc", "idx_complexity", "idx_sloc",
+    "idx_effort", "idx_effort_n", "idx_quality", "idx_quality_n",
+])
+
 
 def log_lag(value, best, direction):
     """How far behind its project's leader a run is, in logarithms -- 0 for the leader itself.
@@ -2700,7 +2772,8 @@ def apply_score_columns(records):
     What it does NOT say: whether one project's leader is better than another's. Every project's
     best is 1.0 by construction. That comparison lives in the measured columns.
     """
-    names = [n for _, n, _, _ in SCORE_COLUMNS] + [n for n, _ in SCORE_COMPOSITES] + ["sc_overall"]
+    names = [n for _, n, _, _ in SCORE_COLUMNS] + [n for n, _ in SCORE_COMPOSITES] + \
+        ["sc_overall_mean", "sc_overall_ratio"]
     for rec in records:
         for name in names:
             rec.setdefault(name, "")
@@ -2745,7 +2818,11 @@ def apply_score_columns(records):
         both = [as_float(rec.get(n)) for n, _ in SCORE_COMPOSITES]
         both = [v for v in both if v is not None]
         if both:
-            rec["sc_overall"] = "%.5f" % (sum(both) / len(both))
+            rec["sc_overall_mean"] = "%.5f" % (sum(both) / len(both))
+        quality = as_float(rec.get("sc_quality"))
+        effort = as_float(rec.get("sc_effort"))
+        if quality is not None and effort is not None:
+            rec["sc_overall_ratio"] = "%.5f" % (quality / (RATIO_MID - RATIO_HALF * effort))
     return records
 
 
@@ -2854,8 +2931,15 @@ def consolidate():
     # Derived last, over the merged rows, so the whole table is recomputed from the frozen bases
     # on every consolidation -- an index is never carried over from an earlier write.
     apply_score_columns(records)
+    # Retired columns. The carry-over above keeps any key an older row wrote, which is what a
+    # reader wants for a column that was merely renamed away from -- but a retired generation of
+    # score columns would then outlive every row that produced it. These are dropped on read, so
+    # one consolidation is enough to clear them from the published table for good.
+    for rec in records:
+        for dead in RETIRED_COLUMNS:
+            rec.pop(dead, None)
     extra = [k for rec in records for k in rec if k not in COLUMNS and k not in seen]
-    columns = list(COLUMNS) + [c for c in seen if c not in COLUMNS] + \
+    columns = list(COLUMNS) + [c for c in seen if c not in COLUMNS and c not in RETIRED_COLUMNS] + \
         sorted(set(extra), key=extra.index)
     out = RESULTS_TABLE
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -3127,7 +3211,11 @@ GATE_ANCHOR_PRJ = "p00_fail"
 # label. These are the columns one campaign must agree on for the label to mean anything.
 CAMPAIGN_CONSTANTS = ("cfg_model", "cfg_provider", "cfg_endpoint", "cfg_effort",
                       "cfg_review_pass", "cfg_review_model",
-                      "cfg_fix_model", "cfg_review_weight", "cfg_tools")
+                      "cfg_fix_model", "cfg_review_weight", "cfg_tools",
+                      # The harness bound the run was censored at. See the column's own note in
+                      # COLUMNS: rows on either side of the 2026-09-13 change to CLI_TIMEOUT_S
+                      # were never poolable, and this is what finally lets the gate say so.
+                      "cfg_walltime_s")
 
 
 def mixed_constants(rows):
