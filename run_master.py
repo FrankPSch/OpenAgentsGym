@@ -3,13 +3,20 @@
 
     py -3 run_master.py <project> <methodology> [--config <path>]
     py -3 run_master.py --matrix [--config <path>] [--workers N] [--skip-existing]
-                                 [--projects a,b] [--methodologies x,y]
+                                 [--projects a,b] [--methodologies x,y] [--min-rows N]
     py -3 run_master.py --consolidate
     py -3 run_master.py --gate [--campaign <name>] [--apparatus-only]
 
 --config selects the campaign constants file. The files are the four capability levels
 .llm_config.e01_claude_haiku_4_5 .. .llm_config.e04_claude_fable_5_1 (chapter 9); the default is .llm_config.e02_claude_sonnet_5, and a
 relative path is resolved against the repository root.
+
+--skip-existing and --min-rows both cut the pair list down, and they read different things.
+--skip-existing asks "did THIS campaign produce a row for this pair", from local/runs alone, and is
+for resuming an interrupted sweep. --min-rows asks "how many rows does this pair have at all",
+counting the published table as well and over every campaign -- for topping a table up to a minimum
+without re-measuring what it already holds. It adds at most one row per pair per call, so a pair
+two rows short is levelled by two calls, and two calls on two engines spread across both.
 """
 import ast
 import csv
@@ -3509,6 +3516,40 @@ def row_counts():
     return out
 
 
+def pair_row_counts():
+    """How many rows exist per (prj_name, mth_name), over the published table AND local/runs.
+
+    This is what `--min-rows` filters on, and it is deliberately not `row_counts()`. That function
+    reads local/runs alone, which is right for `--skip-existing` -- "did THIS sweep produce a row"
+    -- and wrong for "how many rows does this pair have", because run directories are cleared while
+    published rows are not. On a cleaned machine row_counts() sees nothing and a sweep re-runs pairs
+    the table already holds, at the price of the whole campaign.
+
+    Counted over campaigns rather than within one: two rows from two engines are two observations
+    of that pair, which is what a minimum row count is asking about. Chapter 17 still forbids
+    POOLING them, and nothing here does -- this decides what to run, not what to compare.
+
+    Deduplicated by id_run exactly as consolidation is, so a local run already merged into the
+    published table counts once and not twice.
+    """
+    seen_ids = {}
+    sources = [RESULTS_TABLE] + sorted((RUNS).glob("*/results_run.csv"))
+    for path in sources:
+        try:
+            with open(str(path), newline="", encoding="utf-8") as fh:
+                for rec in csv.DictReader(fh):
+                    rec = {plain_name(k): v for k, v in rec.items() if k}
+                    rid = (rec.get("id_run") or "").strip()
+                    key = (rec.get("prj_name", ""), rec.get("mth_name", ""))
+                    seen_ids[rid or ("%s|%s|%d" % (key[0], key[1], len(seen_ids)))] = key
+        except OSError:
+            continue
+    out = {}
+    for key in seen_ids.values():
+        out[key] = out.get(key, 0) + 1
+    return out
+
+
 def matrix_drain(fh, worker, rc):
     """Move one finished worker's captured output into the matrix log, prefixed by its pair.
 
@@ -3547,10 +3588,14 @@ def run_matrix(args):
     workers_txt, args = pop_option(args, "--workers")
     projects_txt, args = pop_option(args, "--projects")
     mths_txt, args = pop_option(args, "--methodologies")
+    min_rows_txt, args = pop_option(args, "--min-rows")
     skip_existing = "--skip-existing" in args
     args = [a for a in args if a != "--skip-existing"]
-    if args or "" in (config, workers_txt, projects_txt, mths_txt):
+    if args or "" in (config, workers_txt, projects_txt, mths_txt, min_rows_txt):
         print(__doc__)
+        return 2
+    if min_rows_txt is not None and (not min_rows_txt.isdigit() or int(min_rows_txt) < 1):
+        print("ABORT: --min-rows takes an integer >= 1 (got %r)" % min_rows_txt)
         return 2
     if workers_txt is not None and (not workers_txt.isdigit() or int(workers_txt) < 1):
         print("ABORT: --workers takes an integer >= 1 (got %r)" % workers_txt)
@@ -3573,6 +3618,18 @@ def run_matrix(args):
     before = row_counts()
     if skip_existing:
         pairs = [(p, m) for p, m in pairs if not before.get((p, m, campaign))]
+    # --min-rows drops the pairs that already hold `want` rows and keeps the rest, ONCE each: a
+    # call adds at most one row per pair. A pair two rows short therefore needs two calls, which is
+    # what makes a two-engine top-up spread across both engines instead of letting the first take
+    # the whole deficit -- the emptiest cell is exactly the one that wants two different engines.
+    # Re-running levels the rest, and a call whose pairs are all satisfied queues nothing.
+    #
+    # Counted over the published table as well as local/runs (pair_row_counts), which is the
+    # difference between topping a table up and re-measuring what it already holds.
+    if min_rows_txt is not None:
+        want = int(min_rows_txt)
+        have = pair_row_counts()
+        pairs = [pair for pair in pairs if have.get(pair, 0) < want]
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log = RUNS / ("_matrix_%s_%s.log" % (campaign, stamp))
     log.parent.mkdir(parents=True, exist_ok=True)
