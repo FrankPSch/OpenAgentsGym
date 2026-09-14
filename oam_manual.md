@@ -126,8 +126,8 @@ fresh checkout (chapter 12). A row you want gone is deleted from that file.
 before a column existed simply gets a blank cell and nothing is orphaned. The published rows are
 kept and a local run overwrites the row of its own id; the counts are printed (chapter 12). The
 table is never written while runs execute. The same call writes `results_pareto.svg` beside the
-table at the repository root — score against cost, one panel per campaign and project; open it in
-a browser (chapter 13.2).
+table at the repository root — code quality against effort spent, one panel per campaign and
+project; open it in a browser (chapter 13.2).
 
 **Interrupted sweeps** resume with `--skip-existing`; `--workers N` runs pairs side by side.
 
@@ -277,6 +277,12 @@ arm that wins on the first while trailing on the second won by fitting to the vi
 that is a finding to state. The maintainability index behind the parsimony factor is the tiebreaker,
 not the discriminator: where correctness is flat it silently becomes the whole ranking, which is a
 result about the project (chapters 11, 17).
+
+`res_score` answers **did it work**, and that is now all it is asked. Ranking arms on how well they
+worked is the job of `sc_overall_mean` and `sc_overall_ratio` below, which see effort and code
+quality as separate terms instead of folding maintainability into the pass fraction as a multiplier.
+The parsimony factor stays in `res_score` for continuity with every row already published; it is not
+carried into the `sc_` columns, and it is not the number to rank on.
 
 **Before reading anything, read the gate.** `rebuild_results_table.bat` prints it: the sabotage arm
 must lose, the impossible project must never pass, every pristine template must fail before the

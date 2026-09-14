@@ -926,6 +926,20 @@ rather than the absence of a measurement, and returning 1.0 there handed an empt
 source tree the best factor there is. The factor is applied to the post-run score only — `res_score_baseline` is the unscaled test
 fraction, so the two are comparable in the same direction.
 
+**The parsimony factor is not carried into the score columns.** Chapter 13.1b's `sc_` family
+measures maintainability directly as `sc_mi`, alongside nesting depth and longest function, and
+measures what a run spent as `sc_effort` — so the work this multiplier was meant to do is done by
+named columns a reader can inspect one at a time, rather than folded invisibly into a pass fraction.
+Two properties of the factor made it the weaker instrument: it needs a measured `MI_REF`, which a
+project without a stored reference does not have, while the `sc_` columns need nothing but the runs
+themselves; and its 0.8 floor caps the whole penalty at a fifth, so it cannot express a run that
+wrote several times more code than it needed. Measured on `p04_python_xlarge`, the factor spans
+0.944–1.000 across the leading arms and leaves the `gsd_*` family on top, while `sc_overall_mean`
+puts that family below the field — the separation coming from `sc_effort`, not from quality.
+
+It remains in `res_score` and is not being removed: every published row was produced with it, and
+`res_score` answers whether a run worked. Ranking how *well* it worked is chapter 13.1b's job.
+
 ### Further details
 
 MI supersedes the earlier raw-SLOC factor because it already combines volume, complexity and size —
@@ -1408,6 +1422,18 @@ tk_fix_input, tk_fix_output, tk_fix_cache_write, tk_fix_cache_read, tk_fix_cost_
 prf_turns, prf_duration_s, prf_review_s, prf_fix_s
 ```
 
+Three blocks follow that list, appended in this order and never inserted into it: the eleven derived
+`sc_` columns of 13.1b, then the campaign constants `cfg_walltime_s` and `cfg_free_ram_gb`, then any
+column a merged row carries that the schema does not.
+
+**Retired columns are dropped on consolidation**, which is the one exception to the carry-over rule
+above. A column merely renamed away from would otherwise be kept alive indefinitely by the rows that
+wrote it, and a retired generation of derived columns would outlive every row that produced it.
+`run_master.py` names them in `RETIRED_COLUMNS`; it currently holds `sc_cost` (the pre-rename
+spelling of `sc_cost_usd`), `sc_overall` (now `sc_overall_mean`) and the thirteen `idx_*` columns the
+`sc_` family replaced. Nothing is lost: every one of them is recomputed from the raw metrics on each
+consolidation. One consolidation clears a retired column from the published table for good.
+
 ### 13.1 Logs
 
 Three levels, all plain text:
@@ -1527,8 +1553,16 @@ reconstructed.
 
 `--consolidate` writes `results_pareto.svg` at the repository root beside the table, from the same
 rows. One panel per campaign × project, laid out vertically and never pooled (chapter 17): x is
-`tk_cost_usd`, y is `res_score`, and each point carries the arm's two-digit number as its label.
-The score axis runs from the tenth below the worst arm of that panel up to 1.0 rather than from 0,
+**effort spent**, `1 − sc_effort`, y is **`sc_quality`**, and each point carries the arm's two-digit
+number as its label. Both are the score columns of 13.1b, not dollars against the pass fraction:
+a dollar axis dropped every engine that reports no price, which is most of the local ones, and the
+pass fraction saturates at 1.00 precisely on the projects where it discriminates least — so the
+chart said least exactly where the table said most. The effort axis is therefore the fixed full
+0.0–1.0 in every panel rather than fitted to the dearest arm, which is what lets two panels be read
+against each other. Only rows carrying a score are plotted, so the correctness gate of 13.1b decides
+what appears: a run that did not pass has no point.
+
+The quality axis runs from the tenth below the worst arm of that panel up to 1.0 rather than from 0,
 because arms of one campaign differ by hundredths and a 0..1 axis showed that as one flat line. A
 `*_outdated` arm is drawn hollow so it stays visible without competing with the live arms, and the
 front line joins the live points no cheaper point beats — the cheapest arm at each new best score.

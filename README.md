@@ -76,7 +76,7 @@ winners and matches the best score at two thirds of the turns; it is the provisi
 until three repeats confirm it. `30` is a working methodology's kernel transcribed into this frame and `31`
 the same kernel untranscribed; both land beside `m00_empty`, and the transcription cost a reviewer
 round the source text did not trigger. Full rows, both projects: [`results_repository.csv`](results_repository.csv).
-Score against cost, one panel per campaign and project: [`results_pareto.svg`](results_pareto.svg) — written by every consolidation, never edited by hand.
+Code quality against effort spent, one panel per campaign and project: [`results_pareto.svg`](results_pareto.svg) — written by every consolidation, never edited by hand.
 
 ---
 

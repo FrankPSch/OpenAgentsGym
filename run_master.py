@@ -3027,7 +3027,13 @@ def pareto_front(points):
 
 
 def write_pareto_svg(records, out_path):
-    """Write the cost/score Pareto chart of these rows to `out_path`; return (panels, points).
+    """Write the effort/quality Pareto chart of these rows to `out_path`; return (panels, points).
+
+    The axes are the two score columns of chapter 13.1b, not dollars against the pass fraction.
+    Dollars excluded every engine that reports no price, which is most of the local ones, and the
+    pass fraction saturates at 1.0 on the projects where it matters least -- so the chart said least
+    exactly where the table said most. Both axes are now on one 0..1 scale, which also lets the
+    effort axis be the fixed full range in every panel rather than fitted to the dearest arm.
 
     A hand-written SVG rather than a plotting library: the harness is stdlib only (chapter 8), and
     the chart is a *derived* file living beside `results_repository.csv` in the repository, so it
@@ -3042,10 +3048,13 @@ def write_pareto_svg(records, out_path):
     """
     groups = {}
     for rec in records:
-        cost = as_float((rec.get("tk_cost_usd") or "").strip())
-        score = as_float((rec.get("res_score") or "").strip())
-        if cost is None or score is None:
+        # x is effort SPENT, so cheaper stays on the left and the front logic below reads as it
+        # always did; sc_effort is an effort score, 1.0 meaning little was spent, hence 1 - it.
+        effort = as_float((rec.get("sc_effort") or "").strip())
+        score = as_float((rec.get("sc_quality") or "").strip())
+        if effort is None or score is None:
             continue
+        cost = 1.0 - effort
         name = (rec.get("mth_name") or "").strip()
         key = ((rec.get("cfg_campaign") or "").strip(), (rec.get("prj_name") or "").strip())
         # The arm's number: what stands before the first `_`, minus the kind letter the naming
@@ -3087,8 +3096,8 @@ def write_pareto_svg(records, out_path):
         lines.append('<text class="hd" x="%s" y="%s">no rows</text>'
                      % (svg_num(CHART_PAD_L), svg_num(CHART_HEADER_H)))
     else:
-        lines.append('<text class="hd" x="%s" y="20">score against cost, one panel per campaign '
-                     "and project</text>" % svg_num(CHART_PAD_L))
+        lines.append('<text class="hd" x="%s" y="20">code quality against effort spent, one panel '
+                     "per campaign and project</text>" % svg_num(CHART_PAD_L))
         lines.append('<text class="lg" x="%s" y="36">filled = live arm, hollow = *_outdated; the '
                      "line is the Pareto front of the live arms</text>" % svg_num(CHART_PAD_L))
     lines.extend(body)
@@ -3103,11 +3112,10 @@ def pareto_panel(key, points, top):
     """The SVG lines of one panel: frame, grid, axes, front, points and labels, offset by `top`."""
     campaign, project = key
     left, base = CHART_PAD_L, top + CHART_PAD_T + CHART_PLOT_H
-    # A "nice" maximum -- the next half dollar above the dearest arm -- so the axis of a panel does
-    # not move by a cent when one run is added, and two rebuilds a run apart stay comparable.
-    steps = int(max(p[0] for p in points) / 0.5) + 1
-    x_max = max(0.5, steps * 0.5)
-    x_step = 1.0 if x_max > 5 else 0.5
+    # The effort axis is the full 0..1 in every panel, never fitted to the rows: both axes are now
+    # score columns on one scale, and an axis that moved with the data would stop two panels being
+    # read against each other -- the whole reason the plot area is a fixed size.
+    x_max, x_step = 1.0, 0.1
     # The score axis is adaptive: 1.0 down to the tenth below the worst arm. A fixed 0..1 axis put
     # every point of a working campaign in the top sixth of the panel -- arms differ by hundredths
     # where the axis counts in tenths -- so the differences the chart exists for were invisible.
@@ -3150,11 +3158,12 @@ def pareto_panel(key, points, top):
                % (svg_num(left), svg_num(base), svg_num(left + CHART_PLOT_W), svg_num(base)))
     out.append('<line class="axis" x1="%s" y1="%s" x2="%s" y2="%s"/>'
                % (svg_num(left), svg_num(top + CHART_PAD_T), svg_num(left), svg_num(base)))
-    out.append('<text class="ax" x="%s" y="%s" text-anchor="middle">cost (USD)</text>'
+    out.append('<text class="ax" x="%s" y="%s" text-anchor="middle">effort spent '
+               "(1 &#8722; sc_effort)</text>"
                % (svg_num(left + CHART_PLOT_W / 2.0), svg_num(base + 33)))
     mid_x, mid_y = svg_num(left - 38), svg_num(top + CHART_PAD_T + CHART_PLOT_H / 2.0)
     out.append('<text class="ax" x="%s" y="%s" text-anchor="middle" transform="rotate(-90 %s %s)">'
-               "score</text>" % (mid_x, mid_y, mid_x, mid_y))
+               "sc_quality</text>" % (mid_x, mid_y, mid_x, mid_y))
 
     front = pareto_front([p for p in points if not p[3]])
     if len(front) > 1:
