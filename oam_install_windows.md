@@ -21,10 +21,14 @@ non-interactive.
 | 2 | Python 3.10 | every run builds its venv from it | `winget install --id Python.Python.3.10 --silent` |
 | 3 | Python 3.12 or newer | the harness itself and the gateway | `winget install --id Python.Python.3.12 --silent` |
 | 4 | Node.js LTS | the opencode and codex CLIs ship as npm packages | `winget install --id OpenJS.NodeJS.LTS --silent` |
-| 5 | Ollama | local engine only | `winget install --id Ollama.Ollama --silent` |
+| 5 | Ollama | local engine only — holds the models | `winget install --id Ollama.Ollama --silent` |
+| 6 | LiteLLM | local engine only — the gateway every local call goes through | `py -3.12 -m pip install --upgrade "litellm[proxy]"` |
+| 7 | opencode | local engine only — the CLI that drives the local models | `npm.cmd install -g --allow-scripts=opencode-ai opencode-ai` |
 
-Add `--accept-source-agreements --accept-package-agreements` to each line on a
-machine that has never used winget.
+Add `--accept-source-agreements --accept-package-agreements` to each winget line
+on a machine that has never used winget. Rows 6 and 7 need row 4 (Node) and row
+3 (Python 3.12) already installed, and both need configuration before they work —
+chapters 5.4 and 5.5.
 
 **Open a new terminal afterwards.** PATH changes reach new processes only.
 
@@ -35,8 +39,15 @@ git --version
 py -0p              # a -V:3.10 line must appear
 node --version
 npm.cmd --version
-ollama --version    # local engine only
+ollama --version                 # local engine only
+py -3.12 -c "import litellm; print(litellm.__version__)"   # local engine only
+opencode --version                                         # local engine only
 ```
+
+`py -3.12 -m litellm` is not how it is checked or started: the proxy's entry
+point is `litellm.proxy.proxy_cli:run_server`, and the generated `litellm.exe`
+shim is blocked by Device Guard on some machines. `02_start_gateway.bat` calls
+the entry point directly for that reason.
 
 `py -0p` must list 3.10 explicitly. A Python 3.10 installed through conda or uv
 is not registered with the `py` launcher and does not count.
@@ -86,7 +97,7 @@ nothing else, which is the correct starting point.
 
 ## 3. Claude engine
 
-The engine every published row was produced with, and the least work to set up.
+The reference engine, and the least work to set up.
 
 ### 3.1 Install and sign in
 
@@ -160,11 +171,10 @@ what you see:
 codex exec --json "reply with the single word OK" > codex_probe.txt 2>&1
 ```
 
-Answer six questions from that file: is stdout one JSON document or a stream of
-them; what the event `type` values are; whether usage fields sit at the top
-level or nested; whether cost and tokens are per-step or cumulative (needs a
-multi-step run to tell); which field names the model actually served; and the
-exit codes on success and on failure.
+Six questions to answer from that file: one JSON document or a stream of them;
+the event `type` values; usage fields top-level or nested; cost and tokens
+per-step or cumulative (a multi-step run is needed to tell); which field names
+the model served; the exit codes on success and on failure.
 
 Then set that engine's `tested` flag to true. Until it is true the pre-flight
 prints a bring-up note on every run.
@@ -173,9 +183,9 @@ prints a bring-up note on every run.
 
 ## 5. Local engine
 
-Four parts, in this order: **Ollama** holds the models, the **gateway**
-translates protocols and prices every call, **opencode** is the CLI that drives
-them, and the **tuned model** is built from a versioned file in this repository.
+Four parts, in this order: **Ollama** holds the models, the **tuned model** is
+built from a versioned file here, the **gateway** presents them all under one
+endpoint, and **opencode** drives them.
 
 ### 5.1 Ollama
 
@@ -212,24 +222,24 @@ size, so the file size on disk says nothing.
 
 ### 5.3 The tuned model
 
-`e11_local_qwen3coder_30b_tuned` runs on a tag this repository defines. It
-differs from the plain 30B only in its context and GPU settings, and those
-settings are what its published rows mean:
+`e11_local_qwen3coder_30b_tuned` runs on a tag defined here. It differs from the
+plain 30B only in context and GPU settings, and those settings are what its
+published rows mean.
 
-```powershell
-ollama create qwen3-coder:30b-tuned -f .\gateway\Modelfile.qwen3-coder-30b-tuned
-```
-
-`01_build_models.bat` does this for every versioned Modelfile, pulls the
-published tags and confirms each one advertises a `tools` capability. Run it
-instead of the individual commands when setting up from scratch:
+Setting up from scratch, run this instead of 5.2 and this section separately: it
+pulls every published tag, builds every versioned Modelfile, and confirms each
+tag advertises `tools` — without which a model is unusable here, since opencode
+performs every edit through a function call.
 
 ```cmd
 01_build_models.bat
 ```
 
-A model without `tools` cannot be used here: opencode performs every edit
-through a function call.
+The tuned tag alone, if you need to rebuild just it:
+
+```powershell
+ollama create qwen3-coder:30b-tuned -f .\gateway\Modelfile.qwen3-coder-30b-tuned
+```
 
 ### Check
 
@@ -239,18 +249,9 @@ ollama list     # every tag above must appear
 
 ### 5.4 The gateway
 
-The local engines speak to the models through a LiteLLM gateway on
-`127.0.0.1:4000`, which presents every Ollama tag under one OpenAI-compatible
-endpoint.
-
-Install it with the Python 3.12 interpreter:
-
-```powershell
-py -3.12 -m pip install --upgrade "litellm[proxy]"
-```
-
-The model list lives in `gateway\config.yaml` and is already part of the
-repository. Start the gateway from the repository root:
+LiteLLM (requirement 6) presents every Ollama tag on `127.0.0.1:4000` under one
+OpenAI-compatible endpoint. Its model list, `gateway\config.yaml`, is part of the
+repository. Start it from the repository root:
 
 ```cmd
 02_start_gateway.bat
@@ -269,24 +270,17 @@ included. The gateway names use hyphens where the Ollama tags use a colon.
 
 ### 5.5 opencode
 
-`opencode` is the agent CLI that drives the local models.
-
-```powershell
-npm.cmd install -g --allow-scripts=opencode-ai opencode-ai
-```
-
-Point the harness at the executable, not at the shim:
+opencode (requirement 7) drives the local models. Resolve its real executable —
+the npm `.cmd` shim on PATH cannot be launched by the harness:
 
 ```powershell
 py -3 engine_find_opencode.py
 ```
 
-It prints the resolved `opencode.exe` path; keep that value for the engine
-configuration.
-
 #### Provider configuration
 
-opencode reads its providers from a user-level file:
+opencode reads its providers from a user-level file, **outside** the repository,
+so it is not under version control and does not travel with a clone:
 
 ```
 %USERPROFILE%\.config\opencode\opencode.jsonc
@@ -339,8 +333,8 @@ check_engine_matrix.bat
 ```
 
 It reports one line per engine: the binary it found, the model it reached and
-whether a tool call succeeded. Mark an engine `tested` in `engines.csv` only
-after its line is clean.
+whether a tool call succeeded. Set an engine's `tested` flag in `run_master.py`'s
+`ENGINES` registry only after its line is clean.
 
 ---
 
@@ -351,9 +345,11 @@ run_engine_matrix.bat
 rebuild_results_table.bat
 ```
 
-The first command runs every `tested` engine over the methodology × project
-matrix; the second consolidates the run directories into `results.csv` and
-recomputes the `sc_*` score columns across all runs held in the repository.
+The first runs **one project against one methodology across every local engine**
+— `p02_python_medium` and `m00_empty` unless you name others, with the billed
+engines opt-in behind `/billed`. The second merges the run directories into
+`results_repository.csv`, recomputes the `sc_*` columns over the whole table and
+prints the validity gate.
 
-Open `results.csv` and confirm the new rows carry a `res_verification_passed`
-value and non-empty `sc_overall_mean`.
+Confirm the new rows carry a `res_verification_passed` value and a non-empty
+`sc_overall_mean`.
