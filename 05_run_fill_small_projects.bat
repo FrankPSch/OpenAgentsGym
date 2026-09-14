@@ -49,7 +49,15 @@ echo   source panels = %SRC%   top %FILL_TOP% of each, by sc_overall_ratio
 echo   arms          = !ARMS!
 echo   projects      = %FILL_PROJECTS%
 echo   engines       = %FILL_ENGINES%
-echo   cells already holding a row are skipped (--min-rows 1)
+echo.
+set /a TOTAL=0
+for %%C in (%FILL_ENGINES%) do (
+  for /f %%N in ('py -3 "%~dp0lib\missing_cells.py" --campaign ".llm_config.%%C" --projects "%FILL_PROJECTS%" --methodologies "!ARMS!" ^| find /c /v ""') do (
+    echo   %%C: %%N cell^(s^) without a row
+    set /a TOTAL+=%%N
+  )
+)
+echo   total         = !TOTAL! run(s), counted per campaign
 echo.
 if /i not "%~1"=="/go" (
   echo Nothing run. Pass /go to spend the machine time, or narrow it first:
@@ -64,8 +72,12 @@ if "!OCBIN!"=="NONE" (echo no launchable opencode.exe found & exit /b 6)
 set "PATH=!OCBIN!;!PATH!"
 
 REM Idle standby with a model resident bugchecked an unattended sweep on 2026-09-13 (0x19C), and
-REM this batch is longer than that one was.
-py -3 "%~dp0engine_nosleep.py" on
+REM this batch is longer than that one was. The verbs are save/off/restore, NOT on/off: an earlier
+REM version called `on` at the start, which is not a verb -- it printed the usage text and left
+REM standby enabled for the whole campaign -- and then `off` at the end, which disabled standby
+REM and left it that way. Exactly backwards, both times.
+for /f "usebackq tokens=* delims=" %%S in (`py -3 "%~dp0engine_nosleep.py" save`) do set "SLEPT=%%S"
+py -3 "%~dp0engine_nosleep.py" off
 
 for %%C in (%FILL_ENGINES%) do (
   echo.
@@ -79,12 +91,19 @@ for %%C in (%FILL_ENGINES%) do (
   ) else (
     py -3 "%~dp0engine_leg.py" unload "!LEGMODEL!"
     py -3 "%~dp0engine_freeram.py"
-    py -3 "%~dp0run_master.py" --matrix --config ".llm_config.%%C" --projects %FILL_PROJECTS% --methodologies !ARMS! --min-rows 1 --workers 1
-    if errorlevel 1 echo   WARNING: %%C reported pairs without a row -- see the matrix log
+    REM Per-campaign, not --min-rows. --min-rows counts rows over EVERY campaign, so on the first
+    REM run of this batch e06 filled all five cells and the four engines after it found nothing to
+    REM do -- one engine's rows, where the point was one row per engine. The panels this batch
+    REM exists to fill are per campaign, so the gap has to be read per campaign too.
+    for /f "usebackq tokens=1,2" %%P in (`py -3 "%~dp0lib\missing_cells.py" --campaign ".llm_config.%%C" --projects "%FILL_PROJECTS%" --methodologies "!ARMS!"`) do (
+      echo   --- %%P %%Q
+      py -3 "%~dp0run_master.py" %%P %%Q --config ".llm_config.%%C"
+      if errorlevel 1 echo       WARNING: no row -- see that run's abort.txt
+    )
   )
 )
 
-py -3 "%~dp0engine_nosleep.py" off
+py -3 "%~dp0engine_nosleep.py" restore !SLEPT!
 echo.
 echo === consolidating
 py -3 "%~dp0run_master.py" --consolidate

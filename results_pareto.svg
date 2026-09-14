@@ -441,7 +441,7 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <line class="axis" x1="58" y1="2410" x2="58" y2="2770"/>
 <text class="ax" x="418" y="2803" text-anchor="middle">effort spent (1 &#8722; sc_effort)</text>
 <text class="ax" x="20" y="2590" text-anchor="middle" transform="rotate(-90 20 2590)">sc_quality</text>
-<polyline class="front" points="349.1,2635.25 419.43,2571.81 481.18,2563.82" style="stroke:#eb6834"/>
+<polyline class="front" points="349.1,2635.25 354.65,2612.21 383.69,2514.04" style="stroke:#eb6834"/>
 <polyline class="front" points="215.02,2602.31 238.71,2550.92" style="stroke:#1baf7a"/>
 <circle class="pt" cx="173.68" cy="2410" r="3.2" style="fill:#2a78d6"/>
 <text class="lb" x="178.68" y="2419">00</text>
@@ -459,10 +459,20 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <text class="lb" x="250.12" y="2647.75">00</text>
 <circle class="pt" cx="349.1" cy="2635.25" r="3.2" style="fill:#eb6834"/>
 <text class="lb" x="354.1" y="2631.25">48</text>
+<circle class="pt" cx="354.65" cy="2612.21" r="3.2" style="fill:#eb6834"/>
+<text class="lb" x="359.65" y="2608.21">08</text>
+<circle class="pt" cx="364.54" cy="2700.3" r="3.2" style="fill:#eb6834"/>
+<text class="lb" x="369.54" y="2696.3">34</text>
+<circle class="pt" cx="383.69" cy="2514.04" r="3.2" style="fill:#eb6834"/>
+<text class="lb" x="388.69" y="2510.04">38</text>
+<circle class="pt" cx="389.06" cy="2686.66" r="3.2" style="fill:#eb6834"/>
+<text class="lb" x="394.06" y="2682.66">44</text>
 <circle class="pt" cx="419.43" cy="2571.81" r="3.2" style="fill:#eb6834"/>
 <text class="lb" x="424.43" y="2567.81">48</text>
 <circle class="pt" cx="440.78" cy="2716.5" r="3.2" style="fill:#eb6834"/>
 <text class="lb" x="445.78" y="2712.5">48</text>
+<circle class="pt" cx="471.56" cy="2673.53" r="3.2" style="fill:#eb6834"/>
+<text class="lb" x="476.56" y="2669.53">29</text>
 <circle class="pt" cx="481.18" cy="2563.82" r="3.2" style="fill:#eb6834"/>
 <text class="lb" x="486.18" y="2559.82">48</text>
 <text class="lg" x="796" y="2396">top 10 by sc_overall_ratio</text>
@@ -497,25 +507,25 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <text class="lb" x="862" y="2504">m48_syntax_gate</text>
 <text class="lb" x="1136" y="2504" text-anchor="end">0.9375</text>
 <text class="lb" x="810" y="2520" text-anchor="end">7.</text>
-<circle cx="820" cy="2517" r="3.2" fill="#1baf7a"/>
-<text class="lb" x="827" y="2520">e07</text>
-<text class="lb" x="862" y="2520">m00_empty</text>
-<text class="lb" x="1136" y="2520" text-anchor="end">0.9075</text>
+<circle cx="820" cy="2517" r="3.2" fill="#eb6834"/>
+<text class="lb" x="827" y="2520">e06</text>
+<text class="lb" x="862" y="2520">m38_pipeline_source_with_reviewer_relative_stop</text>
+<text class="lb" x="1136" y="2520" text-anchor="end">0.9356</text>
 <text class="lb" x="810" y="2536" text-anchor="end">8.</text>
-<circle cx="820" cy="2533" r="3.2" fill="#eb6834"/>
-<text class="lb" x="827" y="2536">e06</text>
-<text class="lb" x="862" y="2536">m48_syntax_gate</text>
-<text class="lb" x="1136" y="2536" text-anchor="end">0.8643</text>
+<circle cx="820" cy="2533" r="3.2" fill="#1baf7a"/>
+<text class="lb" x="827" y="2536">e07</text>
+<text class="lb" x="862" y="2536">m00_empty</text>
+<text class="lb" x="1136" y="2536" text-anchor="end">0.9075</text>
 <text class="lb" x="810" y="2552" text-anchor="end">9.</text>
 <circle cx="820" cy="2549" r="3.2" fill="#eb6834"/>
 <text class="lb" x="827" y="2552">e06</text>
-<text class="lb" x="862" y="2552">m48_syntax_gate</text>
-<text class="lb" x="1136" y="2552" text-anchor="end">0.8531</text>
+<text class="lb" x="862" y="2552">m08_process_doctypes_roles_guardrails</text>
+<text class="lb" x="1136" y="2552" text-anchor="end">0.8698</text>
 <text class="lb" x="810" y="2568" text-anchor="end">10.</text>
 <circle cx="820" cy="2565" r="3.2" fill="#eb6834"/>
 <text class="lb" x="827" y="2568">e06</text>
 <text class="lb" x="862" y="2568">m48_syntax_gate</text>
-<text class="lb" x="1136" y="2568" text-anchor="end">0.8352</text>
+<text class="lb" x="1136" y="2568" text-anchor="end">0.8643</text>
 <text class="lg" x="796" y="2598">engines in this panel</text>
 <circle cx="800" cy="2611" r="3.2" fill="#2a78d6"/>
 <text class="lb" x="808" y="2614">e02</text>
@@ -628,28 +638,53 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <line class="axis" x1="58" y1="3342" x2="58" y2="3702"/>
 <text class="ax" x="418" y="3735" text-anchor="middle">effort spent (1 &#8722; sc_effort)</text>
 <text class="ax" x="20" y="3522" text-anchor="middle" transform="rotate(-90 20 3522)">sc_quality</text>
-<polyline class="front" points="349.1,3567.25 419.43,3503.81 481.18,3495.82" style="stroke:#eb6834"/>
+<polyline class="front" points="349.1,3567.25 354.65,3544.21 383.69,3446.04" style="stroke:#eb6834"/>
 <circle class="pt" cx="349.1" cy="3567.25" r="3.2" style="fill:#eb6834"/>
 <text class="lb" x="354.1" y="3563.25">48</text>
+<circle class="pt" cx="354.65" cy="3544.21" r="3.2" style="fill:#eb6834"/>
+<text class="lb" x="359.65" y="3540.21">08</text>
+<circle class="pt" cx="364.54" cy="3632.3" r="3.2" style="fill:#eb6834"/>
+<text class="lb" x="369.54" y="3628.3">34</text>
+<circle class="pt" cx="383.69" cy="3446.04" r="3.2" style="fill:#eb6834"/>
+<text class="lb" x="388.69" y="3442.04">38</text>
+<circle class="pt" cx="389.06" cy="3618.66" r="3.2" style="fill:#eb6834"/>
+<text class="lb" x="394.06" y="3614.66">44</text>
 <circle class="pt" cx="419.43" cy="3503.81" r="3.2" style="fill:#eb6834"/>
 <text class="lb" x="424.43" y="3499.81">48</text>
 <circle class="pt" cx="440.78" cy="3648.5" r="3.2" style="fill:#eb6834"/>
 <text class="lb" x="445.78" y="3644.5">48</text>
+<circle class="pt" cx="471.56" cy="3605.53" r="3.2" style="fill:#eb6834"/>
+<text class="lb" x="476.56" y="3601.53">29</text>
 <circle class="pt" cx="481.18" cy="3495.82" r="3.2" style="fill:#eb6834"/>
 <text class="lb" x="486.18" y="3491.82">48</text>
 <text class="lg" x="796" y="3328">top 10 by sc_overall_ratio</text>
 <text class="lb" x="810" y="3356" text-anchor="end">1.</text>
-<text class="lb" x="816" y="3356">m48_syntax_gate</text>
-<text class="lb" x="1136" y="3356" text-anchor="end">0.8643</text>
+<text class="lb" x="816" y="3356">m38_pipeline_source_with_reviewer_relative_stop</text>
+<text class="lb" x="1136" y="3356" text-anchor="end">0.9356</text>
 <text class="lb" x="810" y="3372" text-anchor="end">2.</text>
-<text class="lb" x="816" y="3372">m48_syntax_gate</text>
-<text class="lb" x="1136" y="3372" text-anchor="end">0.8531</text>
+<text class="lb" x="816" y="3372">m08_process_doctypes_roles_guardrails</text>
+<text class="lb" x="1136" y="3372" text-anchor="end">0.8698</text>
 <text class="lb" x="810" y="3388" text-anchor="end">3.</text>
 <text class="lb" x="816" y="3388">m48_syntax_gate</text>
-<text class="lb" x="1136" y="3388" text-anchor="end">0.8352</text>
+<text class="lb" x="1136" y="3388" text-anchor="end">0.8643</text>
 <text class="lb" x="810" y="3404" text-anchor="end">4.</text>
 <text class="lb" x="816" y="3404">m48_syntax_gate</text>
-<text class="lb" x="1136" y="3404" text-anchor="end">0.7330</text>
+<text class="lb" x="1136" y="3404" text-anchor="end">0.8531</text>
+<text class="lb" x="810" y="3420" text-anchor="end">5.</text>
+<text class="lb" x="816" y="3420">m48_syntax_gate</text>
+<text class="lb" x="1136" y="3420" text-anchor="end">0.8352</text>
+<text class="lb" x="810" y="3436" text-anchor="end">6.</text>
+<text class="lb" x="816" y="3436">m34_pipeline_source_with_reviewer</text>
+<text class="lb" x="1136" y="3436" text-anchor="end">0.7873</text>
+<text class="lb" x="810" y="3452" text-anchor="end">7.</text>
+<text class="lb" x="816" y="3452">m44_gsd_core_full</text>
+<text class="lb" x="1136" y="3452" text-anchor="end">0.7852</text>
+<text class="lb" x="810" y="3468" text-anchor="end">8.</text>
+<text class="lb" x="816" y="3468">m29_invariants_test_first_relative_stop</text>
+<text class="lb" x="1136" y="3468" text-anchor="end">0.7524</text>
+<text class="lb" x="810" y="3484" text-anchor="end">9.</text>
+<text class="lb" x="816" y="3484">m48_syntax_gate</text>
+<text class="lb" x="1136" y="3484" text-anchor="end">0.7330</text>
 <text class="lg" x="796" y="3530">engines in this panel</text>
 <circle cx="800" cy="3543" r="3.2" fill="#eb6834"/>
 <text class="lb" x="808" y="3546">e06</text>

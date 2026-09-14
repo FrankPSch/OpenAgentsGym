@@ -56,8 +56,11 @@ if not defined GO (
   exit /b 0
 )
 
-REM Idle standby with a run in flight bugchecked an unattended sweep on 2026-09-13.
-py -3 "%~dp0engine_nosleep.py" on
+REM Idle standby with a run in flight bugchecked an unattended sweep on 2026-09-13. The verbs are
+REM save/off/restore, not on/off -- `on` is not a verb and `off` DISABLES standby, so the obvious
+REM pair does nothing at the start and leaves the machine changed at the end.
+for /f "usebackq tokens=* delims=" %%S in (`py -3 "%~dp0engine_nosleep.py" save`) do set "SLEPT=%%S"
+py -3 "%~dp0engine_nosleep.py" off
 
 for %%C in (!ENGINES!) do (
   echo.
@@ -72,7 +75,7 @@ for %%C in (!ENGINES!) do (
   )
 )
 
-py -3 "%~dp0engine_nosleep.py" off
+py -3 "%~dp0engine_nosleep.py" restore !SLEPT!
 echo.
 echo === consolidating
 py -3 "%~dp0run_master.py" --consolidate
