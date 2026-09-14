@@ -1444,6 +1444,47 @@ chapter 16 reports the same state, but only once both `m47_sabotage` and the inc
 Rows without a numeric `res_score`, and rows without a project name, are skipped; the line is
 therefore silent about aborted runs, which chapter 12 already reports by id.
 
+### 13.1b The index columns
+
+Thirteen derived columns, written by `--consolidate` over the whole table and never by a run:
+`idx_duration`, `idx_turns`, `idx_output`, `idx_cost`, `idx_mi`, `idx_max_nesting`,
+`idx_max_func_sloc`, `idx_complexity`, `idx_sloc`, and the two composites `idx_effort` and
+`idx_quality` with their factor counts `idx_effort_n`, `idx_quality_n`.
+
+Each is a measured column divided by a **frozen base**, oriented so that **larger is better**
+everywhere: `base / value` for what you want less of, `value / base` for what you want more of.
+Five decimals are written.
+
+**The bases live in `lib/index_bases.csv`** — one base per column, global, never per project and
+never per engine, so two cells of one column always mean the same thing. They are anchored on
+`p04_python_xlarge` under `e03_claude_opus_5`, the densest cell in the table, and then rounded
+hard: a base is a yardstick to quote, not a measurement. 1.0 therefore reads as *the typical Claude
+run of p04*, and a smaller project sits above 1.0 because it is smaller. That is a property of a
+global base, not a defect: a constant divisor cannot reorder anything, so the arms of one project
+keep their exact order and are separated in the fourth and fifth decimal. Changing a base rewrites
+its whole column on the next consolidation, and the file records when it was frozen.
+
+**The correctness gate is part of the definition.** A row whose `res_verification_passed` is not
+true carries no index at all. Without that, the effort columns reward giving up: a run that stops
+after two turns is the fastest and cheapest row of its project, and a composite would crown it.
+
+**`idx_effort` is time, turns and output tokens** — the three columns every engine reports. Money
+is deliberately not one of them and has its own column: a local model has no price, and a mean over
+three factors here and four there is not one measure. **`idx_quality` is maintainability, nesting
+depth and longest function** — deliberately not cyclomatic complexity and not SLOC, because
+`res_mi` already contains both; averaging a composite with its own ingredients would weight size
+three times over. Those two keep their own index columns, outside any composite.
+
+Both composites are **geometric** means. Ratios do not average arithmetically: 2.0 and 0.5 cancel
+exactly, and their arithmetic mean is 1.25 whichever way round they are written. A factor that is
+missing or non-positive drops out of its mean rather than zeroing it, and the `_n` column records
+how many factors the mean was taken over, so a three-factor mean is never read as a four-factor
+one.
+
+The index columns answer *how much did this cost and what is the code worth*; they do not replace
+`res_score`, which answers *did it work*. Chapter 16 still gates on the score, and chapter 17 still
+forbids pooling across campaigns.
+
 ### 13.2 The Pareto chart
 
 `--consolidate` writes `results_pareto.svg` at the repository root beside the table, from the same

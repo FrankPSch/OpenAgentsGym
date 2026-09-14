@@ -311,6 +311,32 @@ where a methodology matters most.
 5. The rows read are one campaign label (chapter 17); a comparison across levels or configs is
    a comparison of models, not of methodologies, and is not made.
 
+**Effort and quality, side by side.** `res_score` says whether a run worked. The two index columns
+say what it cost and what the code is worth, and they are read together:
+
+| | `idx_effort` | `idx_quality` |
+|---|---|---|
+| built from | duration, turns, output tokens | maintainability, nesting depth, longest function |
+| larger means | less spent | better code |
+| money | not included — `idx_cost` stands alone, because a local model has no price | — |
+
+Both are geometric means of the single index columns, every one of them a measured column divided
+by its frozen base from `lib/index_bases.csv`, oriented so larger is always better. They are blank
+on a run that did not pass: an effort number without a correctness gate rewards giving up early
+(chapter 13.1b of the specification).
+
+1.0 is the typical Claude run of `p04_python_xlarge`, because that is where the bases were
+anchored. A smaller project sits above 1.0 and a larger one below, so **an index is compared within
+a project, never across two** — the same restriction chapter 17 puts on every other comparison.
+Five decimals are written for exactly that reason: inside one project the arms differ in the fourth
+digit.
+
+What the pair is for is the case the score cannot decide. On `p05_python_refactor_large` every arm
+scores 1.0000, and the two indices still separate them: `m00_empty` leads the effort index at
+9.50530 — no methodology is the cheapest way through a task this small — while `m47_sabotage` sits
+in the bottom three of the quality index at 2.12039. One number would have averaged that into
+silence.
+
 **What to look for.**
 - *Saturation* — every arm at the top of the score range. The project has stopped discriminating; it
   now ranks by cost, and it is reported as a cost comparison rather than as a quality ranking. The

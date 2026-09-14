@@ -409,6 +409,26 @@ COLUMNS = [
     # test result: a suite can fail to collect for reasons that are not syntax (a missing import,
     # a module-level exception), and those are a different finding again.
     "res_syntax_ok", "res_syntax_error", "res_collection_errors",
+    # --- index columns (chapter 13.1b) ---------------------------------------------------------
+    # Derived, not measured: every one of them is a measured column above divided by a frozen base
+    # from lib/index_bases.csv, oriented so that LARGER IS BETTER everywhere -- base/value for the
+    # things you want less of, value/base for the things you want more of. Five decimals, because
+    # a global base makes a large project sit near 0.15 and a small one near 6, and the arms of one
+    # project are then separated in the fourth digit.
+    #
+    # They are recomputed over the whole table on every consolidation, so they are never stale and
+    # never hand-maintained; the measured columns they come from stay untouched beside them.
+    # Blank on a run that did not pass verification: an effort index without a correctness gate
+    # rewards giving up early.
+    #
+    # idx_effort is time, turns and output tokens -- the three every engine reports. Money is NOT
+    # in it and has its own column: a local model has no price, and a mean over three factors here
+    # and four there is not one measure. idx_quality is maintainability, nesting depth and longest
+    # function -- deliberately not complexity and SLOC, which res_mi already contains, because
+    # averaging a composite with its own ingredients weights size three times over.
+    "idx_duration", "idx_turns", "idx_output", "idx_cost",
+    "idx_mi", "idx_max_nesting", "idx_max_func_sloc", "idx_complexity", "idx_sloc",
+    "idx_effort", "idx_effort_n", "idx_quality", "idx_quality_n",
 ]
 
 METRIC_COLUMNS = {
@@ -2621,6 +2641,91 @@ def read_table(path):
         return [{plain_name(k): v for k, v in rec.items() if k} for rec in csv.DictReader(fh)]
 
 
+INDEX_BASES_FILE = ROOT / "lib" / "index_bases.csv"
+# idx_<name> for the column it is computed from. Appended to COLUMNS, never inserted.
+INDEX_NAMES = {"prf_duration_s": "idx_duration", "prf_turns": "idx_turns",
+               "tk_output": "idx_output", "tk_cost_usd": "idx_cost",
+               "res_mi": "idx_mi", "res_max_nesting": "idx_max_nesting",
+               "res_max_func_sloc": "idx_max_func_sloc",
+               "res_complexity": "idx_complexity", "res_sloc": "idx_sloc"}
+
+
+def read_index_bases(path=None):
+    """The frozen bases: {column: (base, direction, group)}. Empty when the file is absent.
+
+    Data, not code, so a base can be quoted, diffed and re-frozen without touching the harness.
+    A malformed line is skipped rather than aborting a consolidation that is otherwise fine --
+    the column it would have produced then stays blank, which is the honest cell.
+    """
+    out = {}
+    path = path or INDEX_BASES_FILE
+    if not path.is_file():
+        return out
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or line.startswith("column,"):
+            continue
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) != 4:
+            continue
+        col, base, direction, group = parts
+        try:
+            base = float(base)
+        except ValueError:
+            continue
+        if base > 0 and direction in ("up", "down"):
+            out[col] = (base, direction, group)
+    return out
+
+
+def geometric_mean(values):
+    """The mean for ratios. Arithmetic averaging of ratios is direction-dependent and biased:
+    2.0 and 0.5 average to 1.25 one way round and 1.25 the other, though they cancel exactly."""
+    if not values:
+        return None
+    product = 1.0
+    for v in values:
+        product *= v
+    return product ** (1.0 / len(values))
+
+
+def apply_index_columns(records, bases=None):
+    """Write idx_* into every record, in place. Derived, deterministic, recomputed every time.
+
+    Gated on res_verification_passed. Without that gate the effort columns reward giving up: a run
+    that stops after two turns is the fastest and cheapest row in its project, and a composite
+    would crown it. A row that did not pass keeps every measured column and carries no index.
+
+    A factor that is missing or non-positive drops out of its composite rather than zeroing it;
+    `idx_effort_n` and `idx_quality_n` record how many factors the mean was taken over, so a
+    three-factor mean is never silently read as a four-factor one.
+    """
+    bases = read_index_bases() if bases is None else bases
+    if not bases:
+        return records
+    for rec in records:
+        for name in list(INDEX_NAMES.values()) + ["idx_effort", "idx_effort_n",
+                                                  "idx_quality", "idx_quality_n"]:
+            rec.setdefault(name, "")
+        if str(rec.get("res_verification_passed", "")).strip().lower() != "true":
+            continue
+        groups = {"effort": [], "quality": []}
+        for col, (base, direction, group) in bases.items():
+            value = as_float(rec.get(col))
+            if value is None or value <= 0:
+                continue
+            index = (base / value) if direction == "down" else (value / base)
+            rec[INDEX_NAMES.get(col, "idx_" + col)] = "%.5f" % index
+            if group in groups:
+                groups[group].append(index)
+        for group, values in groups.items():
+            mean = geometric_mean(values)
+            if mean is not None:
+                rec["idx_" + group] = "%.5f" % mean
+                rec["idx_%s_n" % group] = str(len(values))
+    return records
+
+
 def score_spread_report(records):
     """One descriptive line per campaign and project: arms, score range, distinct values.
 
@@ -2697,7 +2802,12 @@ def consolidate():
     # the columns some row had left the published table one column short of the schema for as long
     # as no run had produced the new one, and chapter 13 states the header *is* COLUMNS: a reader
     # comparing the file against the chapter would have found a column missing rather than blank.
-    columns = list(COLUMNS) + [c for c in seen if c not in COLUMNS]
+    # Derived last, over the merged rows, so the whole table is recomputed from the frozen bases
+    # on every consolidation -- an index is never carried over from an earlier write.
+    apply_index_columns(records)
+    extra = [k for rec in records for k in rec if k not in COLUMNS and k not in seen]
+    columns = list(COLUMNS) + [c for c in seen if c not in COLUMNS] + \
+        sorted(set(extra), key=extra.index)
     out = RESULTS_TABLE
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(str(out), "w", newline="", encoding="utf-8") as fh:
@@ -2705,7 +2815,10 @@ def consolidate():
         w.writerow([csv_name(c) for c in columns])
         for rec in records:
             w.writerow([rec.get(c, "") for c in columns])
-    missing = [c for c in COLUMNS if c not in seen]
+    # Read off the rows as written, not off `seen`: the derived columns are added after the merge,
+    # so a check against the input keys reported every idx_* column as blank while it was filled.
+    carried = {c for rec in records for c, v in rec.items() if str(v).strip()}
+    missing = [c for c in COLUMNS if c not in carried]
     print("wrote %s (%d rows, %d columns)" % (out, len(records), len(columns)))
     print("  %d row(s) kept from the published table, %d from local/runs" % (kept, from_runs))
     for line in mixed_campaign_report(records):

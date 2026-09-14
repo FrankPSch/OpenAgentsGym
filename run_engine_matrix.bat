@@ -119,10 +119,6 @@ REM which the 30B failed five times out of five with a Vulkan APIError, and e11
 REM is 8192 context and 10 offloaded blocks instead of 32768 and auto. Keeping
 REM e08 costs about seven minutes of known failure per matrix and is what makes
 REM any e11 result mean something; drop it only once e11 has a track record.
-call :leg e06_local_gptoss_20b "gpt-oss-20b     local  free"
-call :leg e07_local_qwen3_4b "qwen3-4b        local  free"
-call :leg e08_local_qwen3coder_30b "qwen3-coder-30b local  free (ctx32k, gpu auto)"
-call :leg e11_local_qwen3coder_30b_tuned "qwen3-coder-30b local  free (ctx8k, gpu 10)"
 REM Devstral, added 2026-09-13. 14 GB dense, trained for tool-driven multi-file
 REM editing, and the only local model publishing an agentic benchmark (46.8%%
 REM SWE-Bench Verified). It sits between gpt-oss-20b (13 GB, runs here) and the
@@ -130,6 +126,10 @@ REM 30B at 32k context (18 GB + 3 GB KV, refused by the Vulkan allocator), so
 REM this leg also measures where the wall on this machine actually is. If the
 REM tag is not built the preflight skips it -- 01_build_models.bat pulls it.
 call :leg e12_local_devstral_24b "devstral-24b    local  free (24B dense, agentic)"
+call :leg e06_local_gptoss_20b "gpt-oss-20b     local  free"
+call :leg e07_local_qwen3_4b "qwen3-4b        local  free"
+call :leg e08_local_qwen3coder_30b "qwen3-coder-30b local  free (ctx32k, gpu auto)"
+call :leg e11_local_qwen3coder_30b_tuned "qwen3-coder-30b local  free (ctx8k, gpu 10)"
 
 echo.
 echo ============ SUMMARY ============
@@ -231,6 +231,11 @@ if defined LEGMODEL (
   REM The unload runs for every leg: a local model left resident by the previous
   REM leg holds its weights whether or not THIS leg wants them back.
   py -3 "%~dp0engine_leg.py" unload "!LEGMODEL!"
+  REM Between the unload and the load, because that is the memory the next model
+  REM actually finds. On an integrated GPU the VRAM is system RAM, so this one
+  REM number decides whether the model loads, pages from disk, or dies in the
+  REM allocator -- and no column in the row records it.
+  py -3 "%~dp0engine_freeram.py"
   REM Only a local model is pulled into RAM. Saying "pulled into RAM" before a
   REM claude or gpt leg claimed memory for a model that runs on someone else's
   REM hardware, and read as though two models were about to be loaded at once.

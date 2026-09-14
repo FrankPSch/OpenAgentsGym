@@ -54,6 +54,17 @@ REM keeps its summary. Across three projects and six to ten hours that is a
 REM stall, not a safety net, so tell it this is a campaign.
 set "OAG_CAMPAIGN=1"
 
+
+REM --- keep the machine awake --------------------------------------------------
+REM An unattended sweep took the machine down on 2026-09-13: standby-after-60-min
+REM fired mid-leg, and a power transition with 18 GB of weights resident and the
+REM iGPU loaded cannot finish inside the win32k watchdog (bugcheck 0x19C). The
+REM leg left a START with no DONE and no row. The power plan is a machine
+REM setting that does not travel with the repository, so the campaign defends
+REM itself and puts the value back at the end.
+for /f "usebackq delims=" %%S in (`py -3 "%~dp0engine_nosleep.py" save`) do set "PREV_SLEEP=%%S"
+py -3 "%~dp0engine_nosleep.py" off
+
 echo ============================================================
 echo  campaign: %M% on p02, p03, p04
 echo  billed legs: %EXTRA%    (empty = local only)
@@ -70,6 +81,7 @@ echo  campaign finished %DATE% %TIME%
 echo  Rows are consolidated: each project batch merged its own.
 echo  Read them against the m00_empty rows for the same cells.
 echo ============================================================
+py -3 "%~dp0engine_nosleep.py" restore %PREV_SLEEP%
 set "OAG_CAMPAIGN="
 pause
 exit /b 0

@@ -521,9 +521,11 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <line class="axis" x1="58" y1="3808" x2="58" y2="4168"/>
 <text class="ax" x="418" y="4201" text-anchor="middle">cost (USD)</text>
 <text class="ax" x="20" y="3988" text-anchor="middle" transform="rotate(-90 20 3988)">score</text>
-<polyline class="front" points="58,4168 58,3862.36 58,3857.32 58,3850.48 58,3843.28"/>
+<polyline class="front" points="58,4168 58,4168 58,3862.36 58,3857.32 58,3850.48 58,3843.28"/>
 <circle class="pt" cx="58" cy="4168" r="3.2"/>
 <text class="lb" x="63" y="4164">00</text>
+<circle class="pt" cx="58" cy="4168" r="3.2"/>
+<text class="lb" x="42.2" y="4164">00</text>
 <circle class="pt" cx="58" cy="3862.36" r="3.2"/>
 <text class="lb" x="63" y="3858.36">48</text>
 <circle class="pt" cx="58" cy="3857.32" r="3.2"/>
@@ -684,11 +686,13 @@ text{font-family:'Segoe UI',system-ui,-apple-system,'DejaVu Sans',sans-serif;fil
 <line class="axis" x1="58" y1="5672" x2="58" y2="6032"/>
 <text class="ax" x="418" y="6065" text-anchor="middle">cost (USD)</text>
 <text class="ax" x="20" y="5852" text-anchor="middle" transform="rotate(-90 20 5852)">score</text>
-<polyline class="front" points="58,5979.26 58,5943.8 58,5798 58,5789"/>
+<polyline class="front" points="58,5979.26 58,5943.8 58,5819.6 58,5798 58,5789"/>
 <circle class="pt" cx="58" cy="5979.26" r="3.2"/>
 <text class="lb" x="63" y="5975.26">48</text>
 <circle class="pt" cx="58" cy="5943.8" r="3.2"/>
 <text class="lb" x="63" y="5939.8">00</text>
+<circle class="pt" cx="58" cy="5819.6" r="3.2"/>
+<text class="lb" x="63" y="5815.6">00</text>
 <circle class="pt" cx="58" cy="5798" r="3.2"/>
 <text class="lb" x="63" y="5794">48</text>
 <circle class="pt" cx="58" cy="5789" r="3.2"/>
