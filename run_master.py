@@ -428,15 +428,17 @@ COLUMNS = [
     # difference of two logarithms, so these need nothing but the measured column.
     #
     # sc_effort is time, turns and output tokens -- the three every engine reports. Money is NOT in
-    # it and keeps sc_cost: a local model has no price, and a mean over three factors here and four
-    # there is not one measure. sc_quality is maintainability, nesting depth and longest function --
+    # it and keeps sc_cost_usd: a mean over three factors here and four there is not one measure.
+    # The column is filled wherever the engine reports a price and blank where none exists -- that
+    # is a property of the model that ran, not of the vendor, so the name carries the currency and
+    # not an engine. sc_quality is maintainability, nesting depth and longest function --
     # deliberately not cyclomatic complexity and not SLOC, which res_mi already contains, because
     # averaging a composite with its own ingredients weights size three times over. The composites
     # are arithmetic means: after the log transform these are distances on one scale, not ratios.
     #
     # Blank on a run that did not pass verification -- an effort score without a correctness gate
     # crowns the run that gave up after two turns.
-    "sc_duration", "sc_turns", "sc_output", "sc_cost",
+    "sc_duration", "sc_turns", "sc_output", "sc_cost_usd",
     "sc_mi", "sc_max_nesting", "sc_max_func_sloc",
     "sc_effort", "sc_quality", "sc_overall",
 ]
@@ -2657,7 +2659,7 @@ SCORE_COLUMNS = [
     ("prf_duration_s", "sc_duration", "down", "effort"),
     ("prf_turns", "sc_turns", "down", "effort"),
     ("tk_output", "sc_output", "down", "effort"),
-    ("tk_cost_usd", "sc_cost", "down", ""),
+    ("tk_cost_usd", "sc_cost_usd", "down", ""),
     ("res_mi", "sc_mi", "up", "quality"),
     ("res_max_nesting", "sc_max_nesting", "down", "quality"),
     ("res_max_func_sloc", "sc_max_func_sloc", "down", "quality"),

@@ -318,7 +318,7 @@ what it cost and what the code is worth, and they are read together:
 |---|---|---|
 | built from | duration, turns, output tokens | maintainability, nesting depth, longest function |
 | larger means | less spent | better code |
-| money | not included — `sc_cost` stands alone, because a local model has no price | — |
+| money | not included — `sc_cost_usd` stands alone, and is blank wherever the engine reports no price | — |
 
 `sc_overall` is the mean of the two, so effort and quality count equally.
 

@@ -100,8 +100,8 @@ check_engine_matrix.bat                verify a machine can run the second engin
 run_engine_matrix.bat [/billed]        one project x one methodology across engines and local models
 ```
 
-Setting a machine up — Python 3.10, Ollama, LiteLLM, opencode, the CLIs and the traps each of
-them hides — is [`oam_install.md`](oam_install.md).
+Setting a fresh Windows machine up — Python, Node, Ollama, LiteLLM, opencode and the three engine
+families in the order they need to be installed — is [`oam_install_windows.md`](oam_install_windows.md).
 
 All campaign constants live in the four `.llm_config.e01_claude_haiku_4_5` … `e04_claude_fable_5_1` files — one per
 capability level: 1 the cheapest model (`run_turbo_e01.bat`), 2 the workhorse (`run.bat`,
@@ -134,7 +134,7 @@ Everything is a directory listing: a new methodology or project joins the matrix
 |---|---|
 | [`oam_targetpicture.md`](oam_targetpicture.md) | the specification — defines behaviour; the source of truth |
 | [`oam_manual.md`](oam_manual.md) | how to use it, extend a project, extend a methodology, read the columns |
-| [`oam_install.md`](oam_install.md) | bringing a machine up — every dependency, its verification command, and the trap it hides |
+| [`oam_install_windows.md`](oam_install_windows.md) | bringing a fresh Windows machine up — requirements, then the Claude, GPT and local chapters in install order |
 | [`NAMING.md`](NAMING.md) | how projects, methodologies and engines are named and numbered, and the engine register |
 
 ---

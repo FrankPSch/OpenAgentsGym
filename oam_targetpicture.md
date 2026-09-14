@@ -1447,7 +1447,7 @@ therefore silent about aborted runs, which chapter 12 already reports by id.
 ### 13.1b The score columns
 
 Ten derived columns, written by `--consolidate` over the whole table and never by a run:
-`sc_duration`, `sc_turns`, `sc_output`, `sc_cost`, `sc_mi`, `sc_max_nesting`, `sc_max_func_sloc`,
+`sc_duration`, `sc_turns`, `sc_output`, `sc_cost_usd`, `sc_mi`, `sc_max_nesting`, `sc_max_func_sloc`,
 and the composites `sc_effort`, `sc_quality`, `sc_overall`. Larger is better in every one of them,
 and five decimals are written.
 
@@ -1488,8 +1488,10 @@ true carries no score at all. Without it the effort columns reward giving up: a 
 after two turns is the fastest and cheapest row of its project.
 
 **`sc_effort` is time, turns and output tokens** — the three columns every engine reports. Money is
-deliberately not one of them and keeps `sc_cost`: a local model has no price, and a mean over three
-factors here and four there is not one measure. **`sc_quality` is maintainability, nesting depth and
+deliberately not one of them and keeps `sc_cost_usd`: a mean over three factors here and four there
+is not one measure. That column is filled wherever the engine reports a price and blank where none
+exists — a property of the model that ran rather than of a vendor, which is why its name carries the
+currency and not an engine. **`sc_quality` is maintainability, nesting depth and
 longest function** — deliberately not cyclomatic complexity and not SLOC, because `res_mi` already
 contains both, and averaging a composite with its own ingredients weights size three times over.
 
