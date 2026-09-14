@@ -14,6 +14,7 @@ relative path is resolved against the repository root.
 import ast
 import csv
 import json
+import math
 import os
 import re
 import shlex
@@ -409,26 +410,35 @@ COLUMNS = [
     # test result: a suite can fail to collect for reasons that are not syntax (a missing import,
     # a module-level exception), and those are a different finding again.
     "res_syntax_ok", "res_syntax_error", "res_collection_errors",
-    # --- index columns (chapter 13.1b) ---------------------------------------------------------
-    # Derived, not measured: every one of them is a measured column above divided by a frozen base
-    # from lib/index_bases.csv, oriented so that LARGER IS BETTER everywhere -- base/value for the
-    # things you want less of, value/base for the things you want more of. Five decimals, because
-    # a global base makes a large project sit near 0.15 and a small one near 6, and the arms of one
-    # project are then separated in the fourth digit.
+    # --- the sc_* score columns (chapter 13.1b) ------------------------------------------------
+    # Derived, not measured, and recomputed over the whole table on every consolidation, so they
+    # are never stale and never hand-maintained; the measured columns they come from stay
+    # untouched beside them. LARGER IS BETTER in every one of them.
     #
-    # They are recomputed over the whole table on every consolidation, so they are never stale and
-    # never hand-maintained; the measured columns they come from stay untouched beside them.
-    # Blank on a run that did not pass verification: an effort index without a correctness gate
-    # rewards giving up early.
+    # Per column: the best run OF EACH PROJECT is 1.0, the worst run of the WHOLE TABLE is 0.0,
+    # everything else lies between and nothing is clipped. The distance is measured in logarithms,
+    # so one doubling is one distance wherever it happens; on the raw scale the slowest run in the
+    # table (a factor of 1125 above the fastest) owns the whole range and 95% of rows crowd between
+    # 0.9 and 1.0. The denominator is shared across projects, so a distance means the same
+    # everywhere, while the anchor is local, so each project is read on its own -- and a project
+    # whose arms tie stays bunched just under 1.0 rather than being stretched across the range,
+    # which is what a per-project min-max would have done to it.
     #
-    # idx_effort is time, turns and output tokens -- the three every engine reports. Money is NOT
-    # in it and has its own column: a local model has no price, and a mean over three factors here
-    # and four there is not one measure. idx_quality is maintainability, nesting depth and longest
-    # function -- deliberately not complexity and SLOC, which res_mi already contains, because
-    # averaging a composite with its own ingredients weights size three times over.
-    "idx_duration", "idx_turns", "idx_output", "idx_cost",
-    "idx_mi", "idx_max_nesting", "idx_max_func_sloc", "idx_complexity", "idx_sloc",
-    "idx_effort", "idx_effort_n", "idx_quality", "idx_quality_n",
+    # No base file, no reference solution, no starting state: a constant divisor cancels in the
+    # difference of two logarithms, so these need nothing but the measured column.
+    #
+    # sc_effort is time, turns and output tokens -- the three every engine reports. Money is NOT in
+    # it and keeps sc_cost: a local model has no price, and a mean over three factors here and four
+    # there is not one measure. sc_quality is maintainability, nesting depth and longest function --
+    # deliberately not cyclomatic complexity and not SLOC, which res_mi already contains, because
+    # averaging a composite with its own ingredients weights size three times over. The composites
+    # are arithmetic means: after the log transform these are distances on one scale, not ratios.
+    #
+    # Blank on a run that did not pass verification -- an effort score without a correctness gate
+    # crowns the run that gave up after two turns.
+    "sc_duration", "sc_turns", "sc_output", "sc_cost",
+    "sc_mi", "sc_max_nesting", "sc_max_func_sloc",
+    "sc_effort", "sc_quality", "sc_overall",
 ]
 
 METRIC_COLUMNS = {
@@ -2641,89 +2651,126 @@ def read_table(path):
         return [{plain_name(k): v for k, v in rec.items() if k} for rec in csv.DictReader(fh)]
 
 
-INDEX_BASES_FILE = ROOT / "lib" / "index_bases.csv"
-# idx_<name> for the column it is computed from. Appended to COLUMNS, never inserted.
-INDEX_NAMES = {"prf_duration_s": "idx_duration", "prf_turns": "idx_turns",
-               "tk_output": "idx_output", "tk_cost_usd": "idx_cost",
-               "res_mi": "idx_mi", "res_max_nesting": "idx_max_nesting",
-               "res_max_func_sloc": "idx_max_func_sloc",
-               "res_complexity": "idx_complexity", "res_sloc": "idx_sloc"}
+# --- the sc_* score columns (chapter 13.1b) -------------------------------------------------
+# (column, direction, group). down = smaller is better, up = larger is better.
+SCORE_COLUMNS = [
+    ("prf_duration_s", "sc_duration", "down", "effort"),
+    ("prf_turns", "sc_turns", "down", "effort"),
+    ("tk_output", "sc_output", "down", "effort"),
+    ("tk_cost_usd", "sc_cost", "down", ""),
+    ("res_mi", "sc_mi", "up", "quality"),
+    ("res_max_nesting", "sc_max_nesting", "down", "quality"),
+    ("res_max_func_sloc", "sc_max_func_sloc", "down", "quality"),
+]
+SCORE_COMPOSITES = [("sc_effort", "effort"), ("sc_quality", "quality")]
 
 
-def read_index_bases(path=None):
-    """The frozen bases: {column: (base, direction, group)}. Empty when the file is absent.
+def log_lag(value, best, direction):
+    """How far behind its project's leader a run is, in logarithms -- 0 for the leader itself.
 
-    Data, not code, so a base can be quoted, diffed and re-frozen without touching the harness.
-    A malformed line is skipped rather than aborting a consolidation that is otherwise fine --
-    the column it would have produced then stays blank, which is the honest cell.
+    Logarithms because these quantities spread multiplicatively: duration runs from 21 seconds to
+    over twenty minutes, a factor of 1125. On the raw scale that one run owns the whole range and
+    every realistic difference is squeezed into the last two percent -- measured on this table, 95%
+    of all rows then sit between 0.9 and 1.0, and 48 arms of p04 are separated in the third decimal.
+    In logarithms one doubling is one distance, wherever it happens: twice as slow costs the same
+    from 20 to 40 seconds as from 600 to 1200.
     """
-    out = {}
-    path = path or INDEX_BASES_FILE
-    if not path.is_file():
-        return out
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or line.startswith("column,"):
-            continue
-        parts = [p.strip() for p in line.split(",")]
-        if len(parts) != 4:
-            continue
-        col, base, direction, group = parts
-        try:
-            base = float(base)
-        except ValueError:
-            continue
-        if base > 0 and direction in ("up", "down"):
-            out[col] = (base, direction, group)
-    return out
+    ratio = (value / best) if direction == "down" else (best / value)
+    return math.log(ratio) if ratio > 0 else None
 
 
-def geometric_mean(values):
-    """The mean for ratios. Arithmetic averaging of ratios is direction-dependent and biased:
-    2.0 and 0.5 average to 1.25 one way round and 1.25 the other, though they cancel exactly."""
-    if not values:
-        return None
-    product = 1.0
-    for v in values:
-        product *= v
-    return product ** (1.0 / len(values))
+def apply_score_columns(records):
+    """Write sc_* into every record, in place. Derived, deterministic, recomputed every time.
 
+    Per column: the best run OF EACH PROJECT scores 1.0, the worst run of the WHOLE TABLE scores
+    0.0, everything else sits between, nothing is clipped. One shared denominator -- the largest
+    lag anywhere -- so a distance means the same in every project, while the anchor stays local so
+    each project is read on its own. A project whose arms tie therefore stays bunched just under
+    1.0 instead of being stretched across the full range, which is what a per-project min-max would
+    have done: saturation keeps looking like saturation.
 
-def apply_index_columns(records, bases=None):
-    """Write idx_* into every record, in place. Derived, deterministic, recomputed every time.
+    No base file, no reference solution, no starting state: a constant divisor cancels in the
+    difference of two logarithms, so the raw measured column is all this needs.
 
-    Gated on res_verification_passed. Without that gate the effort columns reward giving up: a run
-    that stops after two turns is the fastest and cheapest row in its project, and a composite
-    would crown it. A row that did not pass keeps every measured column and carries no index.
+    Gated on res_verification_passed -- without it the effort columns crown the run that gave up
+    after two turns, the fastest and cheapest row of its project.
 
-    A factor that is missing or non-positive drops out of its composite rather than zeroing it;
-    `idx_effort_n` and `idx_quality_n` record how many factors the mean was taken over, so a
-    three-factor mean is never silently read as a four-factor one.
+    What it does NOT say: whether one project's leader is better than another's. Every project's
+    best is 1.0 by construction. That comparison lives in the measured columns.
     """
-    bases = read_index_bases() if bases is None else bases
-    if not bases:
-        return records
+    names = [n for _, n, _, _ in SCORE_COLUMNS] + [n for n, _ in SCORE_COMPOSITES] + ["sc_overall"]
     for rec in records:
-        for name in list(INDEX_NAMES.values()) + ["idx_effort", "idx_effort_n",
-                                                  "idx_quality", "idx_quality_n"]:
+        for name in names:
             rec.setdefault(name, "")
-        if str(rec.get("res_verification_passed", "")).strip().lower() != "true":
-            continue
-        groups = {"effort": [], "quality": []}
-        for col, (base, direction, group) in bases.items():
-            value = as_float(rec.get(col))
+    scored = [r for r in records
+              if str(r.get("res_verification_passed", "")).strip().lower() == "true"]
+    if not scored:
+        return records
+
+    for source, name, direction, _group in SCORE_COLUMNS:
+        by_project = {}
+        for rec in scored:
+            value = as_float(rec.get(source))
             if value is None or value <= 0:
                 continue
-            index = (base / value) if direction == "down" else (value / base)
-            rec[INDEX_NAMES.get(col, "idx_" + col)] = "%.5f" % index
-            if group in groups:
-                groups[group].append(index)
-        for group, values in groups.items():
-            mean = geometric_mean(values)
-            if mean is not None:
-                rec["idx_" + group] = "%.5f" % mean
-                rec["idx_%s_n" % group] = str(len(values))
+            by_project.setdefault(rec.get("prj_name", ""), []).append((rec, value))
+        lags = []
+        for _project, entries in by_project.items():
+            values = [v for _, v in entries]
+            best = min(values) if direction == "down" else max(values)
+            for rec, value in entries:
+                lag = log_lag(value, best, direction)
+                if lag is not None:
+                    lags.append((rec, lag))
+        if not lags:
+            continue
+        worst = max(lag for _, lag in lags)
+        for rec, lag in lags:
+            rec[name] = "%.5f" % (1.0 - lag / worst) if worst > 0 else "1.00000"
+
+    # The composites are means, not products: after the transform these are distances on one
+    # scale, not ratios, so they add. A factor a row is missing drops out of its own mean.
+    for rec in scored:
+        parts = {}
+        for _source, name, _direction, group in SCORE_COLUMNS:
+            value = as_float(rec.get(name))
+            if group and value is not None:
+                parts.setdefault(group, []).append(value)
+        for name, group in SCORE_COMPOSITES:
+            values = parts.get(group) or []
+            if values:
+                rec[name] = "%.5f" % (sum(values) / len(values))
+        both = [as_float(rec.get(n)) for n, _ in SCORE_COMPOSITES]
+        both = [v for v in both if v is not None]
+        if both:
+            rec["sc_overall"] = "%.5f" % (sum(both) / len(both))
     return records
+
+
+def score_anchor_report(records):
+    """One line per sc_ column: which run set the 0.0 end, and how large the whole lag was."""
+    lines = []
+    scored = [r for r in records
+              if str(r.get("res_verification_passed", "")).strip().lower() == "true"]
+    for source, name, direction, _group in SCORE_COLUMNS:
+        worst, span = None, 0.0
+        by_project = {}
+        for rec in scored:
+            value = as_float(rec.get(source))
+            if value is not None and value > 0:
+                by_project.setdefault(rec.get("prj_name", ""), []).append((rec, value))
+        for _project, entries in by_project.items():
+            values = [v for _, v in entries]
+            best = min(values) if direction == "down" else max(values)
+            for rec, value in entries:
+                lag = log_lag(value, best, direction)
+                if lag is not None and lag > span:
+                    worst, span = rec, lag
+        if worst is not None:
+            lines.append("%-18s span=%.3f (0.0 set by %s / %s / %s)"
+                         % (name, span, worst.get("prj_name", ""), worst.get("mth_name", ""),
+                            worst.get("cfg_campaign", "").replace(".llm_config.", "")))
+    return lines
 
 
 def score_spread_report(records):
@@ -2804,7 +2851,7 @@ def consolidate():
     # comparing the file against the chapter would have found a column missing rather than blank.
     # Derived last, over the merged rows, so the whole table is recomputed from the frozen bases
     # on every consolidation -- an index is never carried over from an earlier write.
-    apply_index_columns(records)
+    apply_score_columns(records)
     extra = [k for rec in records for k in rec if k not in COLUMNS and k not in seen]
     columns = list(COLUMNS) + [c for c in seen if c not in COLUMNS] + \
         sorted(set(extra), key=extra.index)
@@ -2832,6 +2879,8 @@ def consolidate():
         for run_id in aborted:
             print("    %s" % run_id)
     for line in score_spread_report(records):
+        print("  %s" % line)
+    for line in score_anchor_report(records):
         print("  %s" % line)
     # The chart is written from the rows just written, never from a second read of the file: the
     # two artifacts then cannot disagree about what was consolidated.

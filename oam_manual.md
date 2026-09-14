@@ -311,31 +311,33 @@ where a methodology matters most.
 5. The rows read are one campaign label (chapter 17); a comparison across levels or configs is
    a comparison of models, not of methodologies, and is not made.
 
-**Effort and quality, side by side.** `res_score` says whether a run worked. The two index columns
-say what it cost and what the code is worth, and they are read together:
+**Effort and quality, side by side.** `res_score` says whether a run worked. The score columns say
+what it cost and what the code is worth, and they are read together:
 
-| | `idx_effort` | `idx_quality` |
+| | `sc_effort` | `sc_quality` |
 |---|---|---|
 | built from | duration, turns, output tokens | maintainability, nesting depth, longest function |
 | larger means | less spent | better code |
-| money | not included — `idx_cost` stands alone, because a local model has no price | — |
+| money | not included — `sc_cost` stands alone, because a local model has no price | — |
 
-Both are geometric means of the single index columns, every one of them a measured column divided
-by its frozen base from `lib/index_bases.csv`, oriented so larger is always better. They are blank
-on a run that did not pass: an effort number without a correctness gate rewards giving up early
-(chapter 13.1b of the specification).
+`sc_overall` is the mean of the two, so effort and quality count equally.
 
-1.0 is the typical Claude run of `p04_python_xlarge`, because that is where the bases were
-anchored. A smaller project sits above 1.0 and a larger one below, so **an index is compared within
-a project, never across two** — the same restriction chapter 17 puts on every other comparison.
-Five decimals are written for exactly that reason: inside one project the arms differ in the fourth
-digit.
+Every score column places a run by how far it is behind **the leader of its own project**, measured
+in logarithms and divided by the largest such distance anywhere in the table. So the best run of
+each project scores 1.0, the worst run of the whole table scores 0.0, and nothing is clipped
+(chapter 13.1b of the specification). They are blank on a run that did not pass: an effort number
+without a correctness gate rewards giving up early.
+
+Two things follow. A distance means the same in every project, so **all engines and all arms of one
+project are directly comparable** — that is what these columns are for. But the *level* between
+projects is gone: every project's best is 1.0, so they cannot say whether the best `p03` run beats
+the best `p06` run. The measured columns answer that.
 
 What the pair is for is the case the score cannot decide. On `p05_python_refactor_large` every arm
-scores 1.0000, and the two indices still separate them: `m00_empty` leads the effort index at
-9.50530 — no methodology is the cheapest way through a task this small — while `m47_sabotage` sits
-in the bottom three of the quality index at 2.12039. One number would have averaged that into
-silence.
+scores 1.0000, and the score columns still separate them, from
+`m38_pipeline_source_with_reviewer_relative_stop` at 0.97587 down to `m46_gsd_surface_lean` at
+0.37662 — the latter leading nothing and taking 1259 seconds to get there. One number would have
+averaged that into silence.
 
 **What to look for.**
 - *Saturation* — every arm at the top of the score range. The project has stopped discriminating; it

@@ -1444,46 +1444,64 @@ chapter 16 reports the same state, but only once both `m47_sabotage` and the inc
 Rows without a numeric `res_score`, and rows without a project name, are skipped; the line is
 therefore silent about aborted runs, which chapter 12 already reports by id.
 
-### 13.1b The index columns
+### 13.1b The score columns
 
-Thirteen derived columns, written by `--consolidate` over the whole table and never by a run:
-`idx_duration`, `idx_turns`, `idx_output`, `idx_cost`, `idx_mi`, `idx_max_nesting`,
-`idx_max_func_sloc`, `idx_complexity`, `idx_sloc`, and the two composites `idx_effort` and
-`idx_quality` with their factor counts `idx_effort_n`, `idx_quality_n`.
+Ten derived columns, written by `--consolidate` over the whole table and never by a run:
+`sc_duration`, `sc_turns`, `sc_output`, `sc_cost`, `sc_mi`, `sc_max_nesting`, `sc_max_func_sloc`,
+and the composites `sc_effort`, `sc_quality`, `sc_overall`. Larger is better in every one of them,
+and five decimals are written.
 
-Each is a measured column divided by a **frozen base**, oriented so that **larger is better**
-everywhere: `base / value` for what you want less of, `value / base` for what you want more of.
-Five decimals are written.
+**The construction.** Per column, each run is placed by how far it is behind the leader of its own
+project:
 
-**The bases live in `lib/index_bases.csv`** — one base per column, global, never per project and
-never per engine, so two cells of one column always mean the same thing. They are anchored on
-`p04_python_xlarge` under `e03_claude_opus_5`, the densest cell in the table, and then rounded
-hard: a base is a yardstick to quote, not a measurement. 1.0 therefore reads as *the typical Claude
-run of p04*, and a smaller project sits above 1.0 because it is smaller. That is a property of a
-global base, not a defect: a constant divisor cannot reorder anything, so the arms of one project
-keep their exact order and are separated in the fourth and fifth decimal. Changing a base rewrites
-its whole column on the next consolidation, and the file records when it was frozen.
+```
+lag  = ln(value / best_of_project)        for a column where smaller is better
+lag  = ln(best_of_project / value)        for a column where larger is better
+span = the largest lag anywhere in the table
+sc   = 1 - lag / span
+```
+
+The best run of **each project** scores exactly 1.0, the worst run of the **whole table** exactly
+0.0, everything else lies between, and nothing is clipped. The denominator is shared across
+projects, so one distance means the same everywhere; the anchor is local, so each project is read
+on its own terms.
+
+**Why logarithms.** These quantities spread multiplicatively. Duration in this table runs from 21
+seconds to over twenty minutes, a factor of 1125. On the raw scale that single run owns the range:
+a run that took *twice* as long as its leader would score 0.983, and 95% of all rows would sit
+between 0.9 and 1.0, with the 48 arms of `p04_python_xlarge` separated in the third decimal. In
+logarithms one doubling is one distance wherever it occurs — from 20 to 40 seconds exactly as from
+600 to 1200 — and the same rows spread across 0.71 to 1.00.
+
+**What this replaces.** Nothing else is needed: a constant divisor cancels in the difference of two
+logarithms, so these columns need no frozen base, no reference solution and no starting state. The
+earlier `idx_*` columns and their base file are gone.
+
+**A tie stays a tie.** A project whose arms are indistinguishable stays bunched just below 1.0
+rather than being stretched across the whole range, which is what a per-project min-max would have
+done to it. On `p07_qc_bugfix_refactor`, where every arm scores 1.0000, `sc_overall` spans 0.914 to
+0.973; on `p04_python_xlarge`, where the arms really differ, it spans 0.709 to 0.968. Saturation
+keeps looking like saturation (chapter 16).
 
 **The correctness gate is part of the definition.** A row whose `res_verification_passed` is not
-true carries no index at all. Without that, the effort columns reward giving up: a run that stops
-after two turns is the fastest and cheapest row of its project, and a composite would crown it.
+true carries no score at all. Without it the effort columns reward giving up: a run that stops
+after two turns is the fastest and cheapest row of its project.
 
-**`idx_effort` is time, turns and output tokens** — the three columns every engine reports. Money
-is deliberately not one of them and has its own column: a local model has no price, and a mean over
-three factors here and four there is not one measure. **`idx_quality` is maintainability, nesting
-depth and longest function** — deliberately not cyclomatic complexity and not SLOC, because
-`res_mi` already contains both; averaging a composite with its own ingredients would weight size
-three times over. Those two keep their own index columns, outside any composite.
+**`sc_effort` is time, turns and output tokens** — the three columns every engine reports. Money is
+deliberately not one of them and keeps `sc_cost`: a local model has no price, and a mean over three
+factors here and four there is not one measure. **`sc_quality` is maintainability, nesting depth and
+longest function** — deliberately not cyclomatic complexity and not SLOC, because `res_mi` already
+contains both, and averaging a composite with its own ingredients weights size three times over.
 
-Both composites are **geometric** means. Ratios do not average arithmetically: 2.0 and 0.5 cancel
-exactly, and their arithmetic mean is 1.25 whichever way round they are written. A factor that is
-missing or non-positive drops out of its mean rather than zeroing it, and the `_n` column records
-how many factors the mean was taken over, so a three-factor mean is never read as a four-factor
-one.
+The composites are **arithmetic** means. After the log transform these are distances on one scale
+rather than ratios, so they add; a factor a row is missing drops out of its own mean. `sc_overall`
+is the mean of `sc_effort` and `sc_quality`, so effort and quality count equally. Its per-project
+maximum usually sits just below 1.0, because one arm rarely leads every column at once.
 
-The index columns answer *how much did this cost and what is the code worth*; they do not replace
-`res_score`, which answers *did it work*. Chapter 16 still gates on the score, and chapter 17 still
-forbids pooling across campaigns.
+**What these columns do not say.** Whether one project's leader is better than another's: every
+project's best is 1.0 by construction. That comparison lives in the measured columns, and the
+consolidation prints the span and the run that set the 0.0 end of each column so any value can be
+reconstructed.
 
 ### 13.2 The Pareto chart
 
