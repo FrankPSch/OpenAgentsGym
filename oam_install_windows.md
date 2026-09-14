@@ -40,14 +40,15 @@ py -0p              # a -V:3.10 line must appear
 node --version
 npm.cmd --version
 ollama --version                 # local engine only
-py -3.12 -c "import litellm; print(litellm.__version__)"   # local engine only
-opencode --version                                         # local engine only
+py -3.12 -c "from importlib.metadata import version; print(version('litellm'))"
+opencode --version
 ```
 
-`py -3.12 -m litellm` is not how it is checked or started: the proxy's entry
-point is `litellm.proxy.proxy_cli:run_server`, and the generated `litellm.exe`
-shim is blocked by Device Guard on some machines. `02_start_gateway.bat` calls
-the entry point directly for that reason.
+The last two are local-engine only. LiteLLM is checked through
+`importlib.metadata` because the package exposes no `__version__` attribute and
+`py -3.12 -m litellm` cannot run it either — it has no `__main__`. The proxy's
+entry point is `litellm.proxy.proxy_cli:run_server`, which is what
+`02_start_gateway.bat` calls.
 
 `py -0p` must list 3.10 explicitly. A Python 3.10 installed through conda or uv
 is not registered with the `py` launcher and does not count.
