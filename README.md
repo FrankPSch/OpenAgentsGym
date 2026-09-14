@@ -36,47 +36,16 @@ parsimony_factor = clamp(MI_run / MI_REF, 0.8, 1.0)
 `MI` is the SEI-normalised Maintainability Index; `MI_REF` is measured from a stored reference
 solution. The parsimony factor exists so a methodology cannot win by writing more code.
 
+That score says whether a run worked. Beside it the table carries `sc_effort` (duration, turns,
+output tokens), `sc_quality` (maintainability, nesting depth, longest function) and their mean
+`sc_overall`, each placing a run by how far it is behind the leader of its own project — so the best
+run of every project is 1.0 and the worst run of the whole table is 0.0. They are what separates
+arms on a project where every score ties, and they are blank on a run that did not pass, because an
+effort number without a correctness gate rewards giving up early.
+
 Two anchors bound every campaign: `m00_empty` (no methodology at all) and `m47_sabotage` (a
 deliberately bad one). **No ranking is believed until sabotage scores below every real methodology.**
 That validity gate, not the leaderboard, is the first thing to read.
-
----
-
-## First result
-
-Level-3 screen, 8–9 September 2026: all 33 methodologies once on `p04_python_xlarge`
-(`claude-opus-5`, low effort, one repeat, `$4.00` cap, review off). Every arm passed all 50 visible
-tests; 31 of 33 passed all 26 held-out tests. The spread is the parsimony factor — how compact the
-passing code is. pass@1 orders, it does not decide (manual, chapter 6): arms within 0.05 are
-ties. Where scores tie outright, the ordering is Pareto dominance in cost and turns, and it is
-reported as that rather than as a difference in quality.
-
-| # | methodology | score | held-out | MI | SLOC | turns | $ |
-|---|---|---|---|---|---|---|---|
-| 1 | `m29_invariants_test_first_relative_stop` | 0.99 | 1.00 | 15.8 | 186 | 32 | 1.15 |
-| 2 | `m26_test_first` | 0.99 | 0.96 | 15.9 | 187 | 50 | 1.64 |
-| 3 | `m15_invariants` | 0.98 | 1.00 | 15.7 | 187 | 36 | 0.93 |
-| 4 | `m28_invariants_test_first` | 0.97 | 1.00 | 15.6 | 186 | 37 | 1.10 |
-| 5 | `m19_relative_stop` | 0.96 | 1.00 | 15.3 | 187 | 37 | 0.82 |
-| 6 | `m24_two_proposals` | 0.96 | 1.00 | 15.4 | 193 | 33 | 1.04 |
-| 7 | `m07_process_doctypes_roles` | 0.96 | 1.00 | 15.3 | 193 | 59 | 2.14 |
-| 8 | `m06_process_roles` | 0.95 | 1.00 | 15.2 | 193 | 38 | 1.54 |
-| … | | | | | | | |
-| 15 | `m31_pipeline_source` | 0.93 | 1.00 | 14.9 | 191 | 34 | 0.79 |
-| 25 | `m00_empty` | 0.91 | 1.00 | 14.6 | 199 | 22 | 1.16 |
-| 27 | `m47_sabotage` | 0.90 | 1.00 | 14.4 | 193 | 34 | 0.85 |
-| 29 | `m30_delivery_kernel` | 0.90 | 1.00 | 14.4 | 198 | 45 | 1.74 |
-| 32 | `m03_roles` | 0.86 | 1.00 | 13.7 | 199 | 42 | 1.83 |
-| 33 | `m08_process_doctypes_roles_guardrails` | 0.86 | 1.00 | 13.8 | 194 | 47 | 1.94 |
-
-What it says, at this model and effort: short, checkable constraints on the *output* (`26`, `15`,
-`19`, `24`) beat process instructions; the four-layer stack `08` — the incumbent until this screen —
-is last, slowest and dearest; roles are the weak ingredient. `29` is the composition of the three
-winners and matches the best score at two thirds of the turns; it is the provisional incumbent
-until three repeats confirm it. `30` is a working methodology's kernel transcribed into this frame and `31`
-the same kernel untranscribed; both land beside `m00_empty`, and the transcription cost a reviewer
-round the source text did not trigger. Full rows, both projects: [`results_repository.csv`](results_repository.csv).
-Code quality against effort spent, one panel per campaign and project: [`results_pareto.svg`](results_pareto.svg) — written by every consolidation, never edited by hand.
 
 ---
 
@@ -86,27 +55,37 @@ Requirements: Windows, Python via the `py` launcher, `claude` on the `PATH` and 
 `CLAUDE.md` or `AGENTS.md` in any parent folder** of the repository (the CLI walks upwards and would
 load it into every run — pre-flight aborts instead of measuring it).
 
-```
-run_smoke_e02.bat                 double-click; proves the whole chain works (level 2)
-run.bat <project> <methodology>        one specific pair (level 2 unless --config says otherwise)
-run_turbo_e01.bat                 every pair once on level 1, the cheapest model
-run_screen_e03.bat                every methodology once on p04_python_xlarge, level 3 (the screen)
-run_all_e03.bat                   every pair on level 3 (frontier model, low effort)
-run_all_e04.bat                   every pair on level 4
-run_selected_e04.bat              the validity gate on level 4 (edit the list in the file)
-rebuild_results_table.bat              re-merge the results table and print the validity gate
+Every entry point is a batch file in the repository root, and the listing is the documentation —
+`dir *.bat` is current, anything written here would not be. The names say what they do:
 
-check_engine_matrix.bat                verify a machine can run the second engine; spends nothing
-run_engine_matrix.bat [/billed]        one project x one methodology across engines and local models
 ```
+run.bat <project> <methodology>   one specific pair; --config <file> picks another engine
+run_smoke_*.bat                   double-click; proves the whole chain works, cheaply
+run_turbo_*.bat                   every pair once, on the cheapest engine
+run_screen_*.bat                  every methodology once on the ranking project
+run_all_*.bat                     every pair, on the engine the name carries
+run_selected_*.bat                a hand-picked list; edit it in the file
+rebuild_results_table.bat         re-merge the results table and print the validity gate
+
+check_engine_matrix.bat           verify a machine can run a second engine; spends nothing
+run_engine_matrix.bat [/billed]   one project x one methodology across engines and local models
+run_engine_matrix.p<nn>.bat       the same for one project, by double-click; one file per project
+
+NN_*.bat                          numbered setup and campaign steps, run in that order: build the
+                                  local models, start the gateway, then a sweep
+```
+
+A batch file bound to one engine carries that engine's name, so the file you double-click and the
+campaign label on the row it produces are the same word.
 
 Setting a fresh Windows machine up — Python, Node, Ollama, LiteLLM, opencode and the three engine
 families in the order they need to be installed — is [`oam_install_windows.md`](oam_install_windows.md).
 
-All campaign constants live in the four `.llm_config.e01_claude_haiku_4_5` … `e04_claude_fable_5_1` files — one per
-capability level: 1 the cheapest model (`run_turbo_e01.bat`), 2 the workhorse (`run.bat`,
-`run_smoke_e02.bat`), 3 the frontier model at low effort (`run_all_e03.bat`), 4 the model above the
-frontier tier (`run_all_e04.bat`, `run_selected_e04.bat`). The vendor's model id is on
+All campaign constants live in the `.llm_config.<engine>` files, one per engine, and nowhere else;
+[`NAMING.md`](NAMING.md) holds the register of which engine is which and which are retired. The
+low-numbered ones are the capability levels of the reference engine — cheapest, workhorse, frontier
+at low effort, and above the frontier tier — and the rest are the other vendors' CLIs and the local
+models behind the gateway. The vendor's model id is on
 the `MODEL=` line and nowhere else. For a one-off, copy a file, edit the copy and pass it with
 `--config`; its base name becomes the campaign label on every row, so two
 campaigns cannot be pooled by accident.
@@ -116,12 +95,14 @@ campaigns cannot be pooled by accident.
 ## Layout
 
 ```
-methodology/     43 live candidates (+5 outdated, kept with their rows): m00_empty, m47_sabotage, a four-feature ladder, one idea each, two compositions, one transcribed kernel and its untranscribed source
-projects/        p00_fail (impossible by construction), five Python tasks of growing size, two QuantConnect tiers driven through MCP
+methodology/     the candidates: m00_empty, m47_sabotage, a four-feature ladder, one idea each, compositions of the winners, a transcribed kernel and its untranscribed source. A directory suffixed _outdated is retired but keeps its rows
+projects/        p00_fail (impossible by construction), Python tasks of growing size, QuantConnect tiers driven through MCP, SWE-bench-style instances against real upstream repositories
 lib/oracle.py    the shared metric library every project's oracle calls: tests, SLOC, complexity, Halstead, maintainability index
 run_master.py    the harness — pre-flight, invoke, score, one CSV row
 *.bat            the entry points
-local/           run directories, logs and the results table (git-ignored, never published)
+results_repository.csv   every run ever made, one row each; rebuilt by consolidation, never hand-edited
+results_pareto.svg       code quality against effort spent, one panel per campaign and project; written by the same consolidation
+local/           run directories and logs (git-ignored, never published)
 ```
 
 Everything is a directory listing: a new methodology or project joins the matrix by existing.
@@ -167,18 +148,20 @@ Working apparatus, early results. Read before quoting a number:
   is addressed through the model id rather than an environment variable. `cfg_tools` is recorded
   with an `unenforced:` prefix, since that engine has no tool-allowlist flag.
 - **Python projects only.** A project type that filters which methodologies apply is not built.
-- **One repeat so far.** The level-3 screen above orders the arms at pass@1; the repeats that make
-  the ordering a result are the next campaign. With more than one run per pair, report pass^k as
+- **One repeat so far.** Every published row is a single run, so the table orders arms at pass@1 and
+  arms within 0.05 of each other are ties; the repeats that would make an ordering a result have not
+  been run. With more than one run per pair, report pass^k as
   well — every run of a pair succeeding — because that asks for consistency rather than one lucky
   draw.
-- **Three projects saturate at level 3.** `p05_python_refactor_large` (20 arms tie at 1.00),
-  `p06_qc_ema_cross` and `p07_qc_bugfix_refactor` (every arm 1.0000, sabotage included, and on 07 the
-  sabotage arm carries the highest maintainability index of all). A project every arm passes orders
-  by cost alone; these three are smoke tests for the plumbing — 06 and 07 for the MCP path — and are
-  not read as a ranking. Difficulty belongs where the empty anchor still fails: calibrate a new
-  project on level 1 before spending a level-3 campaign on it.
+- **Some projects saturate on a strong engine.** The refactor project and both QuantConnect tiers
+  have every arm at the top of the range, sabotage included. A project every arm passes orders by
+  cost alone; those are smoke tests for the plumbing — the QuantConnect pair for the MCP path — and
+  are not read as a ranking. The consolidation prints one line per project saying how many distinct
+  scores its arms produced, so saturation is visible without anyone having to invent a threshold.
+  Difficulty belongs where the empty anchor still fails: calibrate a new project on the cheapest
+  engine before spending a real campaign on it.
 - **Costs are real.** A campaign is methodologies × projects × repeats invocations of a paid CLI.
-  Start with `run_smoke_e02.bat` and read `tk_cost_usd` before scaling anything up.
+  Start with the smoke batch and read `tk_cost_usd` before scaling anything up.
 
 ---
 
