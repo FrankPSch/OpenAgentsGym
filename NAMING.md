@@ -52,16 +52,17 @@ versus billed.
 | `e06_local_gptoss_20b` | opencode | litellm/gpt-oss-20b | active |
 | `e07_local_qwen3_4b` | opencode | litellm/qwen3-4b | active |
 | `e08_local_qwen3coder_30b` | opencode | litellm/qwen3-coder-30b | active |
-| `e13_claude_sonnet_5_low` | claude | claude-sonnet-5 | active |
+| `e13_claude_sonnet_5_medium` | claude | claude-sonnet-5 | active |
 | `e09_claude_gptoss_20b` | claude | gpt-oss-20b | retired |
 | `e10_claude_qwen3_4b` | claude | qwen3-4b | retired |
 
-`e02` and `e13` are the same model at two efforts — medium and low. They are two
-engines and not one because the config's base name is the campaign label on every
-row, and rows produced at two efforts under one label would be pooled by anything
-reading the table. `e13` exists so a comparison against `e03` varies the model
-alone: `e02` against `e03` varies model and effort together and cannot say which
-of the two moved a result.
+`e02` and `e13` are the same model at the same effort — their configs differ in
+nothing the harness reads. They are two engines and not one because the config's
+base name is the campaign label on every row: `e13` gives
+`run_two_engines_xl_refactor.bat` a label of its own, so its rows are never
+pooled with the published `e02` rows. Two engines that a reader cannot tell apart
+from the configuration alone are a hazard, so if that separation stops being
+wanted, `e13` is deleted and the batch pointed at `e02`.
 
 `e09` and `e10` are the Claude CLI pointed at local models through LiteLLM,
 reversed on 2026-09-11 after four independent blockers (see `REVERT.md`). They

@@ -1,11 +1,13 @@
-# The workhorse model at LOW effort -- e02's model, e03's effort. It exists so a campaign can
-# vary the model while holding effort fixed: e02 is sonnet at medium, so e02 against e03 varies
-# both at once and cannot say which of the two moved a result. e03 and e13 differ in the model
-# alone. Used by run_two_engines_xl_refactor.bat.
+# The workhorse model at medium effort, used by run_two_engines_xl_refactor.bat.
 #
-# A separate engine number, not an edit to e02: the config's base name is the campaign label on
-# every row, and rows produced at two efforts under one label would be pooled by anything reading
-# the table. The published e02 rows are medium and stay medium.
+# NOTE: this is the same model and the same effort as e02 -- the two configs differ in nothing
+# the harness reads. It is a separate engine number only so this sweep's rows carry a campaign
+# label of their own and are never pooled with the published e02 rows. If that separation is not
+# wanted, delete this file and point the batch at .llm_config.e02_claude_sonnet_5 instead.
+#
+# Against e03 this varies model AND effort at once (opus low vs sonnet medium), so a difference
+# between the two halves cannot be attributed to either on its own. Holding effort fixed needs
+# EFFORT=low here, and the file renamed to match.
 # The model id below is the ONLY vendor-specific line in the repository: the level is what file
 # names, batch files and documents refer to. Read once per run by run_master.py (KEY=VALUE, text
 # after # is a comment). Project and methodology are NOT set here -- they come from the command
@@ -24,9 +26,8 @@ BASE_URL=
 # BASE_URL: blank = native. The endpoint the CLI is pointed at; recorded as cfg_endpoint.
 # Together the two set cfg_effort_enforced (--effort is this vendor's flag) and cfg_bound (the cap
 # that actually binds: --max-budget-usd only where the endpoint reports cost, else the timeout).
-EFFORT=low
+EFFORT=medium
 # EFFORT: passed as --effort. Valid values: low | medium | high | xhigh | max.
-# low, matching e03 -- that match is the whole point of this file.
 MAX_TURNS=60
 # MAX_TURNS: NOT passed to the CLI — Claude Code 2.1.251 has no --max-turns flag. Used only
 # after the run to compute res_hit_turn_cap = (num_turns >= MAX_TURNS) in the results row.

@@ -1,11 +1,13 @@
 @echo off
 REM Two engines over two projects, so every (project, methodology) cell of p04_python_xlarge and
-REM p05_python_refactor_large carries two rows from two models at the SAME effort: opus low (e03)
-REM and sonnet low (e13).
+REM p05_python_refactor_large carries two rows: opus low (e03) and sonnet medium (e13).
 REM
-REM e13 rather than e02 on purpose: e02 is sonnet at MEDIUM effort, so e02 against e03 varies
-REM model and effort together and cannot say which of the two moved a result. e03 and e13 differ
-REM in the model alone.
+REM The two halves differ in model AND effort, so a difference between them cannot be attributed
+REM to either on its own -- they are two engines measured side by side, not a controlled contrast.
+REM Holding effort fixed would need a sonnet-at-low config.
+REM
+REM e13 is the same model and effort as e02 and exists only to give this sweep a campaign label of
+REM its own, so its rows are never pooled with the published e02 rows.
 REM
 REM The two engines are two campaigns and are never pooled (chapter 17): each row carries its own
 REM cfg_campaign. The sc_* score columns are computed per project across the whole table, so the
@@ -39,8 +41,8 @@ if defined E03_METHODOLOGIES (
 )
 if errorlevel 1 echo WARNING: the e03 half reported pairs without a row -- see the matrix log
 
-echo === e13_claude_sonnet_5_low (sonnet, low) over %PROJECTS%
-py -3 "%~dp0run_master.py" --matrix --config .llm_config.e13_claude_sonnet_5_low --projects %PROJECTS% --workers 3 --skip-existing
+echo === e13_claude_sonnet_5_medium (sonnet, medium) over %PROJECTS%
+py -3 "%~dp0run_master.py" --matrix --config .llm_config.e13_claude_sonnet_5_medium --projects %PROJECTS% --workers 3 --skip-existing
 if errorlevel 1 echo WARNING: the e13 half reported pairs without a row -- see the matrix log
 
 echo === consolidating
