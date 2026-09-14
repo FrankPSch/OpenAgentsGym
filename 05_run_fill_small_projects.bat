@@ -33,8 +33,9 @@ REM Safe to re-run after a kill, a rate limit or a bugcheck: the next call count
 REM and runs only what is still missing. Nothing here is billed - the local engines are free and
 REM the cloud ones are not touched.
 
-if "%FILL_TOP%"=="" set "FILL_TOP=10"
-if "%FILL_PROJECTS%"=="" set "FILL_PROJECTS=p01_python_small,p02_python_medium,p03_python_large"
+if "%FILL_TOP%"=="" set "FILL_TOP=3"
+rem p01_python_small,p02_python_medium,p03_python_large
+if "%FILL_PROJECTS%"=="" set "FILL_PROJECTS=p02_python_medium"
 if "%FILL_ENGINES%"=="" set "FILL_ENGINES=e06_local_gptoss_20b e07_local_qwen3_4b e08_local_qwen3coder_30b e11_local_qwen3coder_30b_tuned e12_local_devstral_24b"
 set "SRC=p04_python_xlarge,p05_python_refactor_large"
 
