@@ -2987,6 +2987,10 @@ def consolidate():
 CHART_PLOT_W, CHART_PLOT_H = 720, 360
 CHART_PAD_L, CHART_PAD_R, CHART_PAD_T, CHART_PAD_B = 58, 22, 34, 46
 CHART_HEADER_H, CHART_GAP = 46, 26
+# The ranked list to the right of each panel. A point on the chart carries only the arm's number,
+# which is enough to find it again and not enough to read it; the list is where the names and the
+# figures live, so the panel answers "which arms are these" without a second file open beside it.
+CHART_LIST_W, CHART_LIST_GAP, CHART_LIST_N = 340, 18, 10
 
 
 def svg_num(value):
@@ -3072,10 +3076,18 @@ def write_pareto_svg(records, out_path):
         if head[:1] in ("p", "m", "e") and head[1:3].isdigit():
             head = head[1:]
         label = head[:2] or name[:2]
-        groups.setdefault(key, []).append((cost, score, label, name.endswith("_outdated")))
+        # sc_overall_ratio rides along for the ranked list beside the panel. Missing reads as -1.0
+        # rather than None so the tuples stay sortable -- a blank ratio then sorts last, which is
+        # also where a run that did not pass belongs.
+        ratio = as_float((rec.get("sc_overall_ratio") or "").strip())
+        groups.setdefault(key, []).append((cost, score, label, name.endswith("_outdated"),
+                                           -1.0 if ratio is None else ratio, name))
 
-    body, panels, total = [], sorted(groups), 0
-    width = CHART_PAD_L + CHART_PLOT_W + CHART_PAD_R
+    # Panels in PROJECT order, then campaign. The key is (campaign, project) because that is the
+    # pooling unit, but the reading order is the other way round: a reader compares what several
+    # engines did to ONE task, and grouping by campaign put those panels pages apart.
+    body, panels, total = [], sorted(groups, key=lambda k: (k[1], k[0])), 0
+    width = CHART_PAD_L + CHART_PLOT_W + CHART_LIST_GAP + CHART_LIST_W + CHART_PAD_R
     panel_h = CHART_PAD_T + CHART_PLOT_H + CHART_PAD_B
     height = CHART_HEADER_H + max(1, len(panels)) * (panel_h + CHART_GAP)
     for n, key in enumerate(panels):
@@ -3190,7 +3202,7 @@ def pareto_panel(key, points, top):
         return not any(box[0] < b[2] and b[0] < box[2] and box[1] < b[3] and b[1] < box[3]
                        for b in placed)
 
-    for cost, score, label, outdated in points:
+    for cost, score, label, outdated, _ratio, _name in points:
         x, y = px(cost), py(score)
         out.append('<circle class="%s" cx="%s" cy="%s" r="3.2"/>'
                    % ("pto" if outdated else "pt", svg_num(x), svg_num(y)))
@@ -3208,6 +3220,34 @@ def pareto_panel(key, points, top):
         out.append('<text class="%s" x="%s" y="%s">%s</text>'
                    % ("lbo" if outdated else "lb", svg_num(x + dx), svg_num(y + dy),
                       svg_text(label)))
+
+    # The ranked list, best first, to the right of the plot. sc_overall_ratio and not sc_quality:
+    # the chart's y axis is quality alone, so a reader who ranked by eye down the panel would be
+    # ranking on half the measure and ignoring what each arm spent to get there. The list is the
+    # combined column, and the two disagreeing is a thing worth seeing rather than hiding.
+    #
+    # Outdated arms are included and marked. They are on the chart, so leaving them out of a list
+    # that claims to be the top ten would make the list disagree with the panel beside it.
+    # Ties keep the name order they already had, which is stable across rebuilds.
+    ranked = sorted((p for p in points if p[4] >= 0), key=lambda p: (-p[4], p[5]))[:CHART_LIST_N]
+    lx = left + CHART_PLOT_W + CHART_LIST_GAP
+    out.append('<text class="lg" x="%s" y="%s">top %d by sc_overall_ratio</text>'
+               % (svg_num(lx), svg_num(top + 20), CHART_LIST_N))
+    if not ranked:
+        # Every arm of this panel failed verification, so every sc_ cell is blank. Saying so beats
+        # an empty column the reader has to diagnose.
+        out.append('<text class="lb" x="%s" y="%s" fill="#9aa3ad">no scored run in this panel'
+                   "</text>" % (svg_num(lx), svg_num(top + CHART_PAD_T + 14)))
+    for rank, p in enumerate(ranked):
+        y = top + CHART_PAD_T + 14 + rank * 16
+        css = "lbo" if p[3] else "lb"
+        out.append('<text class="%s" x="%s" y="%s" text-anchor="end">%d.</text>'
+                   % (css, svg_num(lx + 14), svg_num(y), rank + 1))
+        out.append('<text class="%s" x="%s" y="%s">%s</text>'
+                   % (css, svg_num(lx + 20), svg_num(y),
+                      svg_text(p[5] + ("  (outdated)" if p[3] else ""))))
+        out.append('<text class="%s" x="%s" y="%s" text-anchor="end">%.4f</text>'
+                   % (css, svg_num(lx + CHART_LIST_W), svg_num(y), p[4]))
     return out
 
 
