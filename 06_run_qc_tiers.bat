@@ -4,8 +4,7 @@ REM Give the two QuantConnect tiers - p06_qc_ema_cross and p07_qc_bugfix_refacto
 REM for sixteen named arms, PER ENGINE, on sonnet at medium and opus at low.
 REM
 REM   06_run_qc_tiers.bat              print the plan and spend nothing
-REM   06_run_qc_tiers.bat /go          run the two billed engines
-REM   06_run_qc_tiers.bat /go /local   also run e11 (qwen3-coder-30b-tuned) -- read the warning
+REM   06_run_qc_tiers.bat /go          run it
 REM   set QC_ARMS=00,34,47             a different list (numbers, m34, or full names)
 REM
 REM PER ENGINE is the point, and it is why this does not use --min-rows. That switch counts rows
@@ -18,32 +17,25 @@ REM COST, from the eleven p06/p07 rows already in the table: $0.73-1.42 and 90-2
 REM gap as this is written is 24 cells on opus and 32 on sonnet, so roughly $55-75 and two to three
 REM hours for the two billed engines. Both are billed legs; nothing here is free.
 REM
-REM WARNING ON /local, and it is not a formality. p06 and p07 are the only projects whose task is
-REM to drive the QuantConnect MCP tools, and the harness passes --mcp-config on the CLAUDE launch
-REM line alone (run_master.py, claude_implementer_argv). Under ENGINE=opencode there is no MCP
-REM server, so e11 would attempt a task whose whole content is calling tools it cannot see. Those
-REM rows would measure the harness rather than the model, which is the one thing this repository
-REM refuses to collect - "a row that measures the harness is worse than no row". The flag exists
-REM because it was asked for; run it to see what that failure looks like, not to rank anything,
-REM and expect res_diff_lines=0 with a verification failure on all 32.
+REM CLAUDE ENGINES ONLY, deliberately. p06 and p07 are the only projects whose task is to drive the
+REM QuantConnect MCP tools, and the harness passes --mcp-config on the CLAUDE launch line alone
+REM (run_master.py, claude_implementer_argv). Under ENGINE=opencode there is no MCP server, so a
+REM local engine would attempt a task whose whole content is calling tools it cannot see: every row
+REM would come back res_diff_lines=0 and failed, measuring the harness rather than the model, which
+REM is the one thing this repository refuses to collect. Adding a local engine to QC_ENGINES is
+REM therefore not a knob to reach for -- wiring MCP into the opencode launch line is the work that
+REM would make those rows mean something.
 REM
 REM Safe to re-run: the next call re-reads the table and runs only what is still missing.
 
 set "ARMS=%QC_ARMS%"
 if "!ARMS!"=="" set "ARMS=00,34,47,08,03,12,38,36,18,01,44,29,19,28,15,32"
 set "PROJECTS=p06_qc_ema_cross,p07_qc_bugfix_refactor"
-set "BILLED=e13_claude_sonnet_5_medium e03_claude_opus_5"
-set "LOCAL=e11_local_qwen3coder_30b_tuned"
+set "ENGINES=%QC_ENGINES%"
+if "!ENGINES!"=="" set "ENGINES=e13_claude_sonnet_5_medium e03_claude_opus_5"
 
 set "GO="
-set "WITHLOCAL="
-for %%A in (%*) do (
-  if /i "%%A"=="/go" set "GO=1"
-  if /i "%%A"=="/local" set "WITHLOCAL=1"
-)
-
-set "ENGINES=%BILLED%"
-if defined WITHLOCAL set "ENGINES=%BILLED% %LOCAL%"
+for %%A in (%*) do if /i "%%A"=="/go" set "GO=1"
 
 echo === plan
 echo   projects = %PROJECTS%
@@ -66,10 +58,6 @@ if not defined GO (
 
 REM Idle standby with a run in flight bugchecked an unattended sweep on 2026-09-13.
 py -3 "%~dp0engine_nosleep.py" on
-if defined WITHLOCAL (
-  for /f "usebackq delims=" %%R in (`py -3 "%~dp0engine_find_opencode.py"`) do set "OCBIN=%%R"
-  if not "!OCBIN!"=="NONE" set "PATH=!OCBIN!;!PATH!"
-)
 
 for %%C in (!ENGINES!) do (
   echo.
