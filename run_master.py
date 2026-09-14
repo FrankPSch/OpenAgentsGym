@@ -2991,6 +2991,19 @@ CHART_HEADER_H, CHART_GAP = 46, 26
 # which is enough to find it again and not enough to read it; the list is where the names and the
 # figures live, so the panel answers "which arms are these" without a second file open beside it.
 CHART_LIST_W, CHART_LIST_GAP, CHART_LIST_N = 340, 18, 10
+# The combined panel that overlays every engine of one project, coloured by engine.
+#
+# These four hues and this order are not a taste: they are the first, second, third and seventh
+# slots of a categorical palette validated for a SCATTER, where every pair of series can end up
+# adjacent on the plot rather than only neighbouring ones. Worst all-pairs separation is dE 9.2
+# under deutan and 16.3 to normal vision, both above their floors. Four is the cap that clears
+# them -- a fifth hue drops the normal-vision floor to 7.1, which is a pair a full-colour reader
+# cannot tell apart, so a project with more engines than this paints the surplus neutral and says
+# so rather than inventing a hue. Colour is never the only carrier: every point keeps its arm
+# number beside it and the legend names each engine.
+CHART_ENGINE_COLORS = ("#2a78d6", "#eb6834", "#1baf7a", "#4a3aa7")
+CHART_ENGINE_OTHER = "#9aa3ad"
+CHART_COMBINED_KEY = "*all engines*"
 
 
 def svg_num(value):
@@ -3011,6 +3024,17 @@ def svg_num(value):
 def svg_text(value):
     """XML-escape a label: campaign and project names reach the file as text and must escape."""
     return str(value).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def engine_short(campaign):
+    """`.llm_config.e13_claude_sonnet_5_medium` -> `e13`, for a legend and a list column.
+
+    The full label stays on the panel title, where there is room for it; in a legend beside forty
+    points the number is what a reader matches against the panels below, and it is the part the
+    naming standard guarantees is permanent.
+    """
+    head = (campaign or "").split(".")[-1].split("_")[0]
+    return head if head[:1] == "e" and head[1:3].isdigit() else (campaign or "")[:12]
 
 
 def pareto_front(points):
@@ -3081,18 +3105,38 @@ def write_pareto_svg(records, out_path):
         # also where a run that did not pass belongs.
         ratio = as_float((rec.get("sc_overall_ratio") or "").strip())
         groups.setdefault(key, []).append((cost, score, label, name.endswith("_outdated"),
-                                           -1.0 if ratio is None else ratio, name))
+                                           -1.0 if ratio is None else ratio, name,
+                                           engine_short(key[0])))
 
     # Panels in PROJECT order, then campaign. The key is (campaign, project) because that is the
     # pooling unit, but the reading order is the other way round: a reader compares what several
     # engines did to ONE task, and grouping by campaign put those panels pages apart.
-    body, panels, total = [], sorted(groups, key=lambda k: (k[1], k[0])), 0
+    #
+    # Each project with more than one campaign also gets a COMBINED panel first, every engine
+    # overlaid and coloured by engine. That is a reading aid and not a pooling: the sc_ columns are
+    # normalised against the leader of the project, so they are on one scale within a project
+    # whatever produced the row, which is exactly the axis a cross-engine look needs. res_score is
+    # not, and is not on this chart. The per-campaign panels stay beneath it, unchanged, because a
+    # claim still belongs to one campaign (chapter 17) and the overlay is where a difference is
+    # spotted, not where it is established.
+    projects = sorted({k[1] for k in groups})
+    panels = []
+    for project in projects:
+        mine = sorted(k for k in groups if k[1] == project)
+        if len(mine) > 1:
+            groups[(CHART_COMBINED_KEY, project)] = [p for k in mine for p in groups[k]]
+            panels.append((CHART_COMBINED_KEY, project))
+        panels.extend(mine)
+    body, total = [], 0
     width = CHART_PAD_L + CHART_PLOT_W + CHART_LIST_GAP + CHART_LIST_W + CHART_PAD_R
     panel_h = CHART_PAD_T + CHART_PLOT_H + CHART_PAD_B
     height = CHART_HEADER_H + max(1, len(panels)) * (panel_h + CHART_GAP)
     for n, key in enumerate(panels):
         top = CHART_HEADER_H + n * (panel_h + CHART_GAP)
-        total += len(groups[key])
+        # The combined panel re-draws points already counted under their own campaign; counting
+        # them twice would make the printed point total disagree with the number of plottable rows.
+        if key[0] != CHART_COMBINED_KEY:
+            total += len(groups[key])
         body.extend(pareto_panel(key, sorted(groups[key]), top))
 
     lines = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %s %s" width="%s" height="%s">'
@@ -3130,6 +3174,17 @@ def write_pareto_svg(records, out_path):
 def pareto_panel(key, points, top):
     """The SVG lines of one panel: frame, grid, axes, front, points and labels, offset by `top`."""
     campaign, project = key
+    combined = campaign == CHART_COMBINED_KEY
+    # Engines in first-appearance order over the sorted points, so the assignment is stable across
+    # rebuilds and a hue belongs to an engine rather than to its rank in this panel.
+    engines = []
+    for p in points:
+        if p[6] not in engines:
+            engines.append(p[6])
+    colour = {}
+    for i, eng in enumerate(engines):
+        colour[eng] = (CHART_ENGINE_COLORS[i] if i < len(CHART_ENGINE_COLORS)
+                       else CHART_ENGINE_OTHER)
     left, base = CHART_PAD_L, top + CHART_PAD_T + CHART_PLOT_H
     # The effort axis is the full 0..1 in every panel, never fitted to the rows: both axes are now
     # score columns on one scale, and an axis that moved with the data would stop two panels being
@@ -3152,8 +3207,10 @@ def pareto_panel(key, points, top):
         share = (min(max(score, y_min_h / 100.0), 1.0) - y_min_h / 100.0) / (span_h / 100.0)
         return base - CHART_PLOT_H * share
 
-    out = ['<text class="ttl" x="%s" y="%s">%s  &#8212;  %s</text>'
-           % (svg_num(left), svg_num(top + 20), svg_text(project), svg_text(campaign)),
+    title = ("%s  &#8212;  every engine, coloured by engine" % svg_text(project) if combined
+             else "%s  &#8212;  %s" % (svg_text(project), svg_text(campaign)))
+    out = ['<text class="ttl" x="%s" y="%s">%s</text>'
+           % (svg_num(left), svg_num(top + 20), title),
            '<rect x="%s" y="%s" width="%s" height="%s" fill="#fbfbfc" stroke="#e5e7eb"/>'
            % (svg_num(left), svg_num(top + CHART_PAD_T), svg_num(CHART_PLOT_W),
               svg_num(CHART_PLOT_H))]
@@ -3184,10 +3241,19 @@ def pareto_panel(key, points, top):
     out.append('<text class="ax" x="%s" y="%s" text-anchor="middle" transform="rotate(-90 %s %s)">'
                "sc_quality</text>" % (mid_x, mid_y, mid_x, mid_y))
 
-    front = pareto_front([p for p in points if not p[3]])
-    if len(front) > 1:
-        out.append('<polyline class="front" points="%s"/>'
-                   % " ".join("%s,%s" % (svg_num(px(p[0])), svg_num(py(p[1]))) for p in front))
+    # One front per engine on the combined panel, each in that engine's hue: a single front drawn
+    # across engines would be one curve made of several treatments, which is the pooled reading
+    # chapter 17 forbids. Per engine it is four honest curves, and where one sits above another
+    # over the same stretch of the effort axis, that is the comparison the panel exists for.
+    fronts = ([(colour[e], [p for p in points if p[6] == e and not p[3]]) for e in engines]
+              if combined else [(None, [p for p in points if not p[3]])])
+    for stroke, live in fronts:
+        front = pareto_front(live)
+        if len(front) > 1:
+            out.append('<polyline class="front" points="%s"%s/>'
+                       % (" ".join("%s,%s" % (svg_num(px(p[0])), svg_num(py(p[1])))
+                                   for p in front),
+                          ' style="stroke:%s"' % stroke if stroke else ""))
     # Labels are placed greedily in cost order: the first offset from the point that does not hit a
     # label already placed, nearest offset first, right before left. Every arm of a project sits in
     # one dense cluster -- scores differ by hundredths where costs differ by a factor of twenty --
@@ -3202,10 +3268,18 @@ def pareto_panel(key, points, top):
         return not any(box[0] < b[2] and b[0] < box[2] and box[1] < b[3] and b[1] < box[3]
                        for b in placed)
 
-    for cost, score, label, outdated, _ratio, _name in points:
+    for cost, score, label, outdated, _ratio, _name, eng in points:
         x, y = px(cost), py(score)
-        out.append('<circle class="%s" cx="%s" cy="%s" r="3.2"/>'
-                   % ("pto" if outdated else "pt", svg_num(x), svg_num(y)))
+        # On the combined panel the hue carries the engine, so a live point is filled with it and
+        # an outdated one keeps the hollow ring in the same hue -- the two encodings stay
+        # independent, one for engine and one for whether the arm is retired.
+        # An inline `style`, not a `fill=`/`stroke=` attribute: the .pt/.pto rules in the chart's
+        # stylesheet are CSS and a presentation attribute loses to CSS, so the attribute form drew
+        # every point in the default ink and the colour silently did nothing.
+        tint = (' style="fill:%s"' % colour[eng] if combined and not outdated else
+                ' style="stroke:%s"' % colour[eng] if combined else "")
+        out.append('<circle class="%s" cx="%s" cy="%s" r="3.2"%s/>'
+                   % ("pto" if outdated else "pt", svg_num(x), svg_num(y), tint))
         w = len(label) * 5.4
         rungs = (9, -4, 18, -13, 27, -22, 36, -31, 45, -40) if y - (top + CHART_PAD_T) < 16 else \
                 (-4, 9, -13, 18, -22, 27, -31, 36, -40, 45)
@@ -3243,11 +3317,36 @@ def pareto_panel(key, points, top):
         css = "lbo" if p[3] else "lb"
         out.append('<text class="%s" x="%s" y="%s" text-anchor="end">%d.</text>'
                    % (css, svg_num(lx + 14), svg_num(y), rank + 1))
+        if combined:
+            # A swatch and the engine number in front of the name: on a panel whose ten best rows
+            # may come from four engines, "which engine was that" is the first question the list
+            # has to answer, and answering it in text as well as colour is what keeps the list
+            # readable to someone who cannot separate the hues.
+            out.append('<circle cx="%s" cy="%s" r="3.2" fill="%s"/>'
+                       % (svg_num(lx + 24), svg_num(y - 3), colour[p[6]]))
+            out.append('<text class="%s" x="%s" y="%s">%s</text>'
+                       % (css, svg_num(lx + 31), svg_num(y), svg_text(p[6])))
+        name_x = lx + (66 if combined else 20)
         out.append('<text class="%s" x="%s" y="%s">%s</text>'
-                   % (css, svg_num(lx + 20), svg_num(y),
+                   % (css, svg_num(name_x), svg_num(y),
                       svg_text(p[5] + ("  (outdated)" if p[3] else ""))))
         out.append('<text class="%s" x="%s" y="%s" text-anchor="end">%.4f</text>'
                    % (css, svg_num(lx + CHART_LIST_W), svg_num(y), p[4]))
+
+    if combined:
+        # The legend, under the list: every engine of the panel with its hue and its full config
+        # name. Identity is never colour alone -- chapter 13.2 aside, a reader who prints the chart
+        # in grey needs this block and the engine tags in the list to read the panel at all.
+        ly = top + CHART_PAD_T + 14 + CHART_LIST_N * 16 + 14
+        out.append('<text class="lg" x="%s" y="%s">engines in this panel</text>'
+                   % (svg_num(lx), svg_num(ly)))
+        for i, eng in enumerate(engines):
+            y = ly + 16 + i * 15
+            out.append('<circle cx="%s" cy="%s" r="3.2" fill="%s"/>'
+                       % (svg_num(lx + 4), svg_num(y - 3), colour[eng]))
+            spare = "" if i < len(CHART_ENGINE_COLORS) else "  (beyond the four validated hues)"
+            out.append('<text class="lb" x="%s" y="%s">%s%s</text>'
+                       % (svg_num(lx + 12), svg_num(y), svg_text(eng), spare))
     return out
 
 
