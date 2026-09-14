@@ -2991,16 +2991,26 @@ CHART_HEADER_H, CHART_GAP = 46, 26
 # which is enough to find it again and not enough to read it; the list is where the names and the
 # figures live, so the panel answers "which arms are these" without a second file open beside it.
 CHART_LIST_W, CHART_LIST_GAP, CHART_LIST_N = 340, 18, 10
-# The combined panel that overlays every engine of one project, coloured by engine.
+# The engine hues, and why there are exactly four of them.
 #
-# These four hues and this order are not a taste: they are the first, second, third and seventh
-# slots of a categorical palette validated for a SCATTER, where every pair of series can end up
-# adjacent on the plot rather than only neighbouring ones. Worst all-pairs separation is dE 9.2
-# under deutan and 16.3 to normal vision, both above their floors. Four is the cap that clears
-# them -- a fifth hue drops the normal-vision floor to 7.1, which is a pair a full-colour reader
-# cannot tell apart, so a project with more engines than this paints the surplus neutral and says
-# so rather than inventing a hue. Colour is never the only carrier: every point keeps its arm
-# number beside it and the legend names each engine.
+# A scatter needs every PAIR of hues separable, not only neighbouring ones, because any two engines
+# can land next to each other on the plot. Measured against that bar these four are the most a
+# validated categorical palette yields: worst all-pairs separation dE 9.2 under deutan and 16.3 to
+# normal vision, both above their floors. Every wider set from the same palette fails -- five hues
+# drop the normal-vision floor to 7.1, six to 12.9, and orange against green measures 3.2 under
+# protan, which is the classic confusion. There is no ordering of eight that clears it.
+#
+# Four hues and more than four engines is not a contradiction, because no PANEL holds more than the
+# engines of one project. The assignment is a graph colouring: engines that share a project are
+# neighbours and never take the same hue, and two engines that never appear together may. So a hue
+# is stable for an engine across every panel it appears on -- the thing a reader needs -- without
+# claiming to be unique across a chart where it does not have to be. Walked in engine-number order,
+# so the result is the same on every rebuild of the same rows, and an engine with more than three
+# neighbours would take the neutral rather than a fifth hue: a generated hue is how a palette stops
+# being validated at all.
+#
+# Colour is never the only carrier: every point keeps its arm number, the ranked list names the
+# engine in text beside a swatch, and every panel carries a legend naming its engines' models.
 CHART_ENGINE_COLORS = ("#2a78d6", "#eb6834", "#1baf7a", "#4a3aa7")
 CHART_ENGINE_OTHER = "#9aa3ad"
 CHART_COMBINED_KEY = "*all engines*"
@@ -3035,6 +3045,33 @@ def engine_short(campaign):
     """
     head = (campaign or "").split(".")[-1].split("_")[0]
     return head if head[:1] == "e" and head[1:3].isdigit() else (campaign or "")[:12]
+
+
+def engine_colours(groups):
+    """engine -> hue, so that two engines sharing a project never share one.
+
+    A greedy colouring of the co-occurrence graph, walked in engine-number order: each engine takes
+    the first hue none of its already-coloured neighbours holds. Greedy is enough here and its
+    weakness does not bite -- it can need more colours than the optimum, but only on graphs far
+    denser than "which engines ran the same project", where a clique is the engines of one project
+    and no project has run more than four.
+
+    Deterministic for a given table: the walk order is the engine number, which is permanent, and
+    the neighbour sets come from the rows. An engine with no hue left takes the neutral, which the
+    legend then marks -- the alternative, inventing a fifth hue, would quietly void the validation
+    the four carry.
+    """
+    neighbours = {}
+    for (_campaign, project) in groups:
+        together = sorted({p[6] for k, pts in groups.items() if k[1] == project for p in pts})
+        for eng in together:
+            neighbours.setdefault(eng, set()).update(x for x in together if x != eng)
+    out = {}
+    for eng in sorted(neighbours):
+        taken = {out[n] for n in neighbours[eng] if n in out}
+        free = [c for c in CHART_ENGINE_COLORS if c not in taken]
+        out[eng] = free[0] if free else CHART_ENGINE_OTHER
+    return out
 
 
 def pareto_front(points):
@@ -3104,9 +3141,16 @@ def write_pareto_svg(records, out_path):
         # rather than None so the tuples stay sortable -- a blank ratio then sorts last, which is
         # also where a run that did not pass belongs.
         ratio = as_float((rec.get("sc_overall_ratio") or "").strip())
+        # What the engine number stands for, read off the ROW rather than parsed out of the config
+        # file's name: cfg_model and cfg_effort are what the run actually used, and a name can be
+        # edited without the constants moving. `e13` alone says nothing to a reader who has not
+        # memorised the register; `e13  claude-sonnet-5  medium` says the whole thing.
+        model = (rec.get("cfg_model") or "").strip()
+        effort = (rec.get("cfg_effort") or "").strip()
+        desc = " ".join(x for x in (model, effort) if x)
         groups.setdefault(key, []).append((cost, score, label, name.endswith("_outdated"),
                                            -1.0 if ratio is None else ratio, name,
-                                           engine_short(key[0])))
+                                           engine_short(key[0]), desc))
 
     # Panels in PROJECT order, then campaign. The key is (campaign, project) because that is the
     # pooling unit, but the reading order is the other way round: a reader compares what several
@@ -3119,6 +3163,8 @@ def write_pareto_svg(records, out_path):
     # not, and is not on this chart. The per-campaign panels stay beneath it, unchanged, because a
     # claim still belongs to one campaign (chapter 17) and the overlay is where a difference is
     # spotted, not where it is established.
+    colour = engine_colours(groups)
+
     projects = sorted({k[1] for k in groups})
     panels = []
     for project in projects:
@@ -3137,7 +3183,7 @@ def write_pareto_svg(records, out_path):
         # them twice would make the printed point total disagree with the number of plottable rows.
         if key[0] != CHART_COMBINED_KEY:
             total += len(groups[key])
-        body.extend(pareto_panel(key, sorted(groups[key]), top))
+        body.extend(pareto_panel(key, sorted(groups[key]), top, colour))
 
     lines = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %s %s" width="%s" height="%s">'
              % (svg_num(width), svg_num(height), svg_num(width), svg_num(height)),
@@ -3171,20 +3217,25 @@ def write_pareto_svg(records, out_path):
     return len(panels), total
 
 
-def pareto_panel(key, points, top):
-    """The SVG lines of one panel: frame, grid, axes, front, points and labels, offset by `top`."""
+def pareto_panel(key, points, top, colour):
+    """The SVG lines of one panel: frame, grid, axes, front, points and labels, offset by `top`.
+
+    `colour` is the chart-wide engine -> hue map, so a panel never decides a colour of its own.
+    Every panel is coloured and every panel carries the legend, including a single-engine one: a
+    reader scrolling past should not have to work out whether a hue means something here.
+    """
     campaign, project = key
     combined = campaign == CHART_COMBINED_KEY
-    # Engines in first-appearance order over the sorted points, so the assignment is stable across
-    # rebuilds and a hue belongs to an engine rather than to its rank in this panel.
-    engines = []
+    engines, desc = [], {}
     for p in points:
         if p[6] not in engines:
             engines.append(p[6])
-    colour = {}
-    for i, eng in enumerate(engines):
-        colour[eng] = (CHART_ENGINE_COLORS[i] if i < len(CHART_ENGINE_COLORS)
-                       else CHART_ENGINE_OTHER)
+        # First non-empty description wins; a campaign is one model at one effort by definition
+        # (chapter 17), so the rows of one engine cannot disagree here without the table being
+        # MIXED, which the gate reports separately.
+        if p[7] and p[6] not in desc:
+            desc[p[6]] = p[7]
+    engines.sort()
     left, base = CHART_PAD_L, top + CHART_PAD_T + CHART_PLOT_H
     # The effort axis is the full 0..1 in every panel, never fitted to the rows: both axes are now
     # score columns on one scale, and an axis that moved with the data would stop two panels being
@@ -3245,8 +3296,7 @@ def pareto_panel(key, points, top):
     # across engines would be one curve made of several treatments, which is the pooled reading
     # chapter 17 forbids. Per engine it is four honest curves, and where one sits above another
     # over the same stretch of the effort axis, that is the comparison the panel exists for.
-    fronts = ([(colour[e], [p for p in points if p[6] == e and not p[3]]) for e in engines]
-              if combined else [(None, [p for p in points if not p[3]])])
+    fronts = [(colour[e], [p for p in points if p[6] == e and not p[3]]) for e in engines]
     for stroke, live in fronts:
         front = pareto_front(live)
         if len(front) > 1:
@@ -3268,16 +3318,16 @@ def pareto_panel(key, points, top):
         return not any(box[0] < b[2] and b[0] < box[2] and box[1] < b[3] and b[1] < box[3]
                        for b in placed)
 
-    for cost, score, label, outdated, _ratio, _name, eng in points:
+    for cost, score, label, outdated, _ratio, _name, eng, _desc in points:
         x, y = px(cost), py(score)
-        # On the combined panel the hue carries the engine, so a live point is filled with it and
-        # an outdated one keeps the hollow ring in the same hue -- the two encodings stay
-        # independent, one for engine and one for whether the arm is retired.
+        # The hue carries the engine and the fill carries whether the arm is retired: a live point
+        # is filled with its engine's hue, an outdated one is a hollow ring in the same hue. Two
+        # independent encodings, neither borrowing the other's channel.
+        #
         # An inline `style`, not a `fill=`/`stroke=` attribute: the .pt/.pto rules in the chart's
         # stylesheet are CSS and a presentation attribute loses to CSS, so the attribute form drew
         # every point in the default ink and the colour silently did nothing.
-        tint = (' style="fill:%s"' % colour[eng] if combined and not outdated else
-                ' style="stroke:%s"' % colour[eng] if combined else "")
+        tint = (' style="fill:%s"' if not outdated else ' style="stroke:%s"') % colour[eng]
         out.append('<circle class="%s" cx="%s" cy="%s" r="3.2"%s/>'
                    % ("pto" if outdated else "pt", svg_num(x), svg_num(y), tint))
         w = len(label) * 5.4
@@ -3333,20 +3383,29 @@ def pareto_panel(key, points, top):
         out.append('<text class="%s" x="%s" y="%s" text-anchor="end">%.4f</text>'
                    % (css, svg_num(lx + CHART_LIST_W), svg_num(y), p[4]))
 
-    if combined:
-        # The legend, under the list: every engine of the panel with its hue and its full config
-        # name. Identity is never colour alone -- chapter 13.2 aside, a reader who prints the chart
-        # in grey needs this block and the engine tags in the list to read the panel at all.
-        ly = top + CHART_PAD_T + 14 + CHART_LIST_N * 16 + 14
-        out.append('<text class="lg" x="%s" y="%s">engines in this panel</text>'
-                   % (svg_num(lx), svg_num(ly)))
-        for i, eng in enumerate(engines):
-            y = ly + 16 + i * 15
-            out.append('<circle cx="%s" cy="%s" r="3.2" fill="%s"/>'
-                       % (svg_num(lx + 4), svg_num(y - 3), colour[eng]))
-            spare = "" if i < len(CHART_ENGINE_COLORS) else "  (beyond the four validated hues)"
-            out.append('<text class="lb" x="%s" y="%s">%s%s</text>'
-                       % (svg_num(lx + 12), svg_num(y), svg_text(eng), spare))
+    # The legend, under the list, on EVERY panel -- a single-engine panel included. Its one hue is
+    # the same hue that engine wears on the combined panel above, and saying so costs one line;
+    # leaving it out would make the reader guess whether the colour meant anything here.
+    #
+    # Each entry names the model and the effort behind the number, because `e13` is a register
+    # lookup and `claude-sonnet-5 medium` is the answer that lookup returns. Identity is never
+    # colour alone: this block and the engine tags in the ranked list carry it in text.
+    ly = top + CHART_PAD_T + 14 + CHART_LIST_N * 16 + 14
+    out.append('<text class="lg" x="%s" y="%s">engines in this panel</text>'
+               % (svg_num(lx), svg_num(ly)))
+    for i, eng in enumerate(engines):
+        y = ly + 16 + i * 15
+        out.append('<circle cx="%s" cy="%s" r="3.2" fill="%s"/>'
+                   % (svg_num(lx + 4), svg_num(y - 3), colour[eng]))
+        out.append('<text class="lb" x="%s" y="%s">%s</text>'
+                   % (svg_num(lx + 12), svg_num(y), svg_text(eng)))
+        if desc.get(eng):
+            out.append('<text class="lb" x="%s" y="%s" fill="#6b7280">%s</text>'
+                       % (svg_num(lx + 46), svg_num(y), svg_text(desc[eng])))
+        if colour[eng] == CHART_ENGINE_OTHER:
+            out.append('<text class="lb" x="%s" y="%s" fill="#9aa3ad">(no validated hue left '
+                       "&#8212; read this engine's own panel)</text>"
+                       % (svg_num(lx + 46), svg_num(y + 11)))
     return out
 
 
