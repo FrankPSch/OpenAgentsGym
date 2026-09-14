@@ -1,4 +1,4 @@
-# p10_xarray_7233
+# p10_python_swe_xarray_7233
 
 ## Task
 

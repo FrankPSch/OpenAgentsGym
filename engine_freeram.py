@@ -35,18 +35,36 @@ class MEMORYSTATUSEX(ctypes.Structure):
     ]
 
 
+def free_gb():
+    """(free, total) physical memory in GB, or None where the figure cannot be read.
+
+    Factored out of main() so run_master.py can record the same number in a column rather
+    than parse this script's printed line. Never raises: a run must not fail for want of a
+    diagnostic, and a blank cell says "not measured", which is the truth in that case.
+    """
+    if sys.platform != "win32":
+        return None
+    try:
+        st = MEMORYSTATUSEX()
+        st.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+        if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(st)):
+            return None
+        gb = 1024.0 ** 3
+        return st.ullAvailPhys / gb, st.ullTotalPhys / gb
+    except Exception:
+        return None
+
+
 def main():
+    reading = free_gb()
     if sys.platform != "win32":
         # Not fatal: the figure is an aid, and a leg must never fail for want of it.
         print("  memory: not available on this platform")
         return 0
-    st = MEMORYSTATUSEX()
-    st.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
-    if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(st)):
+    if reading is None:
         print("  memory: could not be read")
         return 0
-    gb = 1024.0 ** 3
-    free, total = st.ullAvailPhys / gb, st.ullTotalPhys / gb
+    free, total = reading
     note = ""
     # 14 GB is devstral's footprint and the largest model that has ever loaded
     # here; 18 GB is the 30B, which has never loaded at 32k context.

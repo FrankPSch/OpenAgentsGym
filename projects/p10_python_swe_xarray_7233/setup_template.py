@@ -6,7 +6,7 @@ plus the fix's test changes, plus the three files in template_overlay/. It is ~2
 not committed: the repository holds this script and the overlay, the checkout is machine-local
 and .gitignore'd, and both are reproducible from BASE_COMMIT and TEST_COMMIT below.
 
-    py -3 projects/p10_xarray_7233/setup_template.py [--force]
+    py -3 projects/p10_python_swe_xarray_7233/setup_template.py [--force]
 
 Needs `git` on PATH and network access to github.com. Takes about a minute; a blobless clone is
 cached in local/_upstream/ so a second project on the same repository does not clone again.

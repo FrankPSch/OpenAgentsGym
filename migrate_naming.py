@@ -46,6 +46,13 @@ PROJECTS = {
     "06_qc_ema_cross": "p06_qc_ema_cross",
     "07_qc_bugfix_refactor": "p07_qc_bugfix_refactor",
     "10_xarray_7233": "p10_xarray_7233",
+    # 2026-09-14, a second rename on the same number: the name carried the
+    # upstream repository and issue but not the task class, and the SWE-bench
+    # instances are a class that will grow. The 09-12 entry above stays as it
+    # was written - this file is the evidence for what was renamed when, so a
+    # mapping is appended, never rewritten. Applied when no row and no run
+    # directory referenced the old name, so nothing recorded was rewritten.
+    "p10_xarray_7233": "p10_python_swe_xarray_7233",
 }
 
 # 00_empty and 00_sabotage both claimed 00. A number that identifies two things
