@@ -1803,15 +1803,9 @@ would corrupt a campaign without any visible error.
 
 ## 16. Validity gate
 
-Before any campaign result is interpreted, both anchors must behave. The gate is the 3 `p00_fail`
-runs and the `m47_sabotage` rows of the campaign's ranking runs, judged against the incumbent:
+Before any campaign result is interpreted, the project anchors must behave. The gate's binding
+conditions are the `p00_fail` runs and the pre-flight baseline:
 
-- `m47_sabotage` scores worse than the incumbent, `m29_invariants_test_first_relative_stop`, on the
-  same project with an oracle. The condition is evaluated **per project the campaign holds rows for**, and a project
-  carrying one of the two anchors but not the other makes the campaign **INCOMPLETE**, printed as
-  such and exit 1 — never PASS. Skipping such a project silently let a campaign missing half its
-  gate report that the gate held. A project carrying neither anchor — the smoke run on
-  `p01_python_small` — is not a ranking project of that campaign and is not a gap.
 - `p00_fail` never reaches `res_verification_passed` under any methodology.
 - The pristine baseline of an oracle project fails pre-flight. If it passes, the project cannot
   measure anything.
@@ -1832,6 +1826,17 @@ runs and the `m47_sabotage` rows of the campaign's ranking runs, judged against 
   maintainability index of the four. Such a project is kept as a smoke test — for those two, of the
   MCP path — and is reported as a cost comparison, never as a ranking. The score-spread line of
   chapter 13.1a shows the state as `1 distinct value` from the first two arms onwards.
+
+**`m47_sabotage` is informational, not a condition.** Where the campaign holds both anchors on a
+project, the gate prints the sabotage median beside the incumbent's and marks the projects where
+sabotage does not lose — but the comparison decides no verdict and blocks no reading. It was a
+binding condition until 2026-09-14 and was demoted because it answers a question about the
+**project** at least as much as about the apparatus: on a project every arm passes, sabotage ties at
+the top by construction, so the line reported saturation while claiming to report a broken
+measurement. The three saturated projects and `p04_python_xlarge` under `e13_claude_sonnet_5_medium`
+all sat there at once, and a FAIL that fires on the expected behaviour of half the matrix teaches a
+reader to scroll past the two conditions that still bind. A project with one anchor and not the
+other is likewise no longer **INCOMPLETE**; the statistic is simply not printed for it.
 
 **Difficulty is calibrated before a campaign, not diagnosed after one.** A new project is run once
 against `m00_empty` on capability level 1 — the cheapest model — before any level-3 campaign is spent

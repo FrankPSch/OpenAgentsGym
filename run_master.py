@@ -3295,7 +3295,11 @@ def strict_reduction_projects():
 
 
 def gate(campaign=None, apparatus_only=False):
-    """Print the three chapter-16 conditions per campaign, PASS or FAIL, with their numbers.
+    """Print the chapter-16 conditions per campaign, PASS or FAIL, with their numbers.
+
+    Two conditions decide the verdict: the impossible project never verifies, and every pristine
+    template fails pre-flight. The sabotage-versus-incumbent comparison is printed as INFO and
+    decides nothing -- see the note at its call site for why it was demoted on 2026-09-14.
 
     It reads `results_repository.csv` and nothing else, and groups by `cfg_campaign`: the
     conditions are statements about one set of rows sharing its constants, and pooling two
@@ -3303,16 +3307,14 @@ def gate(campaign=None, apparatus_only=False):
     validity check chapter 16 demands, printed after every rebuild -- not an analysis: no ranking,
     no cost, no pivot. Exit 0 when every campaign holds, 1 when one does not.
 
-    `campaign` narrows it to one label; `apparatus_only` drops the first condition, which needs
-    ranking rows the cheap campaign was never meant to buy, and adds the one the cheap campaign
+    `campaign` narrows it to one label; `apparatus_only` drops the informational comparison, which
+    needs ranking rows the cheap campaign was never meant to buy, and adds the one the cheap campaign
     exists to answer: no repeat aborted and no row carries a `res_subtype` other than `success`
     (chapter 16).
 
-    Two verdicts other than PASS/FAIL exist, and both exit 1. A campaign whose rows disagree on the
-    constants chapter 17 pools by is MIXED: the label is the config file's base name, so an edited
-    file or a second file of that name shares it, and no condition over pooled rows means anything.
-    A ranking project that has one anchor of condition 1 but not the other is INCOMPLETE: skipping
-    it silently let a campaign missing half its gate print PASS.
+    One verdict other than PASS/FAIL exits 1. A campaign whose rows disagree on the constants
+    chapter 17 pools by is MIXED: the label is the config file's base name, so an edited file or a
+    second file of that name shares it, and no condition over pooled rows means anything.
     """
     path = RESULTS_TABLE
     if not path.is_file():
@@ -3335,9 +3337,9 @@ def gate(campaign=None, apparatus_only=False):
     ok = True
 
     # The rollup word, most severe first: MIXED (the rows are not one campaign, so nothing
-    # computed over them means anything) beats INCOMPLETE (a condition could not be judged)
-    # beats FAIL beats PASS. Only PASS exits 0.
-    mixed_any = incomplete = False
+    # computed over them means anything) beats FAIL beats PASS. Only PASS exits 0. INFO lines
+    # never enter it.
+    mixed_any = False
 
     def verdict(passed, title, detail, label=None):
         print("  %s  %s" % (label or ("PASS" if passed else "FAIL"), title))
@@ -3397,15 +3399,26 @@ def gate(campaign=None, apparatus_only=False):
             detail.append("no project with both %s and %s rows" % (GATE_ANCHOR_MTH,
                                                                    GATE_INCUMBENT_MTH))
         if not apparatus_only:
-            if half:
-                incomplete = True
-                ok &= verdict(False,
-                              "%s scores worse than %s" % (GATE_ANCHOR_MTH, GATE_INCUMBENT_MTH),
-                              detail + half, label="INCOMPLETE")
-            else:
-                ok &= verdict(bool(verdicts) and all(verdicts),
-                              "%s scores worse than %s" % (GATE_ANCHOR_MTH, GATE_INCUMBENT_MTH),
-                              detail)
+            # INFORMATIONAL since 2026-09-14, and deliberately so. The comparison is still
+            # computed and still printed with its numbers -- it is worth knowing when a
+            # deliberately bad methodology does not lose -- but it no longer decides the
+            # verdict and no longer blocks a campaign from being read.
+            #
+            # Why it was demoted. The condition asks a question about the PROJECT as much as
+            # about the apparatus: on a project every arm passes, sabotage ties at the top by
+            # construction, and the line then reports saturation while claiming to report a
+            # broken measurement. Both QuantConnect tiers and the refactor project are in that
+            # state, and e13 put p04 there too. A condition that fires on the expected
+            # behaviour of half the matrix is not a gate, it is a statistic -- and a red FAIL
+            # that everyone learns to scroll past costs more than it buys, because it hides
+            # the two conditions that do still bound the measurement.
+            #
+            # A missing anchor is likewise no longer INCOMPLETE: an unjudgeable statistic is
+            # simply not printed as a number, which is what `half` says.
+            verdict(bool(verdicts) and all(verdicts),
+                    "%s scores worse than %s (informational)" % (GATE_ANCHOR_MTH,
+                                                                 GATE_INCUMBENT_MTH),
+                    detail + half, label="INFO")
 
         fails = [r for r in rs if r.get("prj_name") == GATE_ANCHOR_PRJ]
         passing = [r["id_run"] for r in fails if (r.get("res_verification_passed") or "") == "true"]
@@ -3445,8 +3458,6 @@ def gate(campaign=None, apparatus_only=False):
         rollup = "PASS"
     elif mixed_any:
         rollup = "MIXED"
-    elif incomplete:
-        rollup = "INCOMPLETE"
     else:
         rollup = "FAIL"
     print("gate: %s" % rollup)

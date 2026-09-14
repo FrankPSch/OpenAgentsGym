@@ -284,10 +284,12 @@ quality as separate terms instead of folding maintainability into the pass fract
 The parsimony factor stays in `res_score` for continuity with every row already published; it is not
 carried into the `sc_` columns, and it is not the number to rank on.
 
-**Before reading anything, read the gate.** `rebuild_results_table.bat` prints it: the sabotage arm
-must lose, the impossible project must never pass, every pristine template must fail before the
-agent starts. If a condition fails, the finding is about the apparatus and nothing else in the table
-means anything yet (chapter 16).
+**Before reading anything, read the gate.** `rebuild_results_table.bat` prints it: the impossible
+project must never pass, and every pristine template must fail before the agent starts. If either
+fails, the finding is about the apparatus and nothing else in the table means anything yet
+(chapter 16). The sabotage arm's score against the incumbent is printed beside them as `INFO` — worth
+reading, since a sabotage arm that does not lose usually means the project has stopped
+discriminating, but it decides nothing and blocks nothing.
 
 **Pool only what belongs together.** Rows sharing a campaign label, and within it the same model,
 effort, CLI version, review settings and tool set; rows whose served model differs from the

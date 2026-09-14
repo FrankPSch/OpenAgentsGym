@@ -44,8 +44,12 @@ arms on a project where every score ties, and they are blank on a run that did n
 effort number without a correctness gate rewards giving up early.
 
 Two anchors bound every campaign: `m00_empty` (no methodology at all) and `m47_sabotage` (a
-deliberately bad one). **No ranking is believed until sabotage scores below every real methodology.**
-That validity gate, not the leaderboard, is the first thing to read.
+deliberately bad one). Every claim is a claim about the difference from the empty anchor, never
+about a score on its own. **The validity gate, not the leaderboard, is the first thing to read**: the
+impossible project must never verify, and every pristine template must fail before the agent starts.
+Where sabotage fails to score below a real methodology the gate says so beside those two, as
+information — it usually means the project has stopped discriminating rather than that the
+apparatus is broken, which is a finding about the project and is reported as one.
 
 ---
 
